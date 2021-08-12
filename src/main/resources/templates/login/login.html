@@ -1,0 +1,266 @@
+<!-- Global stylesheets -->
+<link href="https://fonts.googleapis.com/css?family=Roboto:400,300,100,500,700,900" rel="stylesheet" type="text/css">
+<link href="bootstrap/assets/css/icons/icomoon/styles.css" rel="stylesheet" type="text/css">
+<link href="bootstrap/assets/css/bootstrap.css" rel="stylesheet" type="text/css">
+<link href="bootstrap/assets/css/core.css" rel="stylesheet" type="text/css">
+<link href="bootstrap/assets/css/components.css" rel="stylesheet" type="text/css">
+<link href="bootstrap/assets/css/colors.css" rel="stylesheet" type="text/css">
+<!-- /global stylesheets -->
+
+<!-- Core JS files -->
+<script type="text/javascript" src="bootstrap/assets/js/core/libraries/jquery.min.js"></script>
+<script type="text/javascript" src="bootstrap/assets/js/core/libraries/bootstrap.min.js"></script>
+<!-- /core JS files -->
+
+<style>
+    @charset "utf-8";
+
+    div.main{
+        background: #333333e3; /* Old browsers */
+        background: -moz-radial-gradient(center, ellipse cover,     #333333e3 1%, #333333 100%); /* FF3.6+ */
+        background: -webkit-gradient(radial, center center, 0px, center center, 100%, color-stop(1%,#0264d6), color-stop(100%,#1c2b5a)); /* Chrome,Safari4+ */
+        background: -webkit-radial-gradient(center, ellipse cover,  #333333e3 1%,#333333 100%); /* Chrome10+,Safari5.1+ */
+        background: -o-radial-gradient(center, ellipse cover,       #333333e3 1%,#333333 100%); /* Opera 12+ */
+        background: -ms-radial-gradient(center, ellipse cover,      #333333e3 1%,#333333 100%); /* IE10+ */
+        background: radial-gradient(ellipse at center,              #333333e3 1%,#333333 100%); /* W3C */
+        filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#0264d6', endColorstr='#1c2b5a',GradientType=1 ); /* IE6-9 fallback on horizontal gradient */
+        height:calc(100vh);
+        width:100%;
+    }
+
+    [class*="fontawesome-"]:before {
+        font-family: 'FontAwesome', sans-serif;
+    }
+
+    /* ---------- GENERAL ---------- */
+
+    * {
+        box-sizing: border-box;
+        margin:0px auto;
+
+    &:before,
+    &:after {
+         box-sizing: border-box;
+     }
+
+    }
+
+    body {
+
+        color: #606468;
+        font: 87.5%/1.5em 'Open Sans', sans-serif;
+        margin: 0;
+    }
+
+    a {
+        color: #eee;
+        text-decoration: none;
+    }
+
+    a:hover {
+        text-decoration: underline;
+    }
+
+    input {
+        border: none;
+        font-family: 'Open Sans', Arial, sans-serif;
+        font-size: 14px;
+        line-height: 1.5em;
+        padding: 0;
+        -webkit-appearance: none;
+    }
+
+    p {
+        line-height: 1.5em;
+    }
+
+    .clearfix {
+        *zoom: 1;
+
+    &:before,
+    &:after {
+         content: ' ';
+         display: table;
+     }
+
+    &:after {
+         clear: both;
+     }
+
+    }
+
+    .container {
+        left: 50%;
+        position: fixed;
+        top: 50%;
+        transform: translate(-50%, -50%);
+    }
+
+    /* ---------- LOGIN ---------- */
+
+    #login form{
+        width: 250px;
+    }
+    #login, .logo{
+        display:inline-block;
+        width:60%;
+    }
+    #login{
+        border-left:1px solid #fff;
+        width: 59%;
+    }
+    .logo{
+        color:#fff;
+        font-size:25px;
+        line-height: 125px;
+        padding-right: 30px;
+    }
+
+    #login form span.fa {
+        background-color: #fff;
+        border-radius: 3px 0px 0px 3px;
+        color: #000;
+        display: block;
+        float: left;
+        height: 50px;
+        font-size:24px;
+        line-height: 50px;
+        text-align: center;
+        width: 50px;
+    }
+
+    #login form input {
+        height: 50px;
+    }
+    fieldset{
+        padding:0;
+        border:0;
+        margin: 0;
+
+    }
+    #login form input[type="text"], input[type="password"] {
+        background-color: #fff;
+        border-radius: 0px 3px 3px 0px;
+        color: #000;
+        margin-bottom: 1em;
+        padding: 0 16px;
+        width: 200px;
+    }
+
+    #login form input[type="submit"] {
+        border-radius: 3px;
+        -moz-border-radius: 3px;
+        -webkit-border-radius: 3px;
+        background-color: #000000;
+        color: #eee;
+        font-weight: bold;
+        /* margin-bottom: 2em; */
+        text-transform: uppercase;
+        padding: 5px 10px;
+        height: 30px;
+    }
+
+    #login form input[type="submit"]:hover {
+        background-color: #d44179;
+    }
+
+    #login > p {
+        text-align: center;
+    }
+
+    #login > p span {
+        padding-left: 5px;
+    }
+    .middle {
+        display: flex;
+        width: 600px;
+    }
+</style>
+
+<div class="main">
+    <div class="container">
+        <center>
+            <div class="middle">
+                <div class="logo">Auto Trading Solution
+                    <div class="clearfix"></div>
+                </div>
+
+                <div id="login">
+                    <form action="/main" method="post" onsubmit="return login()">
+                        <fieldset class="clearfix">
+                            <!-- Server애서 받은 RSA Value-->
+                            <input type="hidden" id="RSAModulus"  th:value="${RSAModulus}" />
+                            <input type="hidden" id="RSAExponent" th:value="${RSAExponent}"/>
+
+                            <input type="text"      id="user_id_text"  Placeholder="UserID" required>
+                            <input type="password"  id="user_pw_text" Placeholder="Password" required>
+                            <!-- RSA 를 적용하여 controller 에 보낼 input tag-->
+                            <input type="hidden" id="user_id" name="user_id">
+                            <input type="hidden" id="user_pw" name="user_pw">
+
+                            <div>
+                                <span style="width:50%; text-align:center;  display: inline-block;">
+                                    <input type="submit" value="Sign In">
+                                </span>
+                            </div>
+                        </fieldset>
+                        <div class="clearfix"></div>
+                    </form>
+                    <div class="clearfix"></div>
+                </div>
+
+            </div>
+        </center>
+    </div>
+</div>
+
+
+
+
+
+
+<!-- RSA 로직 -->
+<script type="text/javascript" src="rsa/rsa.js"></script>
+<script type="text/javascript" src="rsa/jsbn.js"></script>
+<script type="text/javascript" src="rsa/prng4.js"></script>
+<script type="text/javascript" src="rsa/rng.js"></script>
+
+<script>
+    $(document).ready(() => {
+        let loginStatus = $('#login_action').val();
+        if(loginStatus == 401){
+            alert('패스워드가 일치하지 않습니다.');
+        }
+    })
+
+    let login = () => {
+        let id = $("#user_id_text");
+        let pw = $("#user_pw_text");
+
+        if(id.val() == ""){
+            alert("아이디를 입력 해주세요.");
+            id.focus();
+            return false;
+        }
+
+        if(pw.val() == ""){
+            alert("비밀번호를 입력 해주세요.");
+            pw.focus();
+            return false;
+        }
+
+        // rsa 암호화
+        let rsa = new RSAKey();
+        rsa.setPublic($('#RSAModulus').val(),$('#RSAExponent').val());
+
+        $("#user_id").val(rsa.encrypt(id.val()));
+        $("#user_pw").val(rsa.encrypt(pw.val()));
+
+        id.val("");
+        pw.val("");
+        return true;
+    }
+</script>
+
+<!-- tymeleaf  -->
+<input type="hidden" id="login_action"  th:value="${login_action}" />

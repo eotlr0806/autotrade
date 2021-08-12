@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ATS - Auto Trading Solution</title>
+
+    <!-- Global stylesheets -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,300,100,500,700,900" rel="stylesheet" type="text/css">
+    <link href="../bootstrap/assets/css/icons/icomoon/styles.css" rel="stylesheet" type="text/css">
+    <link href="../bootstrap/assets/css/bootstrap.css" rel="stylesheet" type="text/css">
+    <link href="../bootstrap/assets/css/core.css" rel="stylesheet" type="text/css">
+    <link href="../bootstrap/assets/css/components.css" rel="stylesheet" type="text/css">
+    <link href="../bootstrap/assets/css/colors.css" rel="stylesheet" type="text/css">
+    <!-- /global stylesheets -->
+</head>
+
+
+
+<body>
+    <!-- Page container -->
+    <div class="page-container">
+
+        <!-- Page content -->
+        <div class="page-content">
+
+
+
+            <!-- Main content -->
+            <div class="content-wrapper">
+
+                <!-- Page header -->
+                <div class="page-header">
+                    <div class="page-header-content">
+                        <div class="page-title">
+                            <h4><i class="icon-arrow-left52 position-left"></i> <span class="text-semibold">운영 관리</span> - 코인 설정</h4>
+                        </div>
+                        <div class="heading-elements">
+                            <div class="heading-btn-group" >
+                                <a href="#" class="btn btn-link btn-float has-text" onclick="fncObj.onClickCoinInfo(INSERT)">
+                                    <i class="glyphicon-plus text-semibold"></i>
+                                    <span>코인 등록</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- /page header -->
+
+
+                <!-- Content area -->
+                <div class="content">
+
+                    <!-- Basic table -->
+                    <div class="row">
+                        <div class="panel panel-flat">
+                            <div class="panel-heading">
+                                <h5 class="panel-title text-bold">코인 정보</h5>
+                                <div class="heading-elements">
+                                    <ul class="icons-list">
+                                        <li><a data-action="collapse"></a></li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="panel-body">
+                            </div>
+                            <div class="table-responsive">
+                                <table id="coin_table" class="table table-bordered table-striped"></table>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- /basic table -->
+                    <!-- Footer -->
+                    <div class="footer text-muted">
+                    </div>
+                    <!-- /footer -->
+
+                </div>
+                <!-- /content area -->
+
+
+            </div>
+            <!-- /main content -->
+
+
+
+
+        </div>
+    </div>
+
+    <!-- Real Time Price Modal container -->
+    <div id="modal_coin_price" class="modal fade">
+        <div class="modal-dialog modal-lg" >
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h5 class="modal-title text-bold">실시간 호가</h5>
+                </div>
+                <div class="form-horizontal">
+                    <div class="modal-body" >
+                        <div class="form-group">
+                            <label class="control-label text-bold col-sm-12">호가</label>
+                            <div class="col-sm-12">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th class="text-bold">가격</th>
+                                                <th class="text-bold">수량</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="modal_coin_price_body">
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- /Real Time Price Modal container -->
+
+
+    <!-- Add coin  -->
+    <div id="modal_coin_info" class="modal fade">
+        <div class="modal-dialog modal-lg" >
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h5 class="modal-title text-bold" id="modalTitle"></h5>
+                </div>
+
+                <div class="form-horizontal">
+                    <div class="modal-body">
+
+                        <div class="form-group">
+                            <label class="control-label text-bold col-sm-2">거래소</label>
+                            <div class="col-sm-8">
+                                <select name="fSpot" id="modal_coin_exchange" class="form-control">
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="control-label text-bold col-sm-2">거래소 유저ID</label>
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control" id="modal_coin_exchange_user_id" >
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="control-label text-bold col-sm-2">코인 코드</label>
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control" id="modal_coin_code" placeholder="BTC">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="control-label text-bold col-sm-2">코인 명</label>
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control" id="modal_coin_name" placeholder="비트코인">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="control-label text-bold col-sm-2">화폐</label>
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control" id="modal_coin_currency" placeholder="KRW">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="control-label text-bold col-sm-2">틱</label>
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control" id="modal_coin_tick" placeholder="0.1" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="control-label text-bold col-sm-2">Public key</label>
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control" id="modal_coin_public_key" >
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="control-label text-bold col-sm-2">Secret_key</label>
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control" id="modal_coin_secret_key" >
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="modal-footer">
+                        <input type="button" onclick="fncObj.postAddCoin()" class="btn btn-primary"  value="저장">
+                        <input type="button" class="btn" data-dismiss="modal" value="닫기">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- /Location add modal area -->
+
+</body>
+
+
+
+<!-- Core JS files -->
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/loaders/pace.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/core/libraries/jquery.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/core/libraries/bootstrap.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/loaders/blockui.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/tables/datatables/datatables.min.js"></script>
+<script type="text/javascript" src="../common/js/datatables_basic.js"></script>
+<!-- /core JS files -->
+
+<!-- Theme JS files -->
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/forms/styling/uniform.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/editors/wysihtml5/wysihtml5.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/editors/wysihtml5/toolbar.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/editors/wysihtml5/parsers.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/editors/wysihtml5/locales/bootstrap-wysihtml5.ua-UA.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/notifications/jgrowl.min.js"></script>
+
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/notifications/pnotify.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/core/app.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/pages/editor_wysihtml5.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/pages/components_notifications_pnotify.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/pages/extension_blockui.js"></script>
+<!-- /theme JS files -->
+
+<!-- Common Lib -->
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script type="text/javascript" src="../common/js/commonScript.js"></script>
+<!-- /Common Lib -->
+
+
+<script>
+
+    const INSERT             = "INSERT";
+    const UPDATE             = "UPDATE";
+
+    let dataTableColumn = [
+        { title: "거래소"           ,orderable: true },
+        { title: "거래소계정"        ,orderable: true },
+        { title: "코인코드"          ,orderable: true  },
+        { title: "코인명"           ,orderable: true },
+        { title: "화폐"            ,orderable: false },
+        { title: "틱"             ,orderable: true  },
+        { title: "Public Key"     ,orderable: true },
+        { title: "Sercret Key"    ,orderable: true  },
+        { title: "수정"            ,orderable: false },
+        { title: "삭제"            ,orderable: false }
+    ];
+
+    let exchangesList        = [];
+    let coinList             = [];
+    let onClickCoinInfoType  = '';
+    let onClickUpdateCoin    = '';
+
+    // init page
+    $(document).ready(() => {
+        fncObj.initPage();
+    })
+
+
+    /** Function object **/
+    let fncObj = {
+
+        // 페이지 로드 시 초기값 셋팅을 위한 함수
+        initPage : async () => {
+            await fncObj.getExchangeList();
+            fncObj.makeCoinList();
+            dataObj.makeCoinTable();
+            loginUserId = $('#server_user_id').val();                   // Set user id
+        },
+
+        // coin 정보를 서버에서 가져온다.
+        getExchangeList : async () => {
+            let response = await common.get(EXCHANGE);   // Get excahgne, coin list
+            if(response.data != null){
+                if(response.status == SUCCESS){
+                    exchangesList = response.data;
+                }
+            }
+        },
+
+        // add coin method
+        onClickCoinInfo : (type, coinIdx) => {
+            onClickCoinInfoType = type;
+            if(onClickCoinInfoType == INSERT){
+                dataObj.setCoinInsert();
+            }else if(onClickCoinInfoType == UPDATE){
+                dataObj.setCoinUpdate(coinIdx);
+            }
+
+            $('#modal_coin_info').modal('show');
+        },
+
+
+        // 코인 저장 버튼
+        postAddCoin : async () => {
+
+            let exchangeId      = $('#modal_coin_exchange').val();
+            let code            = "";
+            let name            = $('#modal_coin_name').val();
+            let currency        = "";
+            let tick            = $('#modal_coin_tick').val();
+            let publicKey       = $('#modal_coin_public_key').val();
+            let secretKey       = $('#modal_coin_secret_key').val();
+            let exchangeUserId  = $('#modal_coin_exchange_user_id').val();
+            
+            let exchangeCode;
+            exchangesList.forEach(item => {
+                if(item.id == exchangeId) exchangeCode = item.exchangeCode;
+            })
+
+            // Dcoin 의 경우 소문자로 통일
+            if(exchangeCode == EXCHANGE_LIST.DCOIN){
+                currency = $('#modal_coin_currency').val().toString().toLowerCase();
+                code     = $('#modal_coin_code').val().toString().toLowerCase();
+            }
+            // BITHUMB_GLOBAL, FOBLGATE , FLATA , COINONE 모두 대문자로 통일
+            else{
+                currency = $('#modal_coin_currency').val().toString().toUpperCase();
+                code     = $('#modal_coin_code').val().toString().toUpperCase();
+            }
+            
+
+            if(exchangeId == 'NONE' || exchangeId == ''){
+                return common.noti("코인 등록","거래소를 선택해주세요.","error");
+            }
+
+            if(code == '' || name == '' || currency == '' || tick == '' || publicKey == '' || secretKey == '' || exchangeUserId == ''){
+                return common.noti("코인 등록","빈값을 모두 등록해주세요.","error");
+            }
+
+            let data = {
+                "coinCode"          : code,
+                "coinName"          : name,
+                "coinPrice"         : tick,
+                "currency"          : currency,
+                "exchangeId"        : exchangeId,
+                "publicKey"         : publicKey,
+                "privateKey"        : secretKey,
+                "exchangeUserId"    : exchangeUserId
+            }
+
+            if(onClickCoinInfoType == UPDATE){
+                data.id = onClickUpdateCoin.id;
+            }
+
+            let response = await common.post(COIN,data);
+            if(response.status == SUCCESS){
+                common.noti("코인 등록", "코인 등록을 완료하였습니다.","success");
+                
+                await fncObj.getExchangeList();
+                fncObj.makeCoinList();
+                dataObj.makeCoinTableReload();
+
+                $('#modal_coin_info').modal('hide');
+            }
+        },
+
+        // 코인 정보 삭제
+        deleteCoin : async (id) => {
+            let response = await common.delete(COIN, { "id": id });
+
+            if(response.status == SUCCESS){
+                common.noti("코인 삭제", "코인 삭제를 완료하였습니다.","success");
+                
+                await fncObj.getExchangeList();
+                fncObj.makeCoinList();
+                dataObj.makeCoinTableReload();
+            }
+
+        },
+
+        // 거래소 정보로 코인 리스트를 만든다.
+        makeCoinList : () => {
+            coinList = [];
+
+            exchangesList.forEach(exchange => {
+                if(exchange.exchangeCoin != null){
+                    exchange.exchangeCoin.forEach(coin => {
+                        let object = {};
+                        
+                        object.exchangeId       = exchange.id           || '';
+                        object.exchangeName     = exchange.exchangeName || '';
+                        object.exchangeUserId   = coin.exchangeUserId   || '';
+                        object.id               = coin.id               || '';
+                        object.code             = coin.coinCode         || '';
+                        object.name             = coin.coinName         || '';
+                        object.currency         = coin.currency         || '';
+                        object.tick             = coin.coinPrice        || '';
+                        object.publicKey        = coin.publicKey        || '';
+                        object.privateKey       = coin.privateKey       || '';
+
+                        coinList.push(object);
+                    })
+                }
+            })
+        },
+  
+
+
+    };
+    /** Function object **/
+
+
+
+
+    /** Function object for data setter / getter **/
+    let dataObj = { 
+
+        // Coin Insert 시 모달
+        setCoinInsert: () =>{
+            // 거래소 값 등록
+            $('#modal_coin_exchange').attr('disabled',false);
+            $('#modal_coin_exchange').empty();
+            $('#modal_coin_code').val('');
+            $('#modal_coin_name').val('');
+            $('#modal_coin_currency').val('');
+            $('#modal_coin_tick').val('');
+            $('#modal_coin_public_key').val('');
+            $('#modal_coin_secret_key').val('');
+            $('#modal_coin_exchange_user_id').val('');
+
+            let dynamicText = "<option value='NONE'>선택</option>";
+            exchangesList.forEach(exchange => {
+                dynamicText += `
+                    <option value=${exchange.id}>
+                        ${exchange.exchangeName}
+                    </option>`;
+            });
+            $('#modal_coin_exchange').append(dynamicText);
+        },
+
+        // Coin Update 시 모달
+        setCoinUpdate: (coinIdx) =>{
+            // 거래소 값 등록
+            onClickUpdateCoin = coinList[coinIdx];
+
+            $('#modal_coin_exchange').empty();
+            let exchagneId      = `<option value='${onClickUpdateCoin.exchangeId}'> ${onClickUpdateCoin.exchangeName} </option>`;
+            $('#modal_coin_exchange').append(exchagneId);
+            $('#modal_coin_exchange').attr('disabled',true);
+            $('#modal_coin_code').val(onClickUpdateCoin.code);
+            $('#modal_coin_name').val(onClickUpdateCoin.name);
+            $('#modal_coin_currency').val(onClickUpdateCoin.currency);
+            $('#modal_coin_tick').val(onClickUpdateCoin.tick);
+            $('#modal_coin_public_key').val(onClickUpdateCoin.publicKey);
+            $('#modal_coin_secret_key').val(onClickUpdateCoin.privateKey);
+            $('#modal_coin_exchange_user_id').val(onClickUpdateCoin.exchangeUserId);
+        },
+
+
+        /***** Make Data table Start *****/
+        makeCoinTable : () => {
+            let dataSet = dataObj.makeCoinTableArr();
+            $('#coin_table').DataTable( {
+                data: dataSet,
+                columns: dataTableColumn
+            } );
+        },
+
+        makeCoinTableReload : () => {
+            $('#coin_table').DataTable().destroy();
+            let dataSet = dataObj.makeCoinTableArr();
+
+            $('#coin_table').DataTable( {
+                data: dataSet,
+                columns: dataTableColumn
+            } );
+        },
+
+        makeCoinTableArr : () => {
+            coinData = [];
+            coinList.forEach((item, index) => {
+                let innerCoinData = [];
+
+                let edit        = `<input  onclick="fncObj.onClickCoinInfo(${UPDATE}, ${index})" type="button" class="btn btn-info"  value="수정">`;
+                let del         = `<input  onclick="fncObj.deleteCoin(${item.id})" type="button" class="btn btn-danger" value="삭제">`
+
+                innerCoinData.push(item.exchangeName);
+                innerCoinData.push(item.exchangeUserId);
+                innerCoinData.push(item.code);
+                innerCoinData.push(item.name);
+                innerCoinData.push(item.currency);
+                innerCoinData.push(item.tick);
+                innerCoinData.push(item.publicKey);
+                innerCoinData.push(item.privateKey);
+                innerCoinData.push(edit);
+                innerCoinData.push(del);
+
+                coinData.push(innerCoinData);
+            });
+
+            return coinData;
+        },
+        /***** Make Data table End *****/
+    }
+    /** Function object for data setter,getter **/
+
+
+   
+
+</script>
+
+
+
+<input type="hidden" id="server_user_id" th:value="${userId}" />

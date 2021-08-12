@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ATS - Auto Trading Solution</title>
+
+    <!-- Global stylesheets -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,300,100,500,700,900" rel="stylesheet" type="text/css">
+    <link href="bootstrap/assets/css/icons/icomoon/styles.css" rel="stylesheet" type="text/css">
+    <link href="bootstrap/assets/css/bootstrap.css" rel="stylesheet" type="text/css">
+    <link href="bootstrap/assets/css/core.css" rel="stylesheet" type="text/css">
+    <link href="bootstrap/assets/css/components.css" rel="stylesheet" type="text/css">
+    <link href="bootstrap/assets/css/colors.css" rel="stylesheet" type="text/css">
+    <!-- /global stylesheets -->
+</head>
+
+<body>
+
+    <!-- top navbar -->
+    <div class="navbar navbar-default header-highlight">
+        <div class="navbar-header">
+            <!-- TODO : 나중에 image 찾아서 변경하는게 날듯.-->
+            <a class="navbar-brand" href="/"><img src="bootstrap/assets/images/logo_light.png" alt=""></a>
+
+            <ul class="nav navbar-nav visible-xs-block">
+                <li><a data-toggle="collapse" data-target="#navbar-mobile"><i class="icon-tree5"></i></a></li>
+                <li><a class="sidebar-mobile-main-toggle"><i class="icon-paragraph-justify3"></i></a></li>
+            </ul>
+        </div>
+
+        <div class="navbar-collapse collapse" id="navbar-mobile">
+            <div class="navbar-right" style="margin-top:1%;">
+                <a href="/logout">
+                    <span class="text-semibold">로그 아웃</span>
+                </a>
+            </div>
+        </div>
+    </div>
+    <!-- /top navbar -->
+
+
+    <!-- Page container -->
+    <div class="page-container">
+
+        <!-- Page content -->
+        <div class="page-content">
+            <!-- Main sidebar -->
+            <div class="sidebar sidebar-main">
+                <div class="sidebar-content">
+                    <!-- Main navigation -->
+                    <div class="sidebar-category sidebar-category-visible">
+                        <div class="category-content no-padding">
+                            <ul class="navigation navigation-main navigation-accordion">
+
+                                <li class="navigation-header"><span>리스트</span> <i class="icon-menu" title="List"></i></li>
+                                <!-- Main -->
+                                <li>
+                                    <a href="#"><i class="icon-stack2"></i> <span>트레이딩</span></a>
+                                    <ul class="nav">
+                                        <li class="nav-item">
+                                            <a class="nav-link" id="trade_embeded" data-toggle="tab" href="#auto_trading" role="tab">자전 거래</a>
+                                        </li>
+                                    </ul>
+                                </li>
+                                <li>
+                                    <a href="#"><i class="icon-wrench3"></i> <span>운영관리</span></a>
+                                    <ul class="nav">
+                                        <li class="nav-item">
+                                            <a class="nav-link" id="config_embeded" data-toggle="tab" href="#coin_config" role="tab">코인 관리</a>
+                                        </li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- /main navigation -->
+
+                </div>
+            </div>
+            <!-- /main sidebar -->
+
+
+            <!-- Main content -->
+            <div class="content-wrapper">
+                <div class="tab-content">
+                    <div class="tab-pane" id="auto_trading" role="tabpanel">
+                      <embed id="embed_auto_trading" name="embed_auto_trading" type="text/html"  src="/main/auto_trading" style="width:100%; height:1000px;"></embed>
+                    </div>
+
+                    <div class="tab-pane" id="coin_config" role="tabpanel">
+                        <embed id="embed_coin_config" name="embed_coin_config" type="text/html"  src="/main/coin_config" style="width:100%; height:1000px;"></embed>
+                    </div>
+                </div>
+            </div>
+            <!-- /main content -->
+
+        </div>
+        <!-- /page content -->
+
+    </div>
+    <!-- /page container -->
+
+</body>
+</html>
+
+
+
+<!-- Core JS files -->
+<script type="text/javascript" src="bootstrap/assets/js/plugins/loaders/pace.min.js"></script>
+<script type="text/javascript" src="bootstrap/assets/js/core/libraries/jquery.min.js"></script>
+<script type="text/javascript" src="bootstrap/assets/js/core/libraries/bootstrap.min.js"></script>
+<script type="text/javascript" src="bootstrap/assets/js/plugins/loaders/blockui.min.js"></script>
+<!-- /core JS files -->
+
+<!-- Theme JS files -->
+<script type="text/javascript" src="bootstrap/assets/js/plugins/forms/styling/uniform.min.js"></script>
+<script type="text/javascript" src="bootstrap/assets/js/plugins/editors/wysihtml5/wysihtml5.min.js"></script>
+<script type="text/javascript" src="bootstrap/assets/js/plugins/editors/wysihtml5/toolbar.js"></script>
+<script type="text/javascript" src="bootstrap/assets/js/plugins/editors/wysihtml5/parsers.js"></script>
+<script type="text/javascript" src="bootstrap/assets/js/plugins/editors/wysihtml5/locales/bootstrap-wysihtml5.ua-UA.js"></script>
+<script type="text/javascript" src="bootstrap/assets/js/plugins/notifications/jgrowl.min.js"></script>
+
+<script type="text/javascript" src="bootstrap/assets/js/core/app.js"></script>
+<script type="text/javascript" src="bootstrap/assets/js/pages/editor_wysihtml5.js"></script>
+<!-- /theme JS files -->
+
+<script>
+    // nav class 가 충돌이나서 사용
+    $(document).ready(() => {
+        $(".nav a").on("click", item => {   
+            $(".nav").find(".active").removeClass("active");   
+            $(this).parent().addClass("active"); 
+
+            if(item.target.id != 'trade_embeded'){
+                $('#auto_trading').empty();
+                $('#auto_trading').append(`<embed id="embed_auto_trading" name="embed_auto_trading" type="text/html"  src="/main/auto_trading" style="width:100%; height:1000px;"></embed>`);
+            }else if(item.target.id != 'config_embeded'){
+                $('#coin_config').empty();
+                $('#coin_config').append(`<embed id="embed_coin_config" name="embed_coin_config" type="text/html"  src="/main/coin_config" style="width:100%; height:1000px;"></embed>`);                
+            }
+
+        });
+
+        $('#trade_embeded').trigger('click'); 
+    })
+</script>
