@@ -61,7 +61,7 @@ public class LiquidityTradeThread implements Runnable{
             /** Coin one **/
             if(DataCommon.COINONE.equals(liquidity.getExchange())){
                 coinOne = new CoinOneFunction();
-                coinOne.initCoinOneLiquidity(liquidity, user, exchange);
+                coinOne.initCoinOne(liquidity, user, exchange);
             }
             /** Dcoin **/
             else if(DataCommon.DCOIN.equals(liquidity.getExchange())){

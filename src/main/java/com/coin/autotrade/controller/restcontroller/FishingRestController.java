@@ -1,7 +1,9 @@
 package com.coin.autotrade.controller.restcontroller;
 
-import com.coin.autotrade.model.AutoTrade;
-import com.coin.autotrade.service.AutoTradeService;
+import com.coin.autotrade.model.Fishing;
+import com.coin.autotrade.model.Liquidity;
+import com.coin.autotrade.service.FishingService;
+import com.coin.autotrade.service.LiquidityService;
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,22 +16,22 @@ import javax.servlet.http.HttpServletRequest;
 
 @RestController
 @Slf4j
-public class AutoTradeRestController {
+public class FishingRestController {
 
     @Autowired
-    AutoTradeService service;
+    FishingService service;
 
     /**
-     * Service Get
+     * Liquidity Get
      * @return
      */
-    @GetMapping(value = "/v1/trade/auto")
-    public String getAutoTrade() {
+    @GetMapping(value = "/v1/trade/fishing")
+    public String getFishingTrade() {
         String returnVal = "";
         try{
-            returnVal = service.getAutoTrade();
+            returnVal = service.getFishing();
         }catch(Exception e){
-            log.error("[ERROR][API - GET Autotrade] {}", e.getMessage());
+            log.error("[API - Get Fishing] {} ", e.getMessage());
         }
 
         return returnVal;
@@ -42,27 +44,27 @@ public class AutoTradeRestController {
      * @param user
      * @return
      */
-    @PostMapping(value = "/v1/trade/auto")
-    public String postAutoTrade(HttpServletRequest request, @RequestBody String body) {
+    @PostMapping(value = "/v1/trade/fishing")
+    public String postFishingTrade(HttpServletRequest request, @RequestBody String body) {
 
         String returnVal = "";
         Gson gson = new Gson();
 
         try{
-            AutoTrade autoTrade = gson.fromJson(body, AutoTrade.class);
+            Fishing fishing = gson.fromJson(body, Fishing.class);
 
-            switch(autoTrade.getStatus()) {
+            switch(fishing.getStatus()) {
                 case "RUN":
-                    returnVal = service.postAutoTrade(autoTrade, request.getSession().getAttribute("userId").toString());
+                    returnVal = service.postFishing(fishing, request.getSession().getAttribute("userId").toString());
                     break;
                 case "STOP":
-                    returnVal = service.deleteAutoTrade(autoTrade);
+                    returnVal = service.deleteFishing(fishing);
                     break;
                 default:
                     break;
             }
         }catch(Exception e){
-            log.error("[ERROR][API - POST Autotrdae] {}", e.getMessage());
+            log.error("[API - Post Fishing] {} ", e.getMessage());
         }
 
         return returnVal;

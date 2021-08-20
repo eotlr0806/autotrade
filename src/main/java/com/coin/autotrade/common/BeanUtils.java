@@ -4,7 +4,6 @@ import lombok.experimental.UtilityClass;
 import org.springframework.context.ApplicationContext;
 
 @UtilityClass
-
 public class BeanUtils {
     public static Object getBean(Class<?> classType) {
         ApplicationContext applicationContext = ApplicationContextProvider.getApplicationContext(); // Container 받아오기

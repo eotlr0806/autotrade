@@ -456,7 +456,126 @@
                                 </div>
                             </div>
                         </div>
-                        
+
+                    </div>
+
+                    <!-- 1 columns form -->
+                    <div class="row">
+                        <!-- 호가 긁기 -->
+                        <div class="col-md-12">
+                            <div class="panel panel-flat">
+                                <div class="panel-heading">
+                                    <h5 class="panel-title text-bold">호가 긁기</h5>
+                                    <div class="heading-elements">
+                                        <ul class="icons-list">
+                                            <li><a data-action="collapse"></a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="panel-body">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="row">
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label>활성 틱수</label>
+                                                        <input id="tick_cnt_fishing" type="text" placeholder="0" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label>틱 간격</label>
+                                                        <input id="range_tick_fishing" type="text" placeholder="0" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="row">
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label>주문 범위</label>
+                                                        <input id="min_contract_fishing" type="text" placeholder="0" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label>　　</label>
+                                                        <input id="max_contract_fishing" type="text" placeholder="100" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="row">
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label>체결 범위</label>
+                                                        <input id="min_execute_fishing" type="text" placeholder="0" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label>　　</label>
+                                                        <input id="max_execute_fishing" type="text" placeholder="100" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="row">
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label>시간 범위</label>
+                                                        <input id="min_seconds_fishing" type="text" placeholder="30" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label>　　</label>
+                                                        <input id="max_seconds_fishing" type="text" placeholder="60" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="row">
+                                                <div class="form-group">
+                                                    <label class="control-label col-sm-2">모드 설정</label>
+                                                    <div class="radio col-sm-8" style="margin-top:0px;">
+                                                        <div class="radio" style="margin-top:0px;">
+                                                            <div>
+                                                                <input id="RANDOM_FISHING_L" type="radio" name="fishing" class="custom-radio">
+                                                                <span style="padding-left:25px; font-size:12px; color:#999999;">무작위</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="radio">
+                                                            <div>
+                                                                <input id="SELL_FISHING_L" type="radio" name="fishing" class="custom-radio">
+                                                                <span style="padding-left:25px; font-size:12px; color:#999999;">매도우선</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="radio">
+                                                            <div>
+                                                                <input id="BUY_FISHING_L" type="radio" name="fishing" class="custom-radio">
+                                                                <span style="padding-left:25px; font-size:12px; color:#999999;">매수우선</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="text-right">
+                                                <button  onclick="fncObj.postFishingTrade(RUN)" type="submit" class="btn btn-primary">실 행</button>
+                                                <button  onclick="fncObj.postFishingTrade(STATUS)" type="submit" class="btn btn-info">리스트 조회</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
                 <!-- /content area -->
@@ -599,6 +718,55 @@
         </div>
     </div>
     <!-- /status container -->
+
+    <!-- status container -->
+    <div id="modal_fishing_status" class="modal fade">
+        <div class="modal-dialog modal-full" >
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h5 class="modal-title text-bold">호가 긁기 현황</h5>
+                </div>
+                <div class="form-horizontal">
+                    <div class="modal-body" >
+                        <div class="form-group">
+                            <label class="control-label text-bold col-sm-12">리스트</label>
+                            <div class="col-sm-12">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th class="text-bold">id</th>
+                                                <th class="text-bold">시간</th>
+                                                <th class="text-bold">거래소</th>
+                                                <th class="text-bold">코인</th>
+                                                <th class="text-bold">주문 범위</th>
+                                                <th class="text-bold">체결 범위</th>
+                                                <th class="text-bold">시간 범위</th>
+                                                <th class="text-bold">모드</th>
+                                                <th class="text-bold">활성틱수</th>
+                                                <th class="text-bold">틱간격</th>
+                                                <th class="text-bold">상태</th>
+                                                <th class="text-bold">실행자</th>
+                                                <th class="text-bold">정지</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="modal_fishing_status_body">
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+                            <input type="button" class="btn" data-dismiss="modal" value="닫기">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- /status container -->
 </body>
 
 
@@ -642,7 +810,8 @@
     const NOT_RUN            = -1;
  
     let clickedAutoMode      = '';
-    let clickedLiquidityMode ='';
+    let clickedLiquidityMode = '';
+    let clickedFishingMode   = '';
     let exchangesList        = [];
     let loginUserId          = '';
     let liquiditySelfTick    = [];
@@ -750,7 +919,7 @@
                 let returnVal = await common.get(AUTO_TRADE);
                 if(returnVal.data != null){
                     if(returnVal.status == SUCCESS){
-                        dataObj.setScheduleStatus(returnVal.data);
+                        dataObj.setAutoTradeStatus(returnVal.data);
                     }
                 }
             }
@@ -758,12 +927,8 @@
         
         // setDataBeforeAutoTrade 에서 값이 유효한지 체크하는 로직
         validateAutoTrade : () => {
-
-            if($('#filter_exchange').val() == '' || $('#filter_exchange').val() == undefined || $('#filter_exchange').val() == 'NONE'){
-                return common.noti("자전거래","상단의 거래소를 선택해주세요.","error");
-            }else if($('#filter_coin').val() == '' || $('#filter_coin').val() == undefined || $('#filter_coin').val() == 'NONE'){
-                return common.noti("자전거래","상단의 코인을 선택해주세요.","error");
-            } else if($('#min_cnt').val() == "" || $('#max_cnt').val() == ""){
+            
+            if($('#min_cnt').val() == "" || $('#max_cnt').val() == ""){
                 return common.noti("자전거래","수량을 모두 입력해주세요.","error");
             }else if(Number($('#min_cnt').val()) > Number($('#max_cnt').val())){
                 return common.noti("자전거래","최소 수량이 최대보다 큽니다.","error");
@@ -797,10 +962,6 @@
                         common.noti("호가유동성","해당 호가유동성이 정상적으로 실행되지 않았습니다.\n로그아웃 후 다시 시도해주세요.","error");
                     }
                 }
-
-                // TODO
-
-
             }else if(action == STOP){
                 params = dataObj.setDataBeforeLiquidityTradeStop(itemId);
                 if(params != CODE_ERROR){
@@ -822,12 +983,6 @@
  
         // liquidityTrade 유효성 검사
         validateLiquidityTrade : () => {
-            
-            if($('#filter_exchange').val() == '' || $('#filter_exchange').val() == undefined || $('#filter_exchange').val() == 'NONE'){
-                return common.noti("호가 유동성","상단의 거래소를 선택해주세요.","error");
-            }else if($('#filter_coin').val() == '' || $('#filter_coin').val() == undefined || $('#filter_coin').val() == 'NONE'){
-                return common.noti("호가 유동성","상단의 코인을 선택해주세요.","error");
-            }
 
             if($('#range_tick_liquidity').val() == ""){
                 return common.noti("호가 유동성","틱 간격을 입력해주세요.","error");
@@ -839,8 +994,7 @@
                 return common.noti("호가 유동성","시간을 모두 입력해주세요.","error");
             }else if(Number($('#min_seconds_liquidity').val()) > Number($('#max_seconds_liquidity').val())){
                 return common.noti("호가 유동성","최소 시간이 최대보다 큽니다.","error");
-            }
-            else if(clickedLiquidityMode == "" || clickedLiquidityMode == undefined){
+            }else if(clickedLiquidityMode == "" || clickedLiquidityMode == undefined){
                 return common.noti("호가 유동성","모드를 설정해주세요.","error");
             }else if(loginUserId == "" || loginUserId == undefined){
                 return common.noti("호가 유동성","세션 정보가 없습니다. \n다시 로그인해주세요.","error");
@@ -856,7 +1010,81 @@
 
             return true;
         },
-        
+
+        // 매매 긁기 요청
+        postFishingTrade : async (action, itemId) => {
+            if(action == RUN){
+                let params  = dataObj.setDataBeforeFishingTrade();
+
+
+                if(params != CODE_ERROR){
+                    let returnVal = await common.post(FISHING, params);
+                    if(returnVal.data != null){
+                        if(returnVal.data.code == SUCCESS){
+                            common.noti("호가 긁기","해당 내역으로 거래가 시작됩니다.","success");
+                        }else{
+                            common.noti("호가 긁기","해당 호가 긁기가 정상적으로 실행되지 않았습니다.\n로그아웃 후 다시 시도해주세요.","error");
+                        }
+                    }else{
+                        common.noti("호가 긁기","해당 호가 긁기가 정상적으로 실행되지 않았습니다.\n로그아웃 후 다시 시도해주세요.","error");
+                    }
+                }
+            }else if(action == STOP){
+                params = dataObj.setDataBeforeFishingTradeStop(itemId);
+                if(params != CODE_ERROR){
+                    let returnVal = await common.post(FISHING, params);
+                    if(returnVal.status == SUCCESS){
+                        common.noti("호가 긁기","해당 호가 긁기를 정지하였습니다.","success");
+                        $('#modal_fishing_status').modal('hide');
+                    }
+                }
+            }else if(action == STATUS){
+                let returnVal = await common.get(FISHING);
+                if(returnVal.data != null){
+                    if(returnVal.status == SUCCESS){
+                        dataObj.setFishingStatus(returnVal.data);
+                    }
+                }
+            }
+        },
+
+        // fishingTrade 유효성 검사
+        validateFishingTrade : () => {
+            
+            if($('#tick_cnt_fishing').val() == ""){
+                return common.noti("호가 긁기","활성 틱수를 입력해주세요.","error");
+            }else if($('#range_tick_fishing').val() == ""){
+                return common.noti("호가 긁기","틱 간격을 입력해주세요.","error");
+            }else if($('#min_contract_fishing').val() == "" || $('#max_contract_fishing').val() == ""){
+                return common.noti("호가 긁기","주문 범위를 모두 입력해주세요.","error");
+            }else if(Number($('#min_contract_fishing').val()) > Number($('#max_contract_fishing').val())){
+                return common.noti("호가 긁기","최소 수량이 최대보다 큽니다.","error");
+            }else if($('#min_execute_fishing').val() == "" || $('#max_execute_fishing').val() == ""){
+                return common.noti("호가 긁기","체결 범위를 모두 입력해주세요.","error");
+            }else if(Number($('#min_execute_fishing').val()) > Number($('#max_execute_fishing').val())){
+                return common.noti("호가 긁기","최소 체결 수량이 최대보다 큽니다.","error");
+            }else if($('#min_seconds_fishing').val() == "" || $('#max_seconds_fishing').val() == ""){
+                return common.noti("호가 긁기","시간을 모두 입력해주세요.","error");
+            }else if(Number($('#min_seconds_fishing').val()) > Number($('#max_seconds_fishing').val())){
+                return common.noti("호가 긁기","최소 시간이 최대보다 큽니다.","error");
+            }else if(clickedFishingMode == "" || clickedFishingMode == undefined){
+                return common.noti("호가 긁기","모드를 설정해주세요.","error");
+            }else if(loginUserId == "" || loginUserId == undefined){
+                return common.noti("호가 긁기","세션 정보가 없습니다. \n다시 로그인해주세요.","error");
+            }
+            return true;
+        },
+
+        // 공통 부분
+        validateCommon : () => {
+            if($('#filter_exchange').val() == '' || $('#filter_exchange').val() == undefined || $('#filter_exchange').val() == 'NONE'){
+                return common.noti("호가 유동성","상단의 거래소를 선택해주세요.","error");
+            }else if($('#filter_coin').val() == '' || $('#filter_coin').val() == undefined || $('#filter_coin').val() == 'NONE'){
+                return common.noti("호가 유동성","상단의 코인을 선택해주세요.","error");
+            }
+
+            return true;
+        },
     };
     /** Function object **/
 
@@ -906,7 +1134,7 @@
         },
 
         // 자전거래 리스트 조회
-        setScheduleStatus : (data) => {
+        setAutoTradeStatus : (data) => {
             $('#modal_schedule_status_body').empty();
             // TODO:
             if(Object.prototype.toString.call(data) == '[object Array]'){
@@ -970,7 +1198,43 @@
                 $('#modal_liquidity_status_body').append(dynamicText);
                 $('#modal_liquidity_status').modal('show');
             }else{
-                common.noti("자전 거래","실행중인 내역이 없습니다.","success");
+                common.noti("호가 유동성","실행중인 내역이 없습니다.","success");
+            }
+        },
+
+        // 호가 긁기 상태조회
+        setFishingStatus : (data) => {
+            
+            $('#modal_fishing_status_body').empty();
+
+            // TODO:
+            if(Object.prototype.toString.call(data) == '[object Array]'){    
+                let dynamicText = "";
+                data.forEach(item => {
+                    dynamicText += `
+                        <tr>
+                            <td class="text-bold">${item.id}</td>
+                            <td class="text-bold">${item.date}</td>
+                            <td class="text-bold">${item.exchange}</td>
+                            <td class="text-bold">${item.coin}</td>
+                            <td class="text-bold">${item.minContractCnt} ~ ${item.maxContractCnt}</td>
+                            <td class="text-bold">${item.minExecuteCnt} ~ ${item.maxExecuteCnt}</td>
+                            <td class="text-bold">${item.minSeconds} ~ ${item.maxSeconds}</td>
+                            <td class="text-bold">${item.mode}</td>
+                            <td class="text-bold">${item.tickCnt}</td>
+                            <td class="text-bold">${item.rangeTick}</td>
+                            <td class="text-bold">${item.status}</td>
+                            <td class="text-bold">${item.userId}</td>
+                            <td class="text-bold">
+                                <button onclick="fncObj.postFishingTrade(${STOP},${item.id});" type="submit" class="btn btn-danger">정 지 </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                $('#modal_fishing_status_body').append(dynamicText);
+                $('#modal_fishing_status').modal('show');
+            }else{
+                common.noti("호가 긁기","실행중인 내역이 없습니다.","success");
             }
         },
 
@@ -991,7 +1255,7 @@
         // Autotrade start
         setDataBeforeAutoTradeRun : () => {
             
-            if(!fncObj.validateAutoTrade()){
+            if(!fncObj.validateCommon() || !fncObj.validateAutoTrade()){
                 return CODE_ERROR;
             }
 
@@ -1022,7 +1286,7 @@
 
         // Liquidity Start
         setDataBeforeLiquidityTrade : () => {
-            if(!fncObj.validateLiquidityTrade()){
+            if(!fncObj.validateCommon() || !fncObj.validateLiquidityTrade()){
                 return CODE_ERROR
             }
 
@@ -1051,7 +1315,44 @@
                 status: STOP
             }
             return body;
-        }
+        },
+
+
+
+
+        // Fishing Start
+        setDataBeforeFishingTrade : () => {
+            if(!fncObj.validateCommon() || !fncObj.validateFishingTrade()){
+                return CODE_ERROR
+            }
+
+            let body = {
+                minContractCnt     : $('#min_contract_fishing').val(),
+                maxContractCnt     : $('#max_contract_fishing').val(),
+                minExecuteCnt      : $('#min_execute_fishing').val(),
+                maxExecuteCnt      : $('#max_execute_fishing').val(),
+                minSeconds         : $('#min_seconds_fishing').val(),
+                maxSeconds         : $('#max_seconds_fishing').val(),
+                rangeTick          : $('#range_tick_fishing').val(),
+                tickCnt            : $('#tick_cnt_fishing').val(),
+                status             : RUN,
+                mode               : clickedFishingMode,
+                exchange           : $('#filter_exchange').val(),
+                coin               : $('#filter_coin').val(),
+                userId             : loginUserId
+            }
+
+            return body;
+        },
+
+        // Fishing Stop
+        setDataBeforeFishingTradeStop : (itemId) => {
+            let body = {
+                id: itemId,
+                status: STOP
+            }
+            return body;
+        },
 
     }
     /** Function object for data setter,getter **/
@@ -1064,9 +1365,11 @@
     $('.custom-radio').on('click', event => {
         let name = event.currentTarget.name;
         if(name == 'autotrade'){
-            clickedAutoMode = event.currentTarget.id;
+            clickedAutoMode      = event.currentTarget.id;
         }else if(name == 'liquidity'){
             clickedLiquidityMode = event.currentTarget.id;
+        }else if(name = 'fishing'){
+            clickedFishingMode   = event.currentTarget.id;
         }
     })
 

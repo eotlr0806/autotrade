@@ -1,6 +1,7 @@
 package com.coin.autotrade.common;
 
 import com.coin.autotrade.service.thread.AutoTradeThread;
+import com.coin.autotrade.service.thread.FishingTradeThread;
 import com.coin.autotrade.service.thread.LiquidityTradeThread;
 
 import java.util.HashMap;
@@ -55,8 +56,9 @@ public class DataCommon {
     public static String RSA_INSTANCE = "RSA";          // RSA transformation
 
     /** Thread List */
-    public static Map<Long, AutoTradeThread> autoTradeThreadMap       = new HashMap<Long,AutoTradeThread>();
-    public static Map<Long, LiquidityTradeThread> liquidityThreadMap  = new HashMap<Long,LiquidityTradeThread>();
+    public static Map<Long, AutoTradeThread> autoTradeThreadMap        = new HashMap<Long,AutoTradeThread>();
+    public static Map<Long, LiquidityTradeThread> liquidityThreadMap   = new HashMap<Long,LiquidityTradeThread>();
+    public static Map<Long, FishingTradeThread> fishingTradeThreadMap  = new HashMap<Long,FishingTradeThread>();
 
     /** ERROR CODE */
     public static Integer CODE_ERROR       = 400;

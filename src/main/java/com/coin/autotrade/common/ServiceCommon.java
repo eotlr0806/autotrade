@@ -1,6 +1,7 @@
 package com.coin.autotrade.common;
 
 import com.coin.autotrade.service.thread.AutoTradeThread;
+import com.coin.autotrade.service.thread.FishingTradeThread;
 import com.coin.autotrade.service.thread.LiquidityTradeThread;
 import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
@@ -41,9 +42,7 @@ public class ServiceCommon {
             }
             value = random.nextInt(max-min+1)+min;
         }catch(Exception e){
-            log.error("[ServiceCommon.java - getRandomInt] ", e);
-            // TODO : log로 변경
-            System.out.println("Exception in getRandomInt {}." + e.getMessage());
+            log.error("[ServiceCommon.java - getRandomInt] {}", e.getMessage());
         }
         return value;
     }
@@ -61,8 +60,7 @@ public class ServiceCommon {
             }
             value = min + (random.nextDouble() * (max - min));
         }catch(Exception e){
-            // TODO : log로 변경
-            System.out.println("Exception in getRandomInt " + e.getMessage());
+            log.error("[ServiceCommon.java - getRandomDouble] {}", e.getMessage());
         }
         return value;
     }
@@ -75,8 +73,7 @@ public class ServiceCommon {
             BigDecimal randomVal = new BigDecimal(String.valueOf(random.nextDouble()));
             value = min.add(randomVal.multiply( max.subtract(min) ));
         }catch(Exception e){
-            // TODO : log로 변경
-            System.out.println("Exception in getRandomInt " + e.getMessage());
+            log.error("[ServiceCommon.java - getRandomDecimal] {}", e.getMessage());
         }
         return value;
     }
@@ -141,6 +138,34 @@ public class ServiceCommon {
     public static LiquidityTradeThread getLiquidityThread (long id){
         LiquidityTradeThread thread = DataCommon.liquidityThreadMap.get(id);
         DataCommon.liquidityThreadMap.remove(id);
+        return thread;
+    }
+
+    /**
+     * fishing thread를 공통 map 에 담아 보관한다.
+     * @param thread - Fishing thread object
+     * @return - true : 성공 / false / 실패
+     */
+    public static boolean setFishingThread (Long id, FishingTradeThread thread){
+        try{
+            synchronized (synchronizedObj){
+                DataCommon.fishingTradeThreadMap.put(id, thread);
+                return true;
+            }
+        }catch (Exception e){
+            System.out.println(e.getMessage());
+        }
+        return false;
+    }
+
+    /**
+     * liquidity thread에서 map 에 값을 remove 후 get해서 반환
+     * @param key
+     * @return
+     */
+    public static FishingTradeThread getFishingThread (long id){
+        FishingTradeThread thread = DataCommon.fishingTradeThreadMap.get(id);
+        DataCommon.fishingTradeThreadMap.remove(id);
         return thread;
     }
 

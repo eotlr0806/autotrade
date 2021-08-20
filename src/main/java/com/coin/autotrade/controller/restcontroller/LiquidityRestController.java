@@ -4,13 +4,15 @@ import com.coin.autotrade.model.Liquidity;
 import com.coin.autotrade.model.User;
 import com.coin.autotrade.service.LiquidityService;
 import com.google.gson.Gson;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 
 @RestController
-@SessionAttributes("user")
+//@SessionAttributes("user")      // TODO : 제거 가능하지 않니?
+@Slf4j
 public class LiquidityRestController {
 
     @Autowired
@@ -26,7 +28,7 @@ public class LiquidityRestController {
         try{
             returnVal = service.getLiquidity();
         }catch(Exception e){
-            System.out.println(e.getMessage());
+            log.error("[API - Get Liquidity] {} ", e.getMessage());
         }
 
         return returnVal;
@@ -59,7 +61,7 @@ public class LiquidityRestController {
                     break;
             }
         }catch(Exception e){
-            System.out.println(e.getMessage());
+            log.error("[API - Post Liquidity] {} ", e.getMessage());
         }
 
         return returnVal;

@@ -9,9 +9,10 @@ const EXCHANGE_LIST      = {
 }
 
 const AUTO_TRADE         = "/v1/trade/auto";
+const LIQUIDITY          = "/v1/trade/liquidity";
+const FISHING            = "/v1/trade/fishing";
 const EXCHANGE           = "/v1/exchanges";
 const COIN               = "/v1/exchanges/coin";
-const LIQUIDITY          = "/v1/trade/liquidity";
 const ORDER_BOOK         = "/v1/orderbook";
 const CODE_ERROR         = -1000;
 const SUCCESS            = 200;

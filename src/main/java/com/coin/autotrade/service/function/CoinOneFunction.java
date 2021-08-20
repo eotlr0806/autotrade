@@ -35,43 +35,34 @@ public class CoinOneFunction {
     private AutoTrade autoTrade         = null;
     private Exchange exchange           = null;
     private Liquidity liquidity         = null;
+    private Fishing fishing             = null;
     private String ACCESS_TOKEN         = "access_token";
     private String SECRET_KEY           = "secret_key";
     private Map<String, String> keyList = new HashMap<>();
     Gson gson                           = new Gson();
 
-    /**
-     * 자전 거래를 이용하기위한 초기값 설정
-     * @param autoTrade
-     * @param user
-     */
-    public void initCoinOneAutoTrade(AutoTrade autoTrade, User user, Exchange exchange) throws Exception {
-        this.user      = user;
+    /** 자전 거래를 이용하기위한 초기값 설정 */
+    public void initCoinOne(AutoTrade autoTrade, User user, Exchange exchange) throws Exception {
         this.autoTrade = autoTrade;
-        this.exchange  = exchange;
-
-        String[] coinData = ServiceCommon.setCoinData(autoTrade.getCoin());
-
-        // Set token key
-        for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
-            if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1]) ){
-                keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
-                keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
-            }
-        }
+        setCommonValue(user, exchange, ServiceCommon.setCoinData(autoTrade.getCoin()));
     }
 
-    /**
-     * 호가 유동성을 이용하기 위한 초기값 설정
-     * @param liquidity
-     * @param user
-     */
-    public void initCoinOneLiquidity(Liquidity liquidity, User user, Exchange exchange) throws Exception{
-        this.user       = user;
+    /** 호가 유동성을 이용하기 위한 초기값 설정 */
+    public void initCoinOne(Liquidity liquidity, User user, Exchange exchange) throws Exception{
         this.liquidity  = liquidity;
-        this.exchange   = exchange;
+        setCommonValue(user, exchange, ServiceCommon.setCoinData(liquidity.getCoin()));
+    }
 
-        String[] coinData = ServiceCommon.setCoinData(liquidity.getCoin());
+    /** 매매 긁기를 이용하기 위한 초기값 설정 */
+    public void initCoinOne(Fishing fishing, User user, Exchange exchange) throws Exception{
+        this.fishing = fishing;
+        setCommonValue(user, exchange, ServiceCommon.setCoinData(fishing.getCoin()));
+    }
+
+    // init 시, keyList 값 세팅
+    private void setCommonValue(User user, Exchange exchange, String[] coinData){
+        this.user       = user;
+        this.exchange   = exchange;
 
         // Set token key
         for(ExchangeCoin exCoin : exchange.getExchangeCoin()){

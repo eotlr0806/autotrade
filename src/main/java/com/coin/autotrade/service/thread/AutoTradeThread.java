@@ -56,27 +56,7 @@ public class AutoTradeThread implements Runnable{
             /** Coin one **/
             if(DataCommon.COINONE.equals(autoTrade.getExchange())){
                 coinOne = new CoinOneFunction();
-                coinOne.initCoinOneAutoTrade(autoTrade, user, exchange);
-            }
-            /** Dcoin **/
-            else if(DataCommon.DCOIN.equals(autoTrade.getExchange())){
-                dCoin   = new DcoinFunction();
-                dCoin.initDcoinAutoTrade(autoTrade, user, exchange);
-            }
-            /** Flata **/
-            else if(DataCommon.FLATA.equals(autoTrade.getExchange())){
-                flata   = new FlataFunction();
-                flata.initFlataAutoTrade(autoTrade, user, exchange);
-            }
-            /** FoblGate **/
-            else if(DataCommon.FOBLGATE.equals(autoTrade.getExchange())){
-                foblGate   = new FoblGateFunction();
-                foblGate.initFoblGateAutoTrade(autoTrade, user, exchange);
-            }
-            /** Bithumb Global **/
-            else if(DataCommon.BITHUMB_GLOBAL.equals(autoTrade.getExchange())){
-                bithumbGlobal   = new BithumbGlobalFunction();
-                bithumbGlobal.initBithumbGlobalAutoTrade(autoTrade, user, exchange);
+                coinOne.initCoinOne(autoTrade, user, exchange);
             }
         }catch (Exception e){
             log.error("[ERROR][Auto Trade Start fail] exchange {}" , exchange.getExchangeCode());
