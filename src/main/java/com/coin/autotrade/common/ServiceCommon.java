@@ -14,12 +14,8 @@ import java.math.BigDecimal;
 import java.security.*;
 import java.security.spec.RSAPublicKeySpec;
 import java.text.DateFormat;
-import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Random;
+import java.util.*;
 
 /*** 공통으로 쓰이는 서비스 로직을 담은 클래스 */
 @Slf4j
@@ -328,5 +324,13 @@ public class ServiceCommon {
         return num;
     }
 
+    public static Map deepCopy( Map<String,String> paramMap) throws Exception{
+        Map<String, String> copy = new HashMap<String, String>();
+        for (String key : paramMap.keySet()){
+            copy.put(key, paramMap.get(key));
+        }
+
+        return copy;
+    }
 
 }

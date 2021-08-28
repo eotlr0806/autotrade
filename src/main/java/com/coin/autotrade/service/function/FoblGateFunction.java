@@ -5,6 +5,7 @@ import com.coin.autotrade.common.DataCommon;
 import com.coin.autotrade.common.ServiceCommon;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.repository.ExchangeRepository;
+import com.coin.autotrade.service.CoinService;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +14,7 @@ import javax.net.ssl.HttpsURLConnection;
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.InputStreamReader;
+import java.math.BigDecimal;
 import java.net.URL;
 import java.security.MessageDigest;
 import java.util.ArrayList;
@@ -31,9 +33,12 @@ public class FoblGateFunction {
     Exchange exchange                    = null;
     AutoTrade autoTrade                  = null;
     Liquidity liquidity                  = null;
+    CoinService coinService              = null;
+    Fishing fishing                      = null;
     User user                            = null;
     String SELL                          = "ask";
     String BUY                           = "bid";
+    private String ALREADY_TRADED        = "5004";
 
     ExchangeRepository exchageRepository;
 
@@ -44,26 +49,36 @@ public class FoblGateFunction {
 
     /**
      * Foblgate Function initialize for autotrade
-     * @param autoTrade
-     * @param user
      */
-    public void initFoblGateAutoTrade(AutoTrade autoTrade, User user, Exchange exchange){
-        this.user      = user;
+    public void initFoblGate(AutoTrade autoTrade, User user, Exchange exchange){
         this.autoTrade = autoTrade;
-        this.exchange  = exchange;
+        setCommonValue(user, exchange);
     }
 
     /**
      * Foblgate Function initialize for liquidity
-     * @param liquidity
-     * @param user
-     * @param exchange
      */
-    public void initFoblGateLiquidity(Liquidity liquidity, User user, Exchange exchange){
-        this.user      = user;
+    public void initFoblGate(Liquidity liquidity, User user, Exchange exchange){
         this.liquidity = liquidity;
-        this.exchange  = exchange;
+        setCommonValue(user, exchange);
     }
+
+    /**
+     * Foblgate Function initialize for fishing
+     */
+    public void initFoblGate(Fishing fishing, User user, Exchange exchange, CoinService coinService){
+        this.fishing     = fishing;
+        this.coinService = coinService;
+        setCommonValue(user, exchange);
+    }
+
+
+    private void setCommonValue(User user,  Exchange exchange){
+        this.user     = user;
+        this.exchange = exchange;
+    }
+
+
 
     /** 해당 user 정보를 이용해 API 키를 셋팅한다 */
     public void setApiKey(String coin, String coinId){
@@ -91,18 +106,23 @@ public class FoblGateFunction {
      * @param price
      * @param cnt
      * @param coin
-     * @param symbol
+     * @param symbol coin + "/" + currency : BTC/KRW
      * @param mode
      * @return
      */
-    public int startAutoTrade(String price, String cnt, String coin,String coinId, String symbol, String mode){
+    public int startAutoTrade(String price, String cnt){
         log.info("[FOBLGATE][AUTOTRADE START]");
-        setApiKey(coin, coinId);    // Key 값 셋팅
-        int returnCode    = DataCommon.CODE_ERROR;
+        int returnCode    = DataCommon.CODE_SUCCESS;
 
         try{
+            String[] coinData = ServiceCommon.setCoinData(autoTrade.getCoin());
+            String coin       = coinData[0];
+            String coinId     = coinData[1];
+            String symbol     = coinData[0] + "/" + getCurrency(exchange, coinData[0], coinData[1]);
+            setApiKey(coin, coinId);    // Key 값 셋팅
 
             // mode 처리
+            String mode = autoTrade.getMode();
             if(DataCommon.MODE_RANDOM.equals(mode)){
                 mode = (ServiceCommon.getRandomInt(0,1) == 0) ? DataCommon.MODE_BUY : DataCommon.MODE_SELL;
             }
@@ -110,11 +130,9 @@ public class FoblGateFunction {
             // 1 : 매수 , 2 : 매도
             if(DataCommon.MODE_BUY.equals(mode)){
                 String buyOrderId  = "";
-                if( !(buyOrderId = createOrder(BUY, price, cnt, symbol)).equals("")){   // 매수
+                if( !(buyOrderId = createOrder(BUY, price, cnt, symbol)).equals("")){    // 매수/OrderId가 있으면 성공
                     Thread.sleep(300);
-                    if(!createOrder(SELL,price, cnt, symbol).equals("")){               // 매도
-                        returnCode = DataCommon.CODE_SUCCESS;
-                    }else{
+                    if(createOrder(SELL,price,cnt,symbol).equals("")){                   // 매도/OrderId가 없으면 실패
                         Thread.sleep(300);
                         cancelOrder(buyOrderId,BUY, price, symbol);                      // 매도 실패 시, 매수 취소
                     }
@@ -123,9 +141,7 @@ public class FoblGateFunction {
                 String sellOrderId  = "";
                 if( !(sellOrderId = createOrder(SELL,price, cnt, symbol)).equals("")){
                     Thread.sleep(300);
-                    if(!createOrder(BUY,price, cnt, symbol).equals("")){
-                        returnCode = DataCommon.CODE_SUCCESS;
-                    }else{
+                    if(createOrder(BUY,price, cnt, symbol).equals("")){
                         Thread.sleep(300);
                         cancelOrder(sellOrderId,SELL, price, symbol);
                     }
@@ -133,7 +149,7 @@ public class FoblGateFunction {
             }
         }catch (Exception e){
             returnCode = DataCommon.CODE_ERROR;
-            log.error("[ERROR][FOBLGATE][AUTOTRADE] {}", e.getMessage());
+            log.error("[FOBLGATE][ERROR][AUTOTRADE] {}", e.getMessage());
         }
 
         log.info("[FOBLGATE][AUTOTRADE END]");
@@ -142,16 +158,22 @@ public class FoblGateFunction {
 
 
     /** 호가유동성 function */
-    public int startLiquidity(Map list, int minCnt, int maxCnt, String coin,String coinId, String symbol){
-        setApiKey(coin, coinId);    // Key 값 셋팅
+    public int startLiquidity(Map list){
 
-        int returnCode = DataCommon.CODE_ERROR;
+        int returnCode = DataCommon.CODE_SUCCESS;
         List sellList = (ArrayList) list.get("sell");
         List buyList  = (ArrayList) list.get("buy");
         List<HashMap<String,String>> sellCancelList = new ArrayList();
         List<HashMap<String,String>> buyCancelList = new ArrayList();
 
         try{
+            String[] coinData = ServiceCommon.setCoinData(liquidity.getCoin());
+            String coin       = coinData[0];
+            String coinId     = coinData[1];
+            setApiKey(coin, coinId);    // Key 값 셋팅
+            String symbol = coinData[0] + "/" + getCurrency(exchange, coinData[0], coinData[1]);
+            int minCnt = liquidity.getMinCnt();
+            int maxCnt = liquidity.getMaxCnt();
 
             Thread.sleep(1000);
             /** 매도 **/
@@ -221,8 +243,124 @@ public class FoblGateFunction {
 
             Thread.sleep(1000);
         }catch(Exception e){
-            log.error("[ERROR][FOBLGATE] {}", e.getMessage());
+            returnCode = DataCommon.CODE_ERROR;
+            log.error("[FOBLGATE][ERROR] {}", e.getMessage());
         }
+        return returnCode;
+    }
+
+    /**
+     * 매매 긁기
+     * @param list
+     * @param intervalTime
+     * @return
+     */
+    public int startFishingTrade(Map<String,List> list, int intervalTime){
+        log.info("[FOBLGATE][FISHINGTRADE START]");
+
+        int returnCode    = DataCommon.CODE_SUCCESS;
+
+        try{
+            String mode       = "";
+            String[] coinData = ServiceCommon.setCoinData(fishing.getCoin());
+            String coin       = coinData[0];
+            String coinId     = coinData[1];
+            setApiKey(coin, coinId);    // Key 값 셋팅
+            String symbol     = coinData[0] + "/" + getCurrency(exchange, coinData[0], coinData[1]);
+
+            boolean noIntervalFlag   = true;    // 해당 플래그를 이용해 마지막 매도/매수 후 바로 intervalTime 없이 바로 다음 매수/매도 진행
+            boolean noMatchFirstTick = true;    // 해당 플래그를 이용해 매수/매도를 올린 가격이 현재 최상위 값이 맞는지 다른 사람의 코인을 사지 않게 방지
+
+            for(String temp : list.keySet()){  mode = temp; }
+            ArrayList<String> tickPriceList = (ArrayList) list.get(mode);
+
+
+            /* 모드가 매수우선일 경우 */
+
+            ArrayList<Map<String, String>> orderList = new ArrayList<>();
+            /* Buy Start */
+            for (int i = 0; i < tickPriceList.size(); i++) {
+                String cnt = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double) fishing.getMinContractCnt(), (double) fishing.getMaxContractCnt()) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
+                String orderId = "";
+                if(DataCommon.MODE_BUY.equals(mode)) {
+                    orderId = createOrder(BUY, tickPriceList.get(i), cnt, symbol);      // 매수
+                }else{
+                    orderId = createOrder(SELL, tickPriceList.get(i), cnt, symbol);     // 매도
+                }
+                if(!orderId.equals("")){                                                // 매수/매도가 정상적으로 이뤄졌을 경우 데이터를 list에 담는다
+                    Map<String, String> orderMap = new HashMap<>();
+                    orderMap.put("order_id" ,orderId);
+                    orderMap.put("price"    ,tickPriceList.get(i));
+                    orderMap.put("symbol"   ,symbol);
+                    orderMap.put("cnt"      ,cnt);
+                    orderList.add(orderMap);
+                }
+                Thread.sleep(300);
+            }
+
+            /* Sell Start */
+            for (int i = orderList.size() - 1; i >= 0; i--) {
+                Map<String, String> copiedOrderMap = ServiceCommon.deepCopy(orderList.get(i));
+                BigDecimal cnt                     = new BigDecimal(copiedOrderMap.get("cnt"));
+
+                while (cnt.compareTo(new BigDecimal("0")) > 0) {
+                    if (!noMatchFirstTick) break;                   // 최신 매도/매수 건 값이 다를경우 돌 필요 없음.
+                    if (noIntervalFlag) Thread.sleep(intervalTime); // intervalTime 만큼 휴식 후 매수 시작
+                    String orderId            = "";
+                    BigDecimal cntForExcution = new BigDecimal(String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double) fishing.getMinExecuteCnt(), (double) fishing.getMaxExecuteCnt()) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL));
+                    // 남은 코인 수와 매도/매수할 코인수를 비교했을 때, 남은 코인 수가 더 적다면.
+                    if (cnt.compareTo(cntForExcution) < 0) {
+                        cntForExcution = cnt;
+                        noIntervalFlag = false;
+                    } else {
+                        noIntervalFlag = true;
+                    }
+                    // 매도/매수 날리기전에 최신 매도/매수값이 내가 건 값이 맞는지 확인
+                    String nowFirstTick = "";
+                    if(DataCommon.MODE_BUY.equals(mode)) {
+                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(DataCommon.MODE_BUY);
+                    }else{
+                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(DataCommon.MODE_SELL);
+                    }
+
+                    if (!copiedOrderMap.get("price").equals(nowFirstTick)) {
+                        log.info("[FOBLGATE][FISHINGTRADE] Not Match First Tick. All Trade will be canceled RequestTick : {}, realTick : {}", copiedOrderMap.get("price"), nowFirstTick);
+                        noMatchFirstTick = false;
+                        break;
+                    }
+
+                    if(DataCommon.MODE_BUY.equals(mode)) {
+                        orderId = createOrder(SELL, copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol);
+                    }else{
+                        orderId = createOrder(BUY, copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol);
+                    }
+
+                    if(!orderId.equals("")){
+                        cnt = cnt.subtract(cntForExcution);
+                        Thread.sleep(500);
+                        if(DataCommon.MODE_BUY.equals(mode)) {
+                            cancelOrder(orderId, SELL, copiedOrderMap.get("price"),symbol );
+                        }else{
+                            cancelOrder(orderId, BUY, copiedOrderMap.get("price"),symbol );
+                        }
+                    }else{
+                        break;
+                    }
+                }
+                // 혹여나 남은 개수가 있을 수 있어 취소 request
+                Thread.sleep(500);
+                if(DataCommon.MODE_BUY.equals(mode)) {
+                    cancelOrder(orderList.get(i).get("order_id"), BUY, orderList.get(i).get("price") ,symbol);
+                }else{
+                    cancelOrder(orderList.get(i).get("order_id"), SELL, orderList.get(i).get("price") ,symbol);
+                }
+            }
+        }catch (Exception e){
+            returnCode = DataCommon.CODE_ERROR;
+            log.error("[FOBLGATE][ERROR][FISHINGTRADE] {}", e.getMessage());
+        }
+
+        log.info("[FOBLGATE][FISHINGTRADE END]");
         return returnCode;
     }
 
@@ -231,32 +369,23 @@ public class FoblGateFunction {
 
         String orderId = "";
         try{
-
-            Map<String, String> header = new HashMap<>();
-            header.put("mbId",      keyList.get(USER_ID));  // userId
-            header.put("pairName",  symbol);                // coin/currency ex) ATX/BTC
-            header.put("action",    type);                  // ask(sell), bid(buy)
+            Map<String, String> header = setDefaultRequest(keyList.get(USER_ID), symbol,type,keyList.get(API_KEY));
             header.put("price",     price);                 // price
             header.put("amount",    cnt);                   // cnt
-            header.put("apiKey",    keyList.get(API_KEY));  // api key
             String secretHash = makeApiHash(keyList.get(API_KEY) + keyList.get(USER_ID) + symbol + type + price+ cnt+ keyList.get(SECRET_KEY));
-
-
-            log.info("[FOBLGATE][CREATE ORDER] mbId:{},pairName:{},action:{},price:{},amount:{},apiKey:{},secretHash:{}",
-                    keyList.get(USER_ID), symbol, type, price, cnt, keyList.get(API_KEY), secretHash);
 
             JsonObject returnVal = postHttpMethod(DataCommon.FOBLGATE_CREATE_ORDER, secretHash, header);
             String status        = gson.fromJson(returnVal.get("status"), String.class);
             if(status.equals("0")){
                 orderId = gson.fromJson(returnVal.get("data"), String.class);
-                log.info("[SUCCESS][FOBLEGATE][CREATE ORDER - response] response : {}", gson.toJson(returnVal));
+                log.info("[FOBLEGATE][SUCCESS][CREATE ORDER - response] response : {}", gson.toJson(returnVal));
             }else{
                 String errorMsg = returnVal.get("message").toString();
-                log.error("[ERROR][FOBLGATE][CREATE ORDER - response] response :{}", gson.toJson(returnVal));
+                log.error("[FOBLGATE][ERROR][CREATE ORDER - response] response :{}", gson.toJson(returnVal));
             }
 
         }catch (Exception e){
-            log.error("[ERROR][FOBLGATE][CREATE ORDER] {}",e.getMessage());
+            log.error("[FOBLGATE][ERROR][CREATE ORDER] {}",e.getMessage());
         }
         return orderId;
     }
@@ -267,31 +396,23 @@ public class FoblGateFunction {
         int returnCode = DataCommon.CODE_ERROR;
         try{
 
-            Map<String, String> header = new HashMap<>();
-            header.put("mbId",      keyList.get(USER_ID));  // userId
-            header.put("pairName",  symbol);                // coin/currency ex) ATX/BTC
+            Map<String, String> header = setDefaultRequest(keyList.get(USER_ID), symbol, type, keyList.get(API_KEY));
             header.put("ordNo",     ordNo);                 // order Id
-            header.put("action",    type);                  // order Id
             header.put("ordPrice",  price);                 // price
-            header.put("apiKey",    keyList.get(API_KEY));  // api key
             String secretHash = makeApiHash(keyList.get(API_KEY) + keyList.get(USER_ID) + symbol + ordNo + type + price+ keyList.get(SECRET_KEY));
-
-
-            log.info("[FOBLGATE][CANCEL ORDER] mbId:{},pairName:{},action:{},price:{},ordNo:{},apiKey:{},secretHash:{}",
-                    keyList.get(USER_ID), symbol, type, price, ordNo, keyList.get(API_KEY), secretHash);
 
             JsonObject returnVal = postHttpMethod(DataCommon.FOBLGATE_CANCEL_ORDER, secretHash, header);
             String status        = gson.fromJson(returnVal.get("status"), String.class);
-            if(status.equals("0")){
+            if(status.equals("0") || status.equals(ALREADY_TRADED)){
                 returnCode = DataCommon.CODE_SUCCESS;
-                log.info("[SUCCESS][FOBLGATE][CANCEL ORDER - response] response:{}", gson.toJson(returnVal));
+                log.info("[FOBLGATE][SUCCESS][CANCEL ORDER - response] response:{}", gson.toJson(returnVal));
             }else{
                 String errorMsg = returnVal.get("message").toString();
-                log.error("[ERROR][FOBLGATE][CANCEL ORDER - response] response:{}", gson.toJson(returnVal));
+                log.error("[FOBLGATE][ERROR][CANCEL ORDER - response] response:{}", gson.toJson(returnVal));
             }
 
         }catch (Exception e){
-            log.error("[ERROR][FOBLGATE][CANCEL ORDER] {}",e.getMessage());
+            log.error("[FOBLGATE][ERROR][CANCEL ORDER] {}",e.getMessage());
         }
         return returnCode;
     }
@@ -318,22 +439,21 @@ public class FoblGateFunction {
             header.put("apiKey",keyList.get(API_KEY));
             header.put("pairName",pairName);
             String secretHash = makeApiHash(keyList.get(API_KEY) + pairName + keyList.get(SECRET_KEY));
+            log.info("[FOBLGATE][ORDER BOOK - REQUEST] request:{}, hash:{}", header.toString(), secretHash);
 
-            log.info("[FOBLGATE][ORDER BOOK - REQUEST] apiKey:{}, parName:{}, hash:{}", keyList.get(API_KEY), pairName, secretHash);
             JsonObject returnVal = postHttpMethod(DataCommon.FOBLGATE_ORDERBOOK, secretHash, header);
             String status        = gson.fromJson(returnVal.get("status"), String.class);
             if(status.equals("0")){
                 returnRes = gson.toJson(returnVal);
-                log.info("[SUCCESS][FOBLGATE][ORDER BOOK]");
+                log.info("[FOBLGATE][SUCCESS][ORDER BOOK]");
             }else{
-                log.error("[ERROR][FOBLGATE][ORDER BOOK - RESPONSE] response:{}", gson.toJson(returnVal));
-
+                log.error("[FOBLGATE][ERROR][ORDER BOOK - RESPONSE] response:{}", gson.toJson(returnVal));
             }
 
             log.info("[FOBLGATE][ORDER BOOK END]");
 
         }catch (Exception e){
-            log.error("[ERROR][FOBLGATE][ORDER BOOK] {}",e.getMessage());
+            log.error("[FOBLGATE][ERROR][ORDER BOOK] {}",e.getMessage());
         }
 
         return returnRes;
@@ -357,7 +477,7 @@ public class FoblGateFunction {
                 }
             }
         }catch(Exception e){
-            log.error("[ERROR][FOBLGATE][GET CURRENCY] {}",e.getMessage());
+            log.error("[FOBLGATE][ERROR][GET CURRENCY] {}",e.getMessage());
         }
         return returnVal;
     }
@@ -388,7 +508,7 @@ public class FoblGateFunction {
             }
             return hexString.toString();
         }catch (Exception e){
-            log.error("[ERROR][FOBLGATE][API HASH] {}",e.getMessage());
+            log.error("[FOBLGATE][ERROR][API HASH] {}",e.getMessage());
         }
 
         return "";
@@ -412,6 +532,8 @@ public class FoblGateFunction {
 
 
         try{
+            log.info("[FOBLGATE][POST REQUEST] request:{}, secretHash:{}", datas.toString(), secretHash);
+
             url = new URL(targetUrl);
 
             HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
@@ -451,11 +573,25 @@ public class FoblGateFunction {
             log.error("[FOBLGATE][ERROR][FOBLGATE POST HTTP] {}", e.getMessage());
         }
 
-
         return returnObj;
     }
 
+    /**
+     * request를 날릴때 Map에 데이터를 담아서 객체형식으로 보내줘야 하는데, 모든 요청에 공통으로 사용되는 값들
+     * @param userId
+     * @param symbol symbol is pairName coin/currency
+     * @param type type is action
+     * @return
+     */
+    private Map<String, String> setDefaultRequest(String userId, String symbol, String type, String apiKey){
+        Map<String, String> mapForRequest = new HashMap<>();
+        mapForRequest.put("mbId",userId);
+        mapForRequest.put("pairName", symbol);
+        mapForRequest.put("action", type);
+        mapForRequest.put("apiKey", apiKey);
 
+        return mapForRequest;
+    }
 
 
     public Exchange getExchange() { return exchange;  }

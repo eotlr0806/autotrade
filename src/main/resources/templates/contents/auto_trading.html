@@ -480,7 +480,7 @@
                                                 <div class="col-md-3">
                                                     <div class="form-group">
                                                         <label>활성 틱수</label>
-                                                        <input id="tick_cnt_fishing" type="text" placeholder="0" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                        <input id="tick_cnt_fishing" type="text" placeholder="0" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/(\..*)\./g, '$1');" >
                                                     </div>
                                                 </div>
                                             </div>
@@ -1336,7 +1336,7 @@
                 rangeTick          : $('#range_tick_fishing').val(),
                 tickCnt            : $('#tick_cnt_fishing').val(),
                 status             : RUN,
-                mode               : clickedFishingMode,
+                mode               : (clickedFishingMode === 'RANDOM_FISHING_L') ? 'RANDOM' : ((clickedFishingMode === 'SELL_FISHING_L') ? 'SELL' : 'BUY'),
                 exchange           : $('#filter_exchange').val(),
                 coin               : $('#filter_coin').val(),
                 userId             : loginUserId

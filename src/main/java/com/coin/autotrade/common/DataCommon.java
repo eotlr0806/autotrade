@@ -25,6 +25,7 @@ public class DataCommon {
     public static String MODE_RANDOM_L  = "RANDOM_L";
     public static String MODE_SELF_L    = "SELF_L";
 
+
     /** Define Public Api URL */
     public static String COINONE_ORDERBOOK        = "https://api.coinone.co.kr/orderbook";
     public static String FOBLGATE_ORDERBOOK       = "https://api2.foblgate.com/api/ticker/orderBook";

@@ -41,7 +41,7 @@ public class Fishing {
     private Integer maxSeconds;
 
     @Column(name = "tick_cnt")
-    private String tickCnt;
+    private Integer tickCnt;
 
     @Column(name = "range_tick")
     private String rangeTick;

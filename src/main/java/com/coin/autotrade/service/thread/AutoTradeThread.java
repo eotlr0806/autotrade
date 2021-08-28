@@ -58,8 +58,28 @@ public class AutoTradeThread implements Runnable{
                 coinOne = new CoinOneFunction();
                 coinOne.initCoinOne(autoTrade, user, exchange);
             }
+            /** FoblGate **/
+            else if(DataCommon.FOBLGATE.equals(autoTrade.getExchange())){
+                foblGate = new FoblGateFunction();
+                foblGate.initFoblGate(autoTrade, user, exchange);
+            }
+            /** Dcoin **/
+            else if(DataCommon.DCOIN.equals(autoTrade.getExchange())){
+                dCoin = new DcoinFunction();
+                dCoin.initDcoinAutoTrade(autoTrade, user, exchange);
+            }
+            /** Flata **/
+            else if(DataCommon.FLATA.equals(autoTrade.getExchange())){
+                flata = new FlataFunction();
+                flata.initFlataAutoTrade(autoTrade, user, exchange);
+            }
+            /** BithumGlobal **/
+            else if(DataCommon.BITHUMB_GLOBAL.equals(autoTrade.getExchange())){
+                bithumbGlobal = new BithumbGlobalFunction();
+                bithumbGlobal.initBithumbGlobalAutoTrade(autoTrade, user, exchange);
+            }
         }catch (Exception e){
-            log.error("[ERROR][Auto Trade Start fail] exchange {}" , exchange.getExchangeCode());
+            log.error("[Auto Trade Start fail][ERROR] exchange {}" , exchange.getExchangeCode());
         }
         return;
     }
@@ -106,7 +126,7 @@ public class AutoTradeThread implements Runnable{
                 Thread.sleep(intervalTime);
             }
         }catch(Exception e){
-            log.error("[ERROR][AutoTrade-Thread] Start error {}", e.getMessage());
+            log.error("[AutoTrade-Thread][ERROR] Start error {}", e.getMessage());
         }
     }
 
@@ -127,7 +147,13 @@ public class AutoTradeThread implements Runnable{
 
             /** 거래소가 코인원일 경우 **/
             if(DataCommon.COINONE.equals(autoTrade.getExchange())){
-                if(coinOne.startAutoTrade(price, cnt, autoTrade.getMode()) == DataCommon.CODE_SUCCESS){
+                if(coinOne.startAutoTrade(price, cnt) == DataCommon.CODE_SUCCESS){
+                    // Insert into history table
+                }
+            }
+            /** 거래소가 포블게이트일 경우 **/
+            else if(DataCommon.FOBLGATE.equals(autoTrade.getExchange())){
+                if(foblGate.startAutoTrade(price, cnt) == DataCommon.CODE_SUCCESS){
                     // Insert into history table
                 }
             }
@@ -145,13 +171,6 @@ public class AutoTradeThread implements Runnable{
                     // Insert into history table
                 }
             }
-            /** 거래소가 포블게이트일 경우 **/
-            else if(DataCommon.FOBLGATE.equals(autoTrade.getExchange())){
-                String symbol = coinData[0] + "/" + foblGate.getCurrency(foblGate.getExchange(), coinData[0], coinData[1]);
-                if(foblGate.startAutoTrade(price, cnt, coinData[0], coinData[1], symbol ,autoTrade.getMode()) == DataCommon.CODE_SUCCESS){
-                    // Insert into history table
-                }
-            }
             /** 거래소가 빗썸글로벌일 경우 **/
             else if(DataCommon.BITHUMB_GLOBAL.equals(autoTrade.getExchange())){
                 String symbol = coinData[0] + "-" + bithumbGlobal.getCurrency(bithumbGlobal.getExchange(), coinData[0], coinData[1]);
@@ -161,7 +180,7 @@ public class AutoTradeThread implements Runnable{
             }
 
         }catch (Exception e){
-            log.error("[ERROR][AutoTradeThread - StartProcess] exchange {}, error {}",
+            log.error("[AutoTradeThread - StartProcess][ERROR] exchange {}, error {}",
                     autoTrade.getExchange(), e.getMessage());
         }
         return;
