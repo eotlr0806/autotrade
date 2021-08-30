@@ -68,17 +68,18 @@ public class FishingTradeThread implements Runnable{
             /** FoblGate **/
             else if(DataCommon.FOBLGATE.equals(fishing.getExchange())){
                 foblGate = new FoblGateFunction();
-                foblGate.initFoblGate(fishing, user, exchange,coinService);
+                foblGate.initFoblGate(fishing, user, exchange, coinService);
             }
+            /** Flata **/
+            else if(DataCommon.FLATA.equals(fishing.getExchange())){
+                flata = new FlataFunction();
+                flata.initFlata(fishing, user, exchange, coinService);
+            }
+
 //            /** Dcoin **/
 //            else if(DataCommon.DCOIN.equals(liquidity.getExchange())){
 //                dCoin = new DcoinFunction();
 //                dCoin.initDcoinLiquidity(liquidity, user, exchange);
-//            }
-//            /** Flata **/
-//            else if(DataCommon.FLATA.equals(liquidity.getExchange())){
-//                flata = new FlataFunction();
-//                flata.initFlataLiquidity(liquidity, user, exchange);
 //            }
 //            /** BithumGlobal **/
 //            else if(DataCommon.BITHUMB_GLOBAL.equals(liquidity.getExchange())){
@@ -160,6 +161,12 @@ public class FishingTradeThread implements Runnable{
             /** 거래소가 포블게이트일 경우 **/
             else if(DataCommon.FOBLGATE.equals(fishing.getExchange())){
                 if(foblGate.startFishingTrade(list, intervalTime) == DataCommon.CODE_SUCCESS){
+
+                }
+            }
+            /** 거래소가 포블게이트일 경우 **/
+            else if(DataCommon.FLATA.equals(fishing.getExchange())){
+                if(flata.startFishingTrade(list, intervalTime) == DataCommon.CODE_SUCCESS){
 
                 }
             }

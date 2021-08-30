@@ -68,15 +68,15 @@ public class LiquidityTradeThread implements Runnable{
                 foblGate = new FoblGateFunction();
                 foblGate.initFoblGate(liquidity, user, exchange);
             }
+            /** Flata **/
+            else if(DataCommon.FLATA.equals(liquidity.getExchange())){
+                flata = new FlataFunction();
+                flata.initFlata(liquidity, user, exchange);
+            }
             /** Dcoin **/
             else if(DataCommon.DCOIN.equals(liquidity.getExchange())){
                 dCoin = new DcoinFunction();
                 dCoin.initDcoinLiquidity(liquidity, user, exchange);
-            }
-            /** Flata **/
-            else if(DataCommon.FLATA.equals(liquidity.getExchange())){
-                flata = new FlataFunction();
-                flata.initFlataLiquidity(liquidity, user, exchange);
             }
             /** BithumGlobal **/
             else if(DataCommon.BITHUMB_GLOBAL.equals(liquidity.getExchange())){
@@ -142,6 +142,12 @@ public class LiquidityTradeThread implements Runnable{
                     // Insert into history table
                 }
             }
+            // Flata
+            else if(DataCommon.FLATA.equals(liquidity.getExchange())){
+                if(flata.startLiquidity(list) == DataCommon.CODE_SUCCESS){
+                    // Insert into history table
+                }
+            }
             // Dcoin
             else if(DataCommon.DCOIN.equals(liquidity.getExchange())){
                 String symbol = coinData[0] + "" + dCoin.getCurrency(dCoin.getExchange(),coinData[0], coinData[1]);
@@ -149,14 +155,6 @@ public class LiquidityTradeThread implements Runnable{
                     // insert into history table
                 }
             }
-            // Flata
-            else if(DataCommon.FLATA.equals(liquidity.getExchange())){
-                String symbol = coinData[0] + "/" + flata.getCurrency(flata.getExchange(),coinData[0], coinData[1]);
-                if(flata.startLiquidity(list, liquidity.getMinCnt(), liquidity.getMaxCnt(), coinData[0], coinData[1], symbol) == DataCommon.CODE_SUCCESS){
-                    // Insert into history table
-                }
-            }
-
             // Bithumb Global
             else if(DataCommon.BITHUMB_GLOBAL.equals(liquidity.getExchange())){
                 String symbol = coinData[0] + "-" + bithumbGlobal.getCurrency(bithumbGlobal.getExchange(), coinData[0], coinData[1]);

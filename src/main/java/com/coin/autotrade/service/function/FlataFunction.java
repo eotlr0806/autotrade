@@ -5,9 +5,9 @@ import com.coin.autotrade.common.DataCommon;
 import com.coin.autotrade.common.ServiceCommon;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.repository.ExchangeRepository;
+import com.coin.autotrade.service.CoinService;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 
@@ -27,14 +27,17 @@ import java.util.Map;
 @Slf4j
 public class FlataFunction {
 
-    Exchange exchange   = null;
-    User user           = null;
-    AutoTrade autoTrade = null;
-    Liquidity liquidity = null;
-    Gson gson           = new Gson();
-    String coinMinCnt   = "";
-    private String BUY    = "1";
-    private String SELL   = "2";
+    Exchange exchange                    = null;
+    User user                            = null;
+    AutoTrade autoTrade                  = null;
+    Liquidity liquidity                  = null;
+    Fishing fishing                      = null;
+    CoinService coinService              = null;
+    Gson gson                            = new Gson();
+    String coinMinCnt                    = "";
+    private String BUY                   = "1";
+    private String SELL                  = "2";
+    private String ALREADY_TRADED        = "30044";
 
     private ExchangeRepository exchageRepository;
 
@@ -50,10 +53,9 @@ public class FlataFunction {
      * @param autoTrade
      * @param user
      */
-    public void initFlataAutoTrade(AutoTrade autoTrade, User user, Exchange exchange){
-        this.user      = user;
+    public void initFlata(AutoTrade autoTrade, User user, Exchange exchange){
         this.autoTrade = autoTrade;
-        this.exchange  = exchange;
+        setCommonValue(user, exchange);
     }
 
     /**
@@ -61,10 +63,21 @@ public class FlataFunction {
      * @param autoTrade
      * @param user
      */
-    public void initFlataLiquidity(Liquidity liquidity, User user, Exchange exchange){
-        this.user      = user;
+    public void initFlata(Liquidity liquidity, User user, Exchange exchange){
         this.liquidity = liquidity;
-        this.exchange  = exchange;
+        setCommonValue(user, exchange);
+    }
+
+    public void initFlata(Fishing fishing, User user, Exchange exchange, CoinService coinService){
+        this.fishing     = fishing;
+        this.coinService = coinService;
+        setCommonValue(user, exchange);
+    }
+
+
+    private void setCommonValue(User user,  Exchange exchange){
+        this.user     = user;
+        this.exchange = exchange;
     }
 
 
@@ -146,13 +159,19 @@ public class FlataFunction {
      * @param symbol - coin / currency
      * @return
      */
-    public int startAutoTrade(String price, String cnt, String coin, String coinId, String symbol, String mode){
+    public int startAutoTrade(String price, String cnt){
         log.info("[FLATA][AUTOTRADE START]");
 
-        int returnCode    = DataCommon.CODE_ERROR;
-        String sessionKey = getSessionKey(coin, coinId);
+        int returnCode    = DataCommon.CODE_SUCCESS;
         try{
+            String[] coinData = ServiceCommon.setCoinData(autoTrade.getCoin());
+            String coin       = coinData[0];
+            String coinId     = coinData[1];
+            String sessionKey = getSessionKey(coin, coinId);
+            String symbol     = coinData[0] + "/" + getCurrency(exchange, coinData[0], coinData[1]);
+
             // mode 처리
+            String mode = autoTrade.getMode();
             if(DataCommon.MODE_RANDOM.equals(mode)){
                 mode = (ServiceCommon.getRandomInt(0,1) == 0) ? DataCommon.MODE_BUY : DataCommon.MODE_SELL;
             }
@@ -160,26 +179,22 @@ public class FlataFunction {
             // 1 : 매수 , 2 : 매도
             if(DataCommon.MODE_BUY.equals(mode)){
                 String buyOrderId  = "0";
-                if( !(buyOrderId = createOrder(BUY,price, cnt, symbol, sessionKey)).equals("0")){   // 매수
-                    if(!createOrder(SELL,price, cnt, symbol,sessionKey).equals("0")){               // 매도
-                        returnCode = DataCommon.CODE_SUCCESS;
-                    }else{
+                if( !(buyOrderId = createOrder(BUY,price, cnt, symbol, sessionKey)).equals("0")){   // 매수 성공
+                    if(createOrder(SELL,price, cnt, symbol,sessionKey).equals("0")){                // 매도 실패
                         cancelOrder(buyOrderId, sessionKey);                                        // 매도 실패 시, 매수 취소
                     }
                 }
             }else if(DataCommon.MODE_SELL.equals(mode)){
                 String sellOrderId  = "0";
                 if( !(sellOrderId = createOrder(SELL,price, cnt, symbol, sessionKey)).equals("0")){
-                    if(!createOrder(BUY,price, cnt, symbol, sessionKey).equals("0")){
-                        returnCode = DataCommon.CODE_SUCCESS;
-                    }else{
+                    if(createOrder(BUY,price, cnt, symbol, sessionKey).equals("0")){
                         cancelOrder(sellOrderId, sessionKey);
                     }
                 }
             }
         }catch (Exception e){
             returnCode = DataCommon.CODE_ERROR;
-            log.error("[ERROR][FLATA][AUTOTRADE] {}", e.getMessage());
+            log.error("[FLATA][ERROR][AUTOTRADE] {}", e.getMessage());
         }
 
         log.info("[FLATA][AUTOTRADE END]");
@@ -188,16 +203,22 @@ public class FlataFunction {
 
 
     /** 호가유동성 function */
-    public int startLiquidity(Map list, int minCnt, int maxCnt, String coin, String coinId,  String symbol){
+    public int startLiquidity(Map list){
         int returnCode = DataCommon.CODE_ERROR;
 
         List sellList = (ArrayList) list.get("sell");
         List buyList  = (ArrayList) list.get("buy");
         List<HashMap<String,String>> sellCancelList = new ArrayList();
         List<HashMap<String,String>> buyCancelList = new ArrayList();
-        String sessionKey = getSessionKey(coin, coinId);
 
         try{
+            String[] coinData = ServiceCommon.setCoinData(liquidity.getCoin());
+            String coin       = coinData[0];
+            String coinId     = coinData[1];
+            String sessionKey = getSessionKey(coin, coinId);
+            String symbol     = coinData[0] + "/" + getCurrency(exchange, coinData[0], coinData[1]);
+            int minCnt        = liquidity.getMinCnt();
+            int maxCnt        = liquidity.getMaxCnt();
 
             Thread.sleep(1000);
             /** 매도 **/
@@ -261,10 +282,123 @@ public class FlataFunction {
 
             Thread.sleep(1000);
         }catch(Exception e){
-            log.error("[ERROR][FLATA] {}", e.getMessage());
+            log.error("[FLATA][ERROR] {}", e.getMessage());
         }
         return returnCode;
     }
+
+
+    /**
+     *
+     * @param list
+     * @param intervalTime
+     * @return
+     */
+    public int startFishingTrade(Map<String,List> list, int intervalTime){
+        log.info("[FLATA][FISHINGTRADE START]");
+
+        int returnCode    = DataCommon.CODE_SUCCESS;
+
+        try{
+            String[] coinData = ServiceCommon.setCoinData(fishing.getCoin());
+            String coin       = coinData[0];
+            String coinId     = coinData[1];
+            String sessionKey = getSessionKey(coin, coinId);
+            String symbol     = coinData[0] + "/" + getCurrency(exchange, coinData[0], coinData[1]);
+
+            // mode 처리
+            String mode = fishing.getMode();
+            if(DataCommon.MODE_RANDOM.equals(mode)){
+                mode = (ServiceCommon.getRandomInt(0,1) == 0) ? DataCommon.MODE_BUY : DataCommon.MODE_SELL;
+            }
+
+            boolean noIntervalFlag   = true;    // 해당 플래그를 이용해 마지막 매도/매수 후 바로 intervalTime 없이 바로 다음 매수/매도 진행
+            boolean noMatchFirstTick = true;    // 해당 플래그를 이용해 매수/매도를 올린 가격이 현재 최상위 값이 맞는지 다른 사람의 코인을 사지 않게 방지
+
+            for(String temp : list.keySet()){  mode = temp; }
+            ArrayList<String> tickPriceList = (ArrayList) list.get(mode);
+            ArrayList<Map<String, String>> orderList = new ArrayList<>();
+
+            /* Start */
+            for (int i = 0; i < tickPriceList.size(); i++) {
+                String cnt = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double) fishing.getMinContractCnt(), (double) fishing.getMaxContractCnt()) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
+                String orderId = "";
+                if(DataCommon.MODE_BUY.equals(mode)) {
+                    orderId = createOrder(BUY, tickPriceList.get(i), cnt, symbol, sessionKey);
+                }else{
+                    orderId = createOrder(SELL, tickPriceList.get(i), cnt, symbol, sessionKey);
+                }
+                if(!orderId.equals("0")){                                                // 매수/매도가 정상적으로 이뤄졌을 경우 데이터를 list에 담는다
+                    Map<String, String> orderMap = new HashMap<>();
+                    orderMap.put("order_id" ,orderId);
+                    orderMap.put("price"    ,tickPriceList.get(i));
+                    orderMap.put("symbol"   ,symbol);
+                    orderMap.put("cnt"      ,cnt);
+                    orderList.add(orderMap);
+                }
+                Thread.sleep(300);
+            }
+
+            /* Sell Start */
+            for (int i = orderList.size() - 1; i >= 0; i--) {
+                Map<String, String> copiedOrderMap = ServiceCommon.deepCopy(orderList.get(i));
+                BigDecimal cnt                     = new BigDecimal(copiedOrderMap.get("cnt"));
+
+                while (cnt.compareTo(new BigDecimal("0")) > 0) {
+                    if (!noMatchFirstTick) break;                   // 최신 매도/매수 건 값이 다를경우 돌 필요 없음.
+                    if (noIntervalFlag) Thread.sleep(intervalTime); // intervalTime 만큼 휴식 후 매수 시작
+                    String orderId            = "";
+                    BigDecimal cntForExcution = new BigDecimal(String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double) fishing.getMinExecuteCnt(), (double) fishing.getMaxExecuteCnt()) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL));
+                    // 남은 코인 수와 매도/매수할 코인수를 비교했을 때, 남은 코인 수가 더 적다면.
+                    if (cnt.compareTo(cntForExcution) < 0) {
+                        cntForExcution = cnt;
+                        noIntervalFlag = false;
+                    } else {
+                        noIntervalFlag = true;
+                    }
+                    // 매도/매수 날리기전에 최신 매도/매수값이 내가 건 값이 맞는지 확인
+                    String nowFirstTick = "";
+                    if(DataCommon.MODE_BUY.equals(mode)) {
+                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(DataCommon.MODE_BUY);
+                    }else{
+                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(DataCommon.MODE_SELL);
+                    }
+
+                    if (!copiedOrderMap.get("price").equals(nowFirstTick)) {
+                        log.info("[FOBLGATE][FISHINGTRADE] Not Match First Tick. All Trade will be canceled RequestTick : {}, realTick : {}", copiedOrderMap.get("price"), nowFirstTick);
+                        noMatchFirstTick = false;
+                        break;
+                    }
+
+                    if(DataCommon.MODE_BUY.equals(mode)) {
+                        orderId = createOrder(SELL, copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol, sessionKey);
+                    }else{
+                        orderId = createOrder(BUY, copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol, sessionKey);
+                    }
+
+                    if(!orderId.equals("0")){
+                        cnt = cnt.subtract(cntForExcution);
+                        Thread.sleep(500);
+                        cancelOrder(orderId, sessionKey );
+                    }else{
+                        break;
+                    }
+                }
+                // 혹여나 남은 개수가 있을 수 있어 취소 request
+                Thread.sleep(500);
+                cancelOrder(orderList.get(i).get("order_id"), sessionKey);
+            }
+
+        }catch (Exception e){
+            returnCode = DataCommon.CODE_ERROR;
+            log.error("[FLATA][ERROR][FISHINGTRADE] {}", e.getMessage());
+        }
+
+        log.info("[FLATA][FISHINGTRADE END]");
+        return returnCode;
+    }
+
+
 
 
     /**
@@ -321,13 +455,12 @@ public class FlataFunction {
 
             // Order ID 가 0이면 에러
             if(!orderId.equals("0")){
-                log.info("[SUCCESS][FLATA][CREATE ORDER] response", gson.toJson(response));
+                log.info("[FLATA][SUCCESS][CREATE ORDER] response :{}", gson.toJson(response));
             }else{
-                String msg = item.get("message").toString();
-                log.info("[ERROR][FLATA][CREATE ORDER] response :{}", gson.toJson(response));
+                log.error("[FLATA][ERROR][CREATE ORDER] response :{}", gson.toJson(response));
             }
         }catch (Exception e){
-            log.error("[ERROR][FLATA][CREATE ORDER] {}",e.getMessage());
+            log.error("[FLATA][ERROR][CREATE ORDER] {}",e.getMessage());
         }
         return orderId;
     }
@@ -344,20 +477,24 @@ public class FlataFunction {
             JsonObject header = new JsonObject();
             header.addProperty("orgOrdNo", orderId);
 
-            JsonObject response = postHttpMethodWithSession(DataCommon.FLATA_CANCEL_ORDER, gson.toJson(header), sessionKey);
-            JsonObject item     = gson.fromJson(response.get("item").toString(), JsonObject.class);
-            orderId             = item.get("ordNo").toString();
+            JsonObject response    = postHttpMethodWithSession(DataCommon.FLATA_CANCEL_ORDER, gson.toJson(header), sessionKey);
+            JsonObject item        = gson.fromJson(response.get("item").toString(), JsonObject.class);
+            String returnOrderId   = item.get("ordNo").toString();
 
-            if(orderId.equals("0") || "".equals(orderId)){
-                String msg = item.get("message").toString();
-                log.info("[ERROR][FLATA][Start Cancel Order] msg:{} , valeus:{}",  gson.toJson(header));
-            }else{
+            String returnMeesageNo = "";
+            if(item.has("messageNo")){
+                returnMeesageNo = item.get("messageNo").toString().replace("\"","");
+            }
+
+            if( (!returnOrderId.equals("0") && !"".equals(returnOrderId)) || returnMeesageNo.equals(ALREADY_TRADED)){
                 returnVal = DataCommon.CODE_SUCCESS;
-                log.info("[SUCCESS][FLATA][Cancel Order]  orderId {}, valeus {}",  orderId, gson.toJson(header));
+                log.info("[FLATA][SUCCESS][CANCEL ORDER] response : {}",  gson.toJson(item));
+            }else{
+                log.error("[FLATA][ERROR][CANCEL ORDER] response : {}",  gson.toJson(item));
             }
 
         }catch (Exception e){
-            log.error("[ERROR][FLATA][Cancel Order] {}", e.getMessage());
+            log.error("[FLATA][ERROR][CANCEL ORDER] {}", e.getMessage());
         }
 
         return returnVal;
@@ -395,7 +532,7 @@ public class FlataFunction {
             log.info("[FLATA][ORDER BOOK] End");
 
         }catch (Exception e){
-            log.error("[ERROR][FLATA][ORDER BOOK] {}",e.getMessage());
+            log.error("[FLATA][ERROR][ORDER BOOK] {}",e.getMessage());
         }
 
         return returnRes;
@@ -445,7 +582,7 @@ public class FlataFunction {
             log.info("[FLATA][GET COIN INFO] End");
 
         }catch (Exception e){
-            log.error("[ERROR][FLATA][GET COIN INFO] {}",e.getMessage());
+            log.error("[FLATA][ERROR][GET COIN INFO] {}",e.getMessage());
         }
 
         return returnRes;
@@ -469,7 +606,7 @@ public class FlataFunction {
                 }
             }
         }catch(Exception e){
-            log.error("[ERROR][FLATA][GET CUREENCY] {}",e.getMessage());
+            log.error("[FLATA][ERROR][GET CUREENCY] {}",e.getMessage());
         }
         return returnVal;
     }
@@ -527,6 +664,8 @@ public class FlataFunction {
         JsonObject returnObj = null;
 
         try{
+            log.info("[FLATA][HTTP POST] request {}", payload);
+
             url = new URL(targetUrl);
 
             HttpURLConnection connection = (HttpsURLConnection) url.openConnection();
@@ -555,7 +694,7 @@ public class FlataFunction {
             returnObj = gson.fromJson(response.toString(), JsonObject.class);
 
         }catch(Exception e){
-            log.error("[ERROR][FLATA][FLATA HTTP POST] {}", e.getMessage());
+            log.error("[FLATA][ERROR][HTTP POST] {}", e.getMessage());
         }
 
         return returnObj;

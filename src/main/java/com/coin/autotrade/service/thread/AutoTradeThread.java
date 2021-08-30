@@ -5,7 +5,6 @@ import com.coin.autotrade.common.DataCommon;
 import com.coin.autotrade.common.ServiceCommon;
 import com.coin.autotrade.model.AutoTrade;
 import com.coin.autotrade.model.Exchange;
-import com.coin.autotrade.model.ExchangeCoin;
 import com.coin.autotrade.model.User;
 import com.coin.autotrade.repository.AutoTradeRepository;
 import com.coin.autotrade.repository.ExchangeRepository;
@@ -63,15 +62,15 @@ public class AutoTradeThread implements Runnable{
                 foblGate = new FoblGateFunction();
                 foblGate.initFoblGate(autoTrade, user, exchange);
             }
+            /** Flata **/
+            else if(DataCommon.FLATA.equals(autoTrade.getExchange())){
+                flata = new FlataFunction();
+                flata.initFlata(autoTrade, user, exchange);
+            }
             /** Dcoin **/
             else if(DataCommon.DCOIN.equals(autoTrade.getExchange())){
                 dCoin = new DcoinFunction();
                 dCoin.initDcoinAutoTrade(autoTrade, user, exchange);
-            }
-            /** Flata **/
-            else if(DataCommon.FLATA.equals(autoTrade.getExchange())){
-                flata = new FlataFunction();
-                flata.initFlataAutoTrade(autoTrade, user, exchange);
             }
             /** BithumGlobal **/
             else if(DataCommon.BITHUMB_GLOBAL.equals(autoTrade.getExchange())){
@@ -157,17 +156,16 @@ public class AutoTradeThread implements Runnable{
                     // Insert into history table
                 }
             }
+            /** 거래소가 플랫타일 경우 **/
+            else if(DataCommon.FLATA.equals(autoTrade.getExchange())){
+                if(flata.startAutoTrade(price, cnt) == DataCommon.CODE_SUCCESS){
+                    // Insert into history table
+                }
+            }
             /** 거래소가 디코인일 경우 **/
             else if(DataCommon.DCOIN.equals(autoTrade.getExchange())){
                 String symbol = coinData[0] + "" + dCoin.getCurrency(dCoin.getExchange(), coinData[0], coinData[1]);
                 if(dCoin.startAutoTrade(price, cnt, symbol ,autoTrade.getMode()) == DataCommon.CODE_SUCCESS){
-                    // Insert into history table
-                }
-            }
-            /** 거래소가 플랫타일 경우 **/
-            else if(DataCommon.FLATA.equals(autoTrade.getExchange())){
-                String symbol = coinData[0] + "/" + flata.getCurrency(flata.getExchange(), coinData[0], coinData[1]);
-                if(flata.startAutoTrade(price, cnt, coinData[0], coinData[1], symbol ,autoTrade.getMode()) == DataCommon.CODE_SUCCESS){
                     // Insert into history table
                 }
             }
