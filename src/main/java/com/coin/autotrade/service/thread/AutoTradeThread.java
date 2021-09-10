@@ -70,7 +70,7 @@ public class AutoTradeThread implements Runnable{
             /** Dcoin **/
             else if(DataCommon.DCOIN.equals(autoTrade.getExchange())){
                 dCoin = new DcoinFunction();
-                dCoin.initDcoinAutoTrade(autoTrade, user, exchange);
+                dCoin.initDcoin(autoTrade, user, exchange);
             }
             /** BithumGlobal **/
             else if(DataCommon.BITHUMB_GLOBAL.equals(autoTrade.getExchange())){
@@ -164,8 +164,7 @@ public class AutoTradeThread implements Runnable{
             }
             /** 거래소가 디코인일 경우 **/
             else if(DataCommon.DCOIN.equals(autoTrade.getExchange())){
-                String symbol = coinData[0] + "" + dCoin.getCurrency(dCoin.getExchange(), coinData[0], coinData[1]);
-                if(dCoin.startAutoTrade(price, cnt, symbol ,autoTrade.getMode()) == DataCommon.CODE_SUCCESS){
+                if(dCoin.startAutoTrade(price, cnt) == DataCommon.CODE_SUCCESS){
                     // Insert into history table
                 }
             }

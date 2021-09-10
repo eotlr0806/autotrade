@@ -76,7 +76,7 @@ public class LiquidityTradeThread implements Runnable{
             /** Dcoin **/
             else if(DataCommon.DCOIN.equals(liquidity.getExchange())){
                 dCoin = new DcoinFunction();
-                dCoin.initDcoinLiquidity(liquidity, user, exchange);
+                dCoin.initDcoin(liquidity, user, exchange);
             }
             /** BithumGlobal **/
             else if(DataCommon.BITHUMB_GLOBAL.equals(liquidity.getExchange())){
@@ -150,8 +150,7 @@ public class LiquidityTradeThread implements Runnable{
             }
             // Dcoin
             else if(DataCommon.DCOIN.equals(liquidity.getExchange())){
-                String symbol = coinData[0] + "" + dCoin.getCurrency(dCoin.getExchange(),coinData[0], coinData[1]);
-                if(dCoin.startLiquidity(list, liquidity.getMinCnt(), liquidity.getMaxCnt(), symbol) == DataCommon.CODE_SUCCESS){
+                if(dCoin.startLiquidity(list) == DataCommon.CODE_SUCCESS){
                     // insert into history table
                 }
             }
