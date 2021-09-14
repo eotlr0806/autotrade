@@ -75,7 +75,7 @@ public class AutoTradeThread implements Runnable{
             /** BithumGlobal **/
             else if(DataCommon.BITHUMB_GLOBAL.equals(autoTrade.getExchange())){
                 bithumbGlobal = new BithumbGlobalFunction();
-                bithumbGlobal.initBithumbGlobalAutoTrade(autoTrade, user, exchange);
+                bithumbGlobal.initBithumbGlobal(autoTrade, user, exchange);
             }
         }catch (Exception e){
             log.error("[Auto Trade Start fail][ERROR] exchange {}" , exchange.getExchangeCode());
@@ -142,7 +142,6 @@ public class AutoTradeThread implements Runnable{
      */
     public void startProcess(String price, String cnt, AutoTrade autoTrade) {
         try{
-            String[] coinData = ServiceCommon.setCoinData(autoTrade.getCoin());
 
             /** 거래소가 코인원일 경우 **/
             if(DataCommon.COINONE.equals(autoTrade.getExchange())){
@@ -170,8 +169,7 @@ public class AutoTradeThread implements Runnable{
             }
             /** 거래소가 빗썸글로벌일 경우 **/
             else if(DataCommon.BITHUMB_GLOBAL.equals(autoTrade.getExchange())){
-                String symbol = coinData[0] + "-" + bithumbGlobal.getCurrency(bithumbGlobal.getExchange(), coinData[0], coinData[1]);
-                if(bithumbGlobal.startAutoTrade(price, cnt, coinData[0], coinData[1], symbol ,autoTrade.getMode()) == DataCommon.CODE_SUCCESS){
+                if(bithumbGlobal.startAutoTrade(price, cnt) == DataCommon.CODE_SUCCESS){
                     // Insert into history table
                 }
             }

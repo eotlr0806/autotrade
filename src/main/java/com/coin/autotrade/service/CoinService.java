@@ -163,18 +163,15 @@ public class CoinService {
         BigDecimal value = new BigDecimal("-1.0");
         // 소수
         if(coinPrice.compareTo(new BigDecimal("1.0")) < 0){
-//        if(coinPrice < 1.0){
             BigDecimal floorFix      = new BigDecimal( String.valueOf( Math.pow(10, length - (dotInx + 1)) ) );
             BigDecimal standardPrice = coinPrice.multiply(floorFix);
             BigDecimal randomVal     = ServiceCommon.getRandomDecimal(bidValue, askValue).multiply(floorFix);
             BigDecimal parseVal      = randomVal.subtract(randomVal.remainder(standardPrice));
             value                    = parseVal.divide(floorFix);
-//            value                    = new BigDecimal( parseStrVal.substring(0, (parseStrVal.indexOf(".")+length-dotInx)));
         }else{
             BigDecimal randomVal     = ServiceCommon.getRandomDecimal(bidValue, askValue);
             BigDecimal parseVal      = randomVal.subtract(randomVal.remainder(coinPrice));
             value                    = parseVal;
-//            value                    = new BigDecimal( parseStrVal.substring(0, (parseStrVal.indexOf(".")) ) );
         }
 
         return value;
@@ -319,13 +316,13 @@ public class CoinService {
         if(type.equals(DataCommon.MODE_BUY)){
             BigDecimal tempBid = bid;
             for (int i = 0; i < cnt; i++) {
-                tempBid = tempBid.add(price);
+                tempBid = tempBid.add(price).stripTrailingZeros();
                 returnList.add(tempBid.toPlainString());
             }
         }else{
             BigDecimal tempAsk = ask;
             for (int i = 0; i < cnt; i++) {
-                tempAsk = tempAsk.subtract(price);
+                tempAsk = tempAsk.subtract(price).stripTrailingZeros();
                 returnList.add(tempAsk.toPlainString());
             }
         }
@@ -361,8 +358,8 @@ public class CoinService {
                     JsonArray ask       = json.getAsJsonArray("ask");
                     JsonObject firstAsk = ask.get(0).getAsJsonObject();
 
-                    BigDecimal bidValue  = new BigDecimal( firstBid.get("price").getAsString() );
-                    BigDecimal askValue  = new BigDecimal( firstAsk.get("price").getAsString() );
+                    BigDecimal bidValue  = new BigDecimal( firstBid.get("price").getAsString() ).stripTrailingZeros();
+                    BigDecimal askValue  = new BigDecimal( firstAsk.get("price").getAsString() ).stripTrailingZeros();
 
                     returnMap.put(DataCommon.MODE_BUY, bidValue.toPlainString());
                     returnMap.put(DataCommon.MODE_SELL, askValue.toPlainString());

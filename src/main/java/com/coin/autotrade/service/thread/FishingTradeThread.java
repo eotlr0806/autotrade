@@ -80,11 +80,11 @@ public class FishingTradeThread implements Runnable{
                 dCoin = new DcoinFunction();
                 dCoin.initDcoin(fishing, user, exchange, coinService);
             }
-//            /** BithumGlobal **/
-//            else if(DataCommon.BITHUMB_GLOBAL.equals(liquidity.getExchange())){
-//                bithumbGlobal = new BithumbGlobalFunction();
-//                bithumbGlobal.initBithumbGlobalLiquidity(liquidity, user, exchange);
-//            }
+            /** BithumGlobal **/
+            else if(DataCommon.BITHUMB_GLOBAL.equals(fishing.getExchange())){
+                bithumbGlobal = new BithumbGlobalFunction();
+                bithumbGlobal.initBithumbGlobal(fishing, user, exchange, coinService);
+            }
 
         }catch (Exception e){
             log.error("[Fishing Start fail][ERROR] exchange : {} ", exchange.getExchangeCode());
@@ -148,8 +148,6 @@ public class FishingTradeThread implements Runnable{
      */
     public void startProcess(Map list, int intervalTime, Fishing fishing) {
         try{
-            String[] coinData = ServiceCommon.setCoinData(fishing.getCoin());
-
             /** Auto Trade start **/
             // Coin one
             if(DataCommon.COINONE.equals(fishing.getExchange())){
@@ -168,6 +166,11 @@ public class FishingTradeThread implements Runnable{
             }
             else if(DataCommon.DCOIN.equals(fishing.getExchange())){
                 if(dCoin.startFishingTrade(list, intervalTime) == DataCommon.CODE_SUCCESS){
+
+                }
+            }
+            else if(DataCommon.BITHUMB_GLOBAL.equals(fishing.getExchange())){
+                if(bithumbGlobal.startFishingTrade(list, intervalTime) == DataCommon.CODE_SUCCESS){
 
                 }
             }

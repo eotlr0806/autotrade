@@ -305,14 +305,9 @@ public class DcoinFunction {
                     }
                     String orderPrice = copiedOrderMap.get("price");
                     if (!orderPrice.equals(nowFirstTick)) {
-                        if(orderPrice.length() > nowFirstTick.length()){
-                            // TODO : 대안 방안 필요. 0.510 != 0.51 의 문제로 이런 처리 로직이 있음...
-                            if(!orderPrice.concat("0").equals(nowFirstTick) && !orderPrice.concat("0").concat("0").equals(nowFirstTick)){
-                                log.info("[DCOIN][FISHINGTRADE] Not Match First Tick. All Trade will be canceled RequestTick : {}, realTick : {}", copiedOrderMap.get("price"), nowFirstTick);
-                                noMatchFirstTick = false;
-                                break;
-                            }
-                        }
+                        log.info("[DCOIN][FISHINGTRADE] Not Match First Tick. All Trade will be canceled RequestTick : {}, realTick : {}", copiedOrderMap.get("price"), nowFirstTick);
+                        noMatchFirstTick = false;
+                        break;
                     }
 
                     if(DataCommon.MODE_BUY.equals(mode)) {

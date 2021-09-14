@@ -81,7 +81,7 @@ public class LiquidityTradeThread implements Runnable{
             /** BithumGlobal **/
             else if(DataCommon.BITHUMB_GLOBAL.equals(liquidity.getExchange())){
                 bithumbGlobal = new BithumbGlobalFunction();
-                bithumbGlobal.initBithumbGlobalLiquidity(liquidity, user, exchange);
+                bithumbGlobal.initBithumbGlobal(liquidity, user, exchange);
             }
 
         }catch (Exception e){
@@ -127,7 +127,6 @@ public class LiquidityTradeThread implements Runnable{
      */
     public void startProcess(Map list, Liquidity liquidity) {
         try{
-            String[] coinData = ServiceCommon.setCoinData(liquidity.getCoin());
 
             /** Auto Trade start **/
             // Coin one
@@ -156,8 +155,7 @@ public class LiquidityTradeThread implements Runnable{
             }
             // Bithumb Global
             else if(DataCommon.BITHUMB_GLOBAL.equals(liquidity.getExchange())){
-                String symbol = coinData[0] + "-" + bithumbGlobal.getCurrency(bithumbGlobal.getExchange(), coinData[0], coinData[1]);
-                if(bithumbGlobal.startLiquidity(list, liquidity.getMinCnt(), liquidity.getMaxCnt(), coinData[0], coinData[1], symbol) == DataCommon.CODE_SUCCESS){
+                if(bithumbGlobal.startLiquidity(list) == DataCommon.CODE_SUCCESS){
                     // Insert into history table
                 }
             }
