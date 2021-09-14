@@ -5,7 +5,6 @@ import com.coin.autotrade.common.DataCommon;
 import com.coin.autotrade.common.ServiceCommon;
 import com.coin.autotrade.model.AutoTrade;
 import com.coin.autotrade.model.Exchange;
-import com.coin.autotrade.model.ExchangeCoin;
 import com.coin.autotrade.model.User;
 import com.coin.autotrade.repository.AutoTradeRepository;
 import com.coin.autotrade.repository.ExchangeRepository;
@@ -56,30 +55,30 @@ public class AutoTradeThread implements Runnable{
             /** Coin one **/
             if(DataCommon.COINONE.equals(autoTrade.getExchange())){
                 coinOne = new CoinOneFunction();
-                coinOne.initCoinOneAutoTrade(autoTrade, user, exchange);
-            }
-            /** Dcoin **/
-            else if(DataCommon.DCOIN.equals(autoTrade.getExchange())){
-                dCoin   = new DcoinFunction();
-                dCoin.initDcoinAutoTrade(autoTrade, user, exchange);
-            }
-            /** Flata **/
-            else if(DataCommon.FLATA.equals(autoTrade.getExchange())){
-                flata   = new FlataFunction();
-                flata.initFlataAutoTrade(autoTrade, user, exchange);
+                coinOne.initCoinOne(autoTrade, user, exchange);
             }
             /** FoblGate **/
             else if(DataCommon.FOBLGATE.equals(autoTrade.getExchange())){
-                foblGate   = new FoblGateFunction();
-                foblGate.initFoblGateAutoTrade(autoTrade, user, exchange);
+                foblGate = new FoblGateFunction();
+                foblGate.initFoblGate(autoTrade, user, exchange);
             }
-            /** Bithumb Global **/
+            /** Flata **/
+            else if(DataCommon.FLATA.equals(autoTrade.getExchange())){
+                flata = new FlataFunction();
+                flata.initFlata(autoTrade, user, exchange);
+            }
+            /** Dcoin **/
+            else if(DataCommon.DCOIN.equals(autoTrade.getExchange())){
+                dCoin = new DcoinFunction();
+                dCoin.initDcoin(autoTrade, user, exchange);
+            }
+            /** BithumGlobal **/
             else if(DataCommon.BITHUMB_GLOBAL.equals(autoTrade.getExchange())){
-                bithumbGlobal   = new BithumbGlobalFunction();
-                bithumbGlobal.initBithumbGlobalAutoTrade(autoTrade, user, exchange);
+                bithumbGlobal = new BithumbGlobalFunction();
+                bithumbGlobal.initBithumbGlobal(autoTrade, user, exchange);
             }
         }catch (Exception e){
-            log.error("[ERROR][Auto Trade Start fail] exchange {}" , exchange.getExchangeCode());
+            log.error("[Auto Trade Start fail][ERROR] exchange {}" , exchange.getExchangeCode());
         }
         return;
     }
@@ -126,7 +125,7 @@ public class AutoTradeThread implements Runnable{
                 Thread.sleep(intervalTime);
             }
         }catch(Exception e){
-            log.error("[ERROR][AutoTrade-Thread] Start error {}", e.getMessage());
+            log.error("[AutoTrade-Thread][ERROR] Start error {}", e.getMessage());
         }
     }
 
@@ -143,45 +142,40 @@ public class AutoTradeThread implements Runnable{
      */
     public void startProcess(String price, String cnt, AutoTrade autoTrade) {
         try{
-            String[] coinData = ServiceCommon.setCoinData(autoTrade.getCoin());
 
             /** 거래소가 코인원일 경우 **/
             if(DataCommon.COINONE.equals(autoTrade.getExchange())){
-                if(coinOne.startAutoTrade(price, cnt, autoTrade.getMode()) == DataCommon.CODE_SUCCESS){
-                    // Insert into history table
-                }
-            }
-            /** 거래소가 디코인일 경우 **/
-            else if(DataCommon.DCOIN.equals(autoTrade.getExchange())){
-                String symbol = coinData[0] + "" + dCoin.getCurrency(dCoin.getExchange(), coinData[0], coinData[1]);
-                if(dCoin.startAutoTrade(price, cnt, symbol ,autoTrade.getMode()) == DataCommon.CODE_SUCCESS){
-                    // Insert into history table
-                }
-            }
-            /** 거래소가 플랫타일 경우 **/
-            else if(DataCommon.FLATA.equals(autoTrade.getExchange())){
-                String symbol = coinData[0] + "/" + flata.getCurrency(flata.getExchange(), coinData[0], coinData[1]);
-                if(flata.startAutoTrade(price, cnt, coinData[0], coinData[1], symbol ,autoTrade.getMode()) == DataCommon.CODE_SUCCESS){
+                if(coinOne.startAutoTrade(price, cnt) == DataCommon.CODE_SUCCESS){
                     // Insert into history table
                 }
             }
             /** 거래소가 포블게이트일 경우 **/
             else if(DataCommon.FOBLGATE.equals(autoTrade.getExchange())){
-                String symbol = coinData[0] + "/" + foblGate.getCurrency(foblGate.getExchange(), coinData[0], coinData[1]);
-                if(foblGate.startAutoTrade(price, cnt, coinData[0], coinData[1], symbol ,autoTrade.getMode()) == DataCommon.CODE_SUCCESS){
+                if(foblGate.startAutoTrade(price, cnt) == DataCommon.CODE_SUCCESS){
+                    // Insert into history table
+                }
+            }
+            /** 거래소가 플랫타일 경우 **/
+            else if(DataCommon.FLATA.equals(autoTrade.getExchange())){
+                if(flata.startAutoTrade(price, cnt) == DataCommon.CODE_SUCCESS){
+                    // Insert into history table
+                }
+            }
+            /** 거래소가 디코인일 경우 **/
+            else if(DataCommon.DCOIN.equals(autoTrade.getExchange())){
+                if(dCoin.startAutoTrade(price, cnt) == DataCommon.CODE_SUCCESS){
                     // Insert into history table
                 }
             }
             /** 거래소가 빗썸글로벌일 경우 **/
             else if(DataCommon.BITHUMB_GLOBAL.equals(autoTrade.getExchange())){
-                String symbol = coinData[0] + "-" + bithumbGlobal.getCurrency(bithumbGlobal.getExchange(), coinData[0], coinData[1]);
-                if(bithumbGlobal.startAutoTrade(price, cnt, coinData[0], coinData[1], symbol ,autoTrade.getMode()) == DataCommon.CODE_SUCCESS){
+                if(bithumbGlobal.startAutoTrade(price, cnt) == DataCommon.CODE_SUCCESS){
                     // Insert into history table
                 }
             }
 
         }catch (Exception e){
-            log.error("[ERROR][AutoTradeThread - StartProcess] exchange {}, error {}",
+            log.error("[AutoTradeThread - StartProcess][ERROR] exchange {}, error {}",
                     autoTrade.getExchange(), e.getMessage());
         }
         return;

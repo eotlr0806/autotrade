@@ -33,7 +33,7 @@ public class ExchangeCoinRestController {
             ExchangeCoin coin = gson.fromJson(body, ExchangeCoin.class);
             returnVal         = String.valueOf(coinService.insertCoin(coin));
         }catch(Exception e){
-            log.info("[ERROR][Add Coin - API] {}", e.getMessage());
+            log.error("[ERROR][API - Add Coin] {}", e.getMessage());
             returnVal = String.valueOf(DataCommon.CODE_ERROR);
         }
         return returnVal;
@@ -49,7 +49,7 @@ public class ExchangeCoinRestController {
             ExchangeCoin coin = gson.fromJson(body, ExchangeCoin.class);
             returnVal         = String.valueOf(coinService.deleteCoin(coin.getId()));
         }catch(Exception e){
-            log.info("[ERROR][Delete Coin - API] {}", e.getMessage());
+            log.error("[ERROR][API - Delete Coin] {}", e.getMessage());
             returnVal = String.valueOf(DataCommon.CODE_ERROR);
         }
         return returnVal;

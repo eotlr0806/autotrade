@@ -50,7 +50,7 @@ public class AutoTradeService {
             }
 
         }catch(Exception e){
-            System.out.println("getshceulde:" + e.getMessage());
+            log.error("[ERROR][Get AutoTrade Trade] {}",e.getMessage());
         }
 
         return returnVal;
@@ -99,7 +99,7 @@ public class AutoTradeService {
             if(!msg.equals("")){
                 ServiceCommon.getAutoTradeThread(id);
             }
-            System.out.println(e.getMessage());
+            log.error("[ERROR][Post AutoTrade Trade] {}",e.getMessage());
         }
         return returnValue;
     }
@@ -123,7 +123,7 @@ public class AutoTradeService {
             msg = "msg:fail stop thread, id:" + autoTrade.getId();
             returnValue = ServiceCommon.makeReturnValue(DataCommon.CODE_ERROR, msg);
 
-            System.out.println(e.getMessage());
+            log.error("[ERROR][Delete AutoTrade Trade] {}",e.getMessage());
         }
         msg = "msg:success stop thread, id:" + autoTrade.getId();
         returnValue = ServiceCommon.makeReturnValue(DataCommon.CODE_SUCCESS, msg);
