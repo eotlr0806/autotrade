@@ -1,5 +1,6 @@
 package com.coin.autotrade.common;
 
+import com.coin.autotrade.service.function.*;
 import com.coin.autotrade.service.thread.AutoTradeThread;
 import com.coin.autotrade.service.thread.FishingTradeThread;
 import com.coin.autotrade.service.thread.LiquidityTradeThread;
@@ -342,4 +343,25 @@ public class ServiceCommon {
         }
     }
 
+    /* 거래소 반환 */
+    public static ExchangeFunction initExchange(String exchange) throws Exception{
+
+        ExchangeFunction exchangeFunction = null;
+
+        if(DataCommon.COINONE.equals(exchange)){
+            exchangeFunction = new CoinOneFunction();
+        } else if(DataCommon.FOBLGATE.equals(exchange)){
+            exchangeFunction = new FoblGateFunction();
+        } else if(DataCommon.FLATA.equals(exchange)){
+            exchangeFunction = new FlataFunction();
+        } else if(DataCommon.DCOIN.equals(exchange)){
+            exchangeFunction = new DcoinFunction();
+        } else if(DataCommon.BITHUMB_GLOBAL.equals(exchange)){
+            exchangeFunction = new BithumbGlobalFunction();
+        }
+
+        return exchangeFunction;
+    }
+
 }
+

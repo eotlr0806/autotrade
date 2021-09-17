@@ -25,11 +25,7 @@ public class AutoTradeThread implements Runnable{
     CoinService         coinService;
     AutoTradeRepository autotradeRepository;
     ExchangeRepository  exchangeRepository;
-    CoinOneFunction     coinOne;        // Coin one
-    DcoinFunction       dCoin;          // D coin
-    FlataFunction       flata;          // Flata
-    FoblGateFunction    foblGate;       // Foblgate
-    BithumbGlobalFunction bithumbGlobal;
+    ExchangeFunction exchangeFunction;
 
     boolean run                  = true;
     AutoTrade autoTrade          = null;
@@ -45,46 +41,19 @@ public class AutoTradeThread implements Runnable{
 
         // 거래소 셋팅
         initExchangeValue(inputAutoTrade, inputUser, exchange);
-
         return;
     }
 
     /** 각 거래소 정보들 초기값 셋팅 */
     public void initExchangeValue(AutoTrade autoTrade, User user, Exchange exchange){
         try{
-            /** Coin one **/
-            if(DataCommon.COINONE.equals(autoTrade.getExchange())){
-                coinOne = new CoinOneFunction();
-                coinOne.initCoinOne(autoTrade, user, exchange);
-            }
-            /** FoblGate **/
-            else if(DataCommon.FOBLGATE.equals(autoTrade.getExchange())){
-                foblGate = new FoblGateFunction();
-                foblGate.initFoblGate(autoTrade, user, exchange);
-            }
-            /** Flata **/
-            else if(DataCommon.FLATA.equals(autoTrade.getExchange())){
-                flata = new FlataFunction();
-                flata.initFlata(autoTrade, user, exchange);
-            }
-            /** Dcoin **/
-            else if(DataCommon.DCOIN.equals(autoTrade.getExchange())){
-                dCoin = new DcoinFunction();
-                dCoin.initDcoin(autoTrade, user, exchange);
-            }
-            /** BithumGlobal **/
-            else if(DataCommon.BITHUMB_GLOBAL.equals(autoTrade.getExchange())){
-                bithumbGlobal = new BithumbGlobalFunction();
-                bithumbGlobal.initBithumbGlobal(autoTrade, user, exchange);
-            }
+            exchangeFunction = ServiceCommon.initExchange(autoTrade.getExchange());
+            exchangeFunction.initClass(autoTrade, user, exchange);
         }catch (Exception e){
-            log.error("[Auto Trade Start fail][ERROR] exchange {}" , exchange.getExchangeCode());
+            log.error("[ERROR][AUTOTRADE THREAD INIT ERROR] error : {}" , e.getMessage());
         }
         return;
     }
-
-
-
 
     // best offer가 없어서 멈춤
     public void setTempStopNoBestOffer () {
@@ -93,7 +62,7 @@ public class AutoTradeThread implements Runnable{
             autoTrade.setStatus(NO_BEST_OFFER);
             autotradeRepository.save(autoTrade);
         }
-        log.info("[AutoTrade-Thread] temporarily Stop , There is no best offer");
+        log.info("[AUTOTRADE THREAD] Temporarily Stop , There is no best offer");
     }
 
 
@@ -110,74 +79,24 @@ public class AutoTradeThread implements Runnable{
                 }else{
                     if(!autoTrade.getStatus().equals("RUN")){
                         autoTrade.setStatus("RUN");
-                        log.info("[AutoTrade-Thread] Restart , Find best offer");
+                        log.info("[AUTOTRADE THREAD][RESTART] Find best offer");
                         autotradeRepository.save(autoTrade);
                     }
                     /** make cnt random value */
                     String cnt   = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double) autoTrade.getMinCnt(), (double) autoTrade.getMaxCnt()) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
-
                     /** Auto Trade start **/
-                    startProcess(price, cnt, autoTrade);
+                    exchangeFunction.startAutoTrade(price, cnt);
                 }
 
                 intervalTime = ServiceCommon.getRandomInt(autoTrade.getMinSeconds(), autoTrade.getMaxSeconds()) * 1000;
-                log.info("[AutoTrade-Thread] Start , intervalTime : {} seconds", intervalTime/1000);
+                log.info("[AUTOTRADE THREAD][START] , intervalTime : {} seconds", intervalTime/1000);
                 Thread.sleep(intervalTime);
             }
         }catch(Exception e){
-            log.error("[AutoTrade-Thread][ERROR] Start error {}", e.getMessage());
+            log.error("[ERROR][AUTOTRADE THREAD] Run is failed {}", e.getMessage());
         }
     }
 
     // Stop thread
     public void setStop(){  run = false; }
-
-
-
-
-
-    /**
-     * 거래소에 맞게 Thread 시작
-     * @param exchange
-     */
-    public void startProcess(String price, String cnt, AutoTrade autoTrade) {
-        try{
-
-            /** 거래소가 코인원일 경우 **/
-            if(DataCommon.COINONE.equals(autoTrade.getExchange())){
-                if(coinOne.startAutoTrade(price, cnt) == DataCommon.CODE_SUCCESS){
-                    // Insert into history table
-                }
-            }
-            /** 거래소가 포블게이트일 경우 **/
-            else if(DataCommon.FOBLGATE.equals(autoTrade.getExchange())){
-                if(foblGate.startAutoTrade(price, cnt) == DataCommon.CODE_SUCCESS){
-                    // Insert into history table
-                }
-            }
-            /** 거래소가 플랫타일 경우 **/
-            else if(DataCommon.FLATA.equals(autoTrade.getExchange())){
-                if(flata.startAutoTrade(price, cnt) == DataCommon.CODE_SUCCESS){
-                    // Insert into history table
-                }
-            }
-            /** 거래소가 디코인일 경우 **/
-            else if(DataCommon.DCOIN.equals(autoTrade.getExchange())){
-                if(dCoin.startAutoTrade(price, cnt) == DataCommon.CODE_SUCCESS){
-                    // Insert into history table
-                }
-            }
-            /** 거래소가 빗썸글로벌일 경우 **/
-            else if(DataCommon.BITHUMB_GLOBAL.equals(autoTrade.getExchange())){
-                if(bithumbGlobal.startAutoTrade(price, cnt) == DataCommon.CODE_SUCCESS){
-                    // Insert into history table
-                }
-            }
-
-        }catch (Exception e){
-            log.error("[AutoTradeThread - StartProcess][ERROR] exchange {}, error {}",
-                    autoTrade.getExchange(), e.getMessage());
-        }
-        return;
-    }
 }

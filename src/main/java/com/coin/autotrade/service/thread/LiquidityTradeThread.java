@@ -27,12 +27,7 @@ public class LiquidityTradeThread implements Runnable{
     CoinService         coinService;
     LiquidityRepository liquidityRepository;
     ExchangeRepository  exchangeRepository;
-    CoinOneFunction     coinOne;
-    DcoinFunction       dCoin;
-    FlataFunction       flata;
-    FoblGateFunction    foblGate;
-    BithumbGlobalFunction bithumbGlobal;
-
+    ExchangeFunction exchangeFunction;
     boolean run                 = true;
     Liquidity liquidity         = null;
 
@@ -57,114 +52,37 @@ public class LiquidityTradeThread implements Runnable{
      */
     public void initExchangeValue(Liquidity liquidity, User user, Exchange exchange){
         try{
-
-            /** Coin one **/
-            if(DataCommon.COINONE.equals(liquidity.getExchange())){
-                coinOne = new CoinOneFunction();
-                coinOne.initCoinOne(liquidity, user, exchange);
-            }
-            /** FoblGate **/
-            else if(DataCommon.FOBLGATE.equals(liquidity.getExchange())){
-                foblGate = new FoblGateFunction();
-                foblGate.initFoblGate(liquidity, user, exchange);
-            }
-            /** Flata **/
-            else if(DataCommon.FLATA.equals(liquidity.getExchange())){
-                flata = new FlataFunction();
-                flata.initFlata(liquidity, user, exchange);
-            }
-            /** Dcoin **/
-            else if(DataCommon.DCOIN.equals(liquidity.getExchange())){
-                dCoin = new DcoinFunction();
-                dCoin.initDcoin(liquidity, user, exchange);
-            }
-            /** BithumGlobal **/
-            else if(DataCommon.BITHUMB_GLOBAL.equals(liquidity.getExchange())){
-                bithumbGlobal = new BithumbGlobalFunction();
-                bithumbGlobal.initBithumbGlobal(liquidity, user, exchange);
-            }
+            exchangeFunction = ServiceCommon.initExchange(liquidity.getExchange());
+            exchangeFunction.initClass(liquidity, user, exchange);
 
         }catch (Exception e){
-            log.error("[Liquidity Start fail][ERROR] exchange : {} ", exchange.getExchangeCode());
+            log.error("[ERROR][LIQUIDITY THREAD INIT ERROR] error : {}" , e.getMessage());
         }
         return;
     }
-
-
-
 
     // Stop thread
     public void setStop(){
         run = false;
     }
 
-
     @Override
     public void run() {
         try{
             int intervalTime = 100;
             while(run){
-
                 /** Check is there best offer */
                 Map list = coinService.getLiquidityList(liquidity);
-
                 /** Start Liquidity Thread **/
-                startProcess(list, liquidity);
+                exchangeFunction.startLiquidity(list);
 
                 intervalTime = ServiceCommon.getRandomInt(liquidity.getMinSeconds(), liquidity.getMaxSeconds()) * 1000;
-                log.info("[Liquidity-Thread] Start , intervalTime : {} seconds", intervalTime/1000);
+                log.info("[LIQUIDITY THREAD][START] , intervalTime : {} seconds", intervalTime/1000);
                 Thread.sleep(intervalTime);
             }
         }catch(Exception e){
-            log.error("[Liquidity-Thread][ERROR] Start error {}", e.getMessage());
+            log.error("[ERROR][LIQUIDITY THREAD] Run is failed {}", e.getMessage());
         }
     }
-
-
-    /**
-     * 거래소에 맞게 Thread 시작
-     * @param exchange
-     */
-    public void startProcess(Map list, Liquidity liquidity) {
-        try{
-
-            /** Auto Trade start **/
-            // Coin one
-            if(DataCommon.COINONE.equals(liquidity.getExchange())){
-                if(coinOne.startLiquidity(list) == DataCommon.CODE_SUCCESS){
-                    // insert into history table
-                }
-            }
-            // Foblgate
-            else if(DataCommon.FOBLGATE.equals(liquidity.getExchange())){
-                if(foblGate.startLiquidity(list) == DataCommon.CODE_SUCCESS){
-                    // Insert into history table
-                }
-            }
-            // Flata
-            else if(DataCommon.FLATA.equals(liquidity.getExchange())){
-                if(flata.startLiquidity(list) == DataCommon.CODE_SUCCESS){
-                    // Insert into history table
-                }
-            }
-            // Dcoin
-            else if(DataCommon.DCOIN.equals(liquidity.getExchange())){
-                if(dCoin.startLiquidity(list) == DataCommon.CODE_SUCCESS){
-                    // insert into history table
-                }
-            }
-            // Bithumb Global
-            else if(DataCommon.BITHUMB_GLOBAL.equals(liquidity.getExchange())){
-                if(bithumbGlobal.startLiquidity(list) == DataCommon.CODE_SUCCESS){
-                    // Insert into history table
-                }
-            }
-        }catch (Exception e){
-            log.error("[LiquidityThread - StartProcess][ERROR] exchange {}, error {}",
-                    liquidity.getExchange(), e.getMessage());
-        }
-        return;
-    }
-
 
 }

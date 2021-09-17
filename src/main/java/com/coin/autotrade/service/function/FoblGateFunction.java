@@ -23,93 +23,42 @@ import java.util.List;
 import java.util.Map;
 
 @Slf4j
-public class FoblGateFunction {
+public class FoblGateFunction extends ExchangeFunction{
 
     private String API_KEY               = "apiKey";
     private String SECRET_KEY            = "secretKey";
     private String USER_ID               = "userId";
-    private Map<String, String> keyList  = new HashMap<>();
-    Gson gson                            = new Gson();
-    Exchange exchange                    = null;
-    AutoTrade autoTrade                  = null;
-    Liquidity liquidity                  = null;
-    CoinService coinService              = null;
-    Fishing fishing                      = null;
-    User user                            = null;
-    String SELL                          = "ask";
-    String BUY                           = "bid";
+    private String SELL                  = "ask";
+    private String BUY                   = "bid";
     private String ALREADY_TRADED        = "5004";
+    private Map<String, String> keyList  = new HashMap<>();
 
     ExchangeRepository exchageRepository;
 
-    /** 생성자로서, 생성될 때, injection**/
-    public FoblGateFunction(){
-        exchageRepository   = (ExchangeRepository) BeanUtils.getBean(ExchangeRepository.class);
-    }
-
-    /**
-     * Foblgate Function initialize for autotrade
-     */
-    public void initFoblGate(AutoTrade autoTrade, User user, Exchange exchange){
-        this.autoTrade = autoTrade;
+    /* Foblgate Function initialize for autotrade */
+    @Override
+    public void initClass(AutoTrade autoTrade, User user, Exchange exchange){
+        super.autoTrade = autoTrade;
         setCommonValue(user, exchange);
     }
 
-    /**
-     * Foblgate Function initialize for liquidity
-     */
-    public void initFoblGate(Liquidity liquidity, User user, Exchange exchange){
-        this.liquidity = liquidity;
+    /* Foblgate Function initialize for liquidity */
+    @Override
+    public void initClass(Liquidity liquidity, User user, Exchange exchange){
+        super.liquidity = liquidity;
         setCommonValue(user, exchange);
     }
 
-    /**
-     * Foblgate Function initialize for fishing
-     */
-    public void initFoblGate(Fishing fishing, User user, Exchange exchange, CoinService coinService){
-        this.fishing     = fishing;
-        this.coinService = coinService;
+    /* Foblgate Function initialize for fishing */
+    @Override
+    public void initClass(Fishing fishing, User user, Exchange exchange, CoinService coinService){
+        super.fishing     = fishing;
+        super.coinService = coinService;
         setCommonValue(user, exchange);
     }
 
-
-    private void setCommonValue(User user,  Exchange exchange){
-        this.user     = user;
-        this.exchange = exchange;
-    }
-
-
-
-    /** 해당 user 정보를 이용해 API 키를 셋팅한다 */
-    public void setApiKey(String coin, String coinId){
-        try{
-            // 키 값이 셋팅되어 있지 않다면
-            if(keyList.size() < 1){
-                // Set token key
-                for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
-                    if(exCoin.getCoinCode().equals(coin) && exCoin.getId() == Long.parseLong(coinId)){
-                        keyList.put(USER_ID,     exCoin.getExchangeUserId());
-                        keyList.put(API_KEY,     exCoin.getPublicKey());
-                        keyList.put(SECRET_KEY,  exCoin.getPrivateKey());
-                    }
-                }
-                log.info("[FOBLGATE][Set Key] First Key setting in instance API:{}, secret:{}",keyList.get(API_KEY), keyList.get(SECRET_KEY));
-            }
-        }catch (Exception e){
-            log.error("[FOBLGATE][ERROR][Set Key] {}",e.getMessage());
-        }
-
-    }
-
-    /**
-     * 포블게이트 자전거래 로직
-     * @param price
-     * @param cnt
-     * @param coin
-     * @param symbol coin + "/" + currency : BTC/KRW
-     * @param mode
-     * @return
-     */
+    /* 포블게이트 자전거래 로직 */
+    @Override
     public int startAutoTrade(String price, String cnt){
         log.info("[FOBLGATE][AUTOTRADE START]");
         int returnCode    = DataCommon.CODE_SUCCESS;
@@ -156,8 +105,8 @@ public class FoblGateFunction {
         return returnCode;
     }
 
-
     /** 호가유동성 function */
+    @Override
     public int startLiquidity(Map list){
 
         int returnCode = DataCommon.CODE_SUCCESS;
@@ -249,12 +198,8 @@ public class FoblGateFunction {
         return returnCode;
     }
 
-    /**
-     * 매매 긁기
-     * @param list
-     * @param intervalTime
-     * @return
-     */
+    /* 매매 긁기 */
+    @Override
     public int startFishingTrade(Map<String,List> list, int intervalTime){
         log.info("[FOBLGATE][FISHINGTRADE START]");
 
@@ -364,6 +309,38 @@ public class FoblGateFunction {
         return returnCode;
     }
 
+    /** 생성자로서, 생성될 때, injection**/
+    public FoblGateFunction(){
+        exchageRepository   = (ExchangeRepository) BeanUtils.getBean(ExchangeRepository.class);
+    }
+
+    private void setCommonValue(User user,  Exchange exchange){
+        super.user     = user;
+        super.exchange = exchange;
+    }
+
+    /** 해당 user 정보를 이용해 API 키를 셋팅한다 */
+    public void setApiKey(String coin, String coinId){
+        try{
+            // 키 값이 셋팅되어 있지 않다면
+            if(keyList.size() < 1){
+                // Set token key
+                for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
+                    if(exCoin.getCoinCode().equals(coin) && exCoin.getId() == Long.parseLong(coinId)){
+                        keyList.put(USER_ID,     exCoin.getExchangeUserId());
+                        keyList.put(API_KEY,     exCoin.getPublicKey());
+                        keyList.put(SECRET_KEY,  exCoin.getPrivateKey());
+                    }
+                }
+                log.info("[FOBLGATE][Set Key] First Key setting in instance API:{}, secret:{}",keyList.get(API_KEY), keyList.get(SECRET_KEY));
+            }
+        }catch (Exception e){
+            log.error("[FOBLGATE][ERROR][Set Key] {}",e.getMessage());
+        }
+
+    }
+
+
     /** 포블게이트 매수/매도 로직 */
     public String createOrder(String type, String price, String cnt, String symbol){
 
@@ -417,11 +394,7 @@ public class FoblGateFunction {
         return returnCode;
     }
 
-    /**
-     * Fobl Gate Order book api
-     * @param coin
-     * @return
-     */
+    /* Fobl Gate Order book api */
     public String getOrderBook(Exchange exchange, String coin, String coinId){
         if(getExchange() == null){ setExchange(exchange); } // Exchange setting
         setApiKey(coin, coinId);
@@ -460,11 +433,7 @@ public class FoblGateFunction {
     }
 
 
-    /**
-     * Fobl Gate 의 경우 통화 기준으로 필요함.
-     * @param coin
-     * @return
-     */
+    /* Fobl Gate 의 경우 통화 기준으로 필요함. */
     public String getCurrency(Exchange exchange, String coin, String coinId){
         String returnVal = "";
         try {
@@ -483,11 +452,7 @@ public class FoblGateFunction {
     }
 
 
-    /**
-     * API 이용하기 전, 해쉬값으로 변환하기 위한 메서드
-     * @param targetStr
-     * @return
-     */
+    /* API 이용하기 전, 해쉬값으로 변환하기 위한 메서드 */
     public String makeApiHash(String targetStr){
         StringBuffer sb = new StringBuffer();
         try{
@@ -519,7 +484,6 @@ public class FoblGateFunction {
      * @param targetUrl  - target url
      * @param secretHash - 암호화한 값
      * @param formData   - post에 들어가는 body 데이터
-     * @return
      */
     public JsonObject postHttpMethod(String targetUrl, String secretHash,  Map<String, String> datas ) {
         URL url;
@@ -578,10 +542,8 @@ public class FoblGateFunction {
 
     /**
      * request를 날릴때 Map에 데이터를 담아서 객체형식으로 보내줘야 하는데, 모든 요청에 공통으로 사용되는 값들
-     * @param userId
      * @param symbol symbol is pairName coin/currency
      * @param type type is action
-     * @return
      */
     private Map<String, String> setDefaultRequest(String userId, String symbol, String type, String apiKey){
         Map<String, String> mapForRequest = new HashMap<>();
@@ -594,7 +556,7 @@ public class FoblGateFunction {
     }
 
 
-    public Exchange getExchange() { return exchange;  }
-    public void setExchange(Exchange exchange) { this.exchange = exchange; }
+    public Exchange getExchange() { return super.exchange;  }
+    public void setExchange(Exchange exchange) { super.exchange = exchange; }
 
 }
