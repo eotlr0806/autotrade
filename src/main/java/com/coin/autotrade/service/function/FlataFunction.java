@@ -25,140 +25,39 @@ import java.util.List;
 import java.util.Map;
 
 @Slf4j
-public class FlataFunction {
+public class FlataFunction extends ExchangeFunction{
 
-    Exchange exchange                    = null;
-    User user                            = null;
-    AutoTrade autoTrade                  = null;
-    Liquidity liquidity                  = null;
-    Fishing fishing                      = null;
-    CoinService coinService              = null;
-    Gson gson                            = new Gson();
-    String coinMinCnt                    = "";
-    private String BUY                   = "1";
-    private String SELL                  = "2";
-    private String ALREADY_TRADED        = "30044";
+    String coinMinCnt                          = "";
+    final private String BUY                   = "1";
+    final private String SELL                  = "2";
+    final private String ALREADY_TRADED        = "30044";
 
     private ExchangeRepository exchageRepository;
 
-
-    /** 생성자로서, 생성될 때, injection**/
-    public FlataFunction(){
-        exchageRepository   = (ExchangeRepository) BeanUtils.getBean(ExchangeRepository.class);
-    }
-
-
-    /**
-     * Flata Function initialize
-     * @param autoTrade
-     * @param user
-     */
-    public void initFlata(AutoTrade autoTrade, User user, Exchange exchange){
-        this.autoTrade = autoTrade;
+    @Override
+    public void initClass(AutoTrade autoTrade, User user, Exchange exchange){
+        super.autoTrade = autoTrade;
         setCommonValue(user, exchange);
     }
 
-    /**
-     * Flata Function initialize
-     * @param autoTrade
-     * @param user
-     */
-    public void initFlata(Liquidity liquidity, User user, Exchange exchange){
-        this.liquidity = liquidity;
+    @Override
+    public void initClass(Liquidity liquidity, User user, Exchange exchange){
+        super.liquidity = liquidity;
         setCommonValue(user, exchange);
     }
 
-    public void initFlata(Fishing fishing, User user, Exchange exchange, CoinService coinService){
-        this.fishing     = fishing;
-        this.coinService = coinService;
+    @Override
+    public void initClass(Fishing fishing, User user, Exchange exchange, CoinService coinService){
+        super.fishing     = fishing;
+        super.coinService = coinService;
         setCommonValue(user, exchange);
     }
-
-
-    private void setCommonValue(User user,  Exchange exchange){
-        this.user     = user;
-        this.exchange = exchange;
-    }
-
-
-    /**
-     * Session key 생성
-     * 해당 코인에 등록된 key를 가져와 그 코인에 맞는 session key 생성
-     * @return
-     */
-    public String setSessionKey(String userPublicKey, String coinCode, String coinId){
-
-        // 해당 계정에 대해 세션 키가 있을 경우 반환
-        if(DataCommon.FLATA_SESSION_KEY.get(userPublicKey) != null){
-            return DataCommon.FLATA_SESSION_KEY.get(userPublicKey);
-        }
-
-        String publicKey     = "";
-        String secretKey     = "";
-        String returnValue   = "";
-        JsonObject header    = new JsonObject();
-        try{
-
-            if(exchange.getExchangeCoin().size() > 0){
-                for(ExchangeCoin coin : exchange.getExchangeCoin()){
-                    if(coin.getCoinCode().equals(coinCode) && coin.getId() == Long.parseLong(coinId)){
-                        publicKey   = coin.getPublicKey();
-                        secretKey = coin.getPrivateKey();
-                        break;
-                    }
-                }
-            }
-            header.addProperty("acctid",publicKey);
-            header.addProperty("acckey",secretKey);
-
-            JsonObject response =  postHttpMethod(DataCommon.FLATA_MAKE_SESSION, gson.toJson(header));
-            JsonObject item     =  response.getAsJsonObject("item");
-            returnValue         =  item.get("sessionId").toString().replace("\"","");
-
-            // 메모리에 저장
-            DataCommon.FLATA_SESSION_KEY.put(userPublicKey, returnValue);
-            log.info("[SUCCESS][FLATA][SET SESSION KEY] First session key {}: mapperedPublicKey : {}", returnValue, userPublicKey );
-
-        }catch (Exception e){
-            log.error("[ERROR][FLATA][MAKE SESSION KEY] {}" , e.getMessage());
-        }
-
-        return DataCommon.FLATA_SESSION_KEY.get(userPublicKey);
-    }
-
-    /**
-     * 최초에 등록한 세션키를 가져옴.
-     * @param coin
-     * @return
-     */
-    public String getSessionKey(String coin, String coinId){
-        String publicKey  = "";
-        String sessionKey = "";
-        try{
-            for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
-                if(exCoin.getCoinCode().equals(coin) && exCoin.getId() == Long.parseLong(coinId)){
-                    publicKey = exCoin.getPublicKey();
-                    break;
-                }
-            }
-
-            if(!publicKey.equals("")){
-                sessionKey = setSessionKey(publicKey, coin, coinId);
-            }
-        }catch (Exception e){
-            log.error("[ERROR][FLATA][GET SESSION] {}", e.getMessage());
-        }
-
-        log.info("[FLATA][GET SESSION] Session key : {}", sessionKey );
-        return sessionKey;
-    }
-
 
     /**
      * Start auto trade function
      * @param symbol - coin / currency
-     * @return
      */
+    @Override
     public int startAutoTrade(String price, String cnt){
         log.info("[FLATA][AUTOTRADE START]");
 
@@ -201,8 +100,8 @@ public class FlataFunction {
         return returnCode;
     }
 
-
     /** 호가유동성 function */
+    @Override
     public int startLiquidity(Map list){
         int returnCode = DataCommon.CODE_ERROR;
 
@@ -287,13 +186,7 @@ public class FlataFunction {
         return returnCode;
     }
 
-
-    /**
-     *
-     * @param list
-     * @param intervalTime
-     * @return
-     */
+    @Override
     public int startFishingTrade(Map<String,List> list, int intervalTime){
         log.info("[FLATA][FISHINGTRADE START]");
 
@@ -399,13 +292,87 @@ public class FlataFunction {
     }
 
 
+    /** 생성자로서, 생성될 때, injection**/
+    public FlataFunction(){
+        exchageRepository   = (ExchangeRepository) BeanUtils.getBean(ExchangeRepository.class);
+    }
 
+    private void setCommonValue(User user,  Exchange exchange){
+        super.user     = user;
+        super.exchange = exchange;
+    }
+
+    /**
+     * Session key 생성
+     * 해당 코인에 등록된 key를 가져와 그 코인에 맞는 session key 생성
+     */
+    public String setSessionKey(String userPublicKey, String coinCode, String coinId){
+
+        // 해당 계정에 대해 세션 키가 있을 경우 반환
+        if(DataCommon.FLATA_SESSION_KEY.get(userPublicKey) != null){
+            return DataCommon.FLATA_SESSION_KEY.get(userPublicKey);
+        }
+
+        String publicKey     = "";
+        String secretKey     = "";
+        String returnValue   = "";
+        JsonObject header    = new JsonObject();
+        try{
+
+            if(exchange.getExchangeCoin().size() > 0){
+                for(ExchangeCoin coin : exchange.getExchangeCoin()){
+                    if(coin.getCoinCode().equals(coinCode) && coin.getId() == Long.parseLong(coinId)){
+                        publicKey   = coin.getPublicKey();
+                        secretKey = coin.getPrivateKey();
+                        break;
+                    }
+                }
+            }
+            header.addProperty("acctid",publicKey);
+            header.addProperty("acckey",secretKey);
+
+            JsonObject response =  postHttpMethod(DataCommon.FLATA_MAKE_SESSION, gson.toJson(header));
+            JsonObject item     =  response.getAsJsonObject("item");
+            returnValue         =  item.get("sessionId").toString().replace("\"","");
+
+            // 메모리에 저장
+            DataCommon.FLATA_SESSION_KEY.put(userPublicKey, returnValue);
+            log.info("[SUCCESS][FLATA][SET SESSION KEY] First session key {}: mapperedPublicKey : {}", returnValue, userPublicKey );
+
+        }catch (Exception e){
+            log.error("[ERROR][FLATA][MAKE SESSION KEY] {}" , e.getMessage());
+        }
+
+        return DataCommon.FLATA_SESSION_KEY.get(userPublicKey);
+    }
+
+    /* 최초에 등록한 세션키를 가져옴. */
+    public String getSessionKey(String coin, String coinId){
+        String publicKey  = "";
+        String sessionKey = "";
+        try{
+            for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
+                if(exCoin.getCoinCode().equals(coin) && exCoin.getId() == Long.parseLong(coinId)){
+                    publicKey = exCoin.getPublicKey();
+                    break;
+                }
+            }
+
+            if(!publicKey.equals("")){
+                sessionKey = setSessionKey(publicKey, coin, coinId);
+            }
+        }catch (Exception e){
+            log.error("[ERROR][FLATA][GET SESSION] {}", e.getMessage());
+        }
+
+        log.info("[FLATA][GET SESSION] Session key : {}", sessionKey );
+        return sessionKey;
+    }
 
     /**
      * 매도/매수 function
      * @param type   - 1: 매수 / 2 : 매도
      * @param symbol - coin + / + currency
-     * @return
      */
     public String createOrder(String type, String price, String cnt, String symbol, String sessionKey){
 
@@ -465,12 +432,7 @@ public class FlataFunction {
         return orderId;
     }
 
-    /**
-     * 주문 취소 function
-     * @param orderId
-     * @param sessionKey
-     * @return
-     */
+    /* 주문 취소 function */
     public int cancelOrder(String orderId, String sessionKey){
         int returnVal = DataCommon.CODE_ERROR;
         try{
@@ -500,11 +462,7 @@ public class FlataFunction {
         return returnVal;
     }
 
-    /**
-     * 호가 조회 API
-     * @param coin
-     * @return
-     */
+    /* 호가 조회 API */
     public String getOrderBook(Exchange exchange, String coin, String coinId) {
         String returnRes = "";
         try{
@@ -538,12 +496,7 @@ public class FlataFunction {
         return returnRes;
     }
 
-
-    /**
-     * 해당 코인의 최소 매수/매도 단위 조회
-     * @param symbol
-     * @return
-     */
+    /* 해당 코인의 최소 매수/매도 단위 조회 */
     public String getCoinMinCount(String symbol) {
         String returnRes = "";
 
@@ -588,12 +541,7 @@ public class FlataFunction {
         return returnRes;
     }
 
-
-    /**
-     * Coin의 등록된 화폐를 가져오는 로직
-     * @param coin
-     * @return
-     */
+    /* Coin의 등록된 화폐를 가져오는 로직 */
     public String getCurrency(Exchange exchange,String coin, String coinId){
         String returnVal = "";
         try {
@@ -611,15 +559,7 @@ public class FlataFunction {
         return returnVal;
     }
 
-
-
-
-    /**
-     * HTTP POST Method for coinone
-     * @param targetUrl
-     * @param payload
-     * @return
-     */
+    /* HTTP POST Method for coinone */
     public JsonObject postHttpMethod(String targetUrl, String payload) {
         URL url;
         String inputLine;
@@ -701,10 +641,10 @@ public class FlataFunction {
     }
 
     public void setExchange(Exchange exchange){
-        this.exchange = exchange;
+        super.exchange = exchange;
     }
     public Exchange getExchange(){
-        return this.exchange;
+        return super.exchange;
     }
 
 }

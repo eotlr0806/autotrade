@@ -6,7 +6,6 @@ import com.coin.autotrade.common.ServiceCommon;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.repository.ExchangeRepository;
 import com.coin.autotrade.service.CoinService;
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 
@@ -26,92 +25,41 @@ import java.util.List;
 import java.util.Map;
 
 @Slf4j
-public class DcoinFunction {
+public class DcoinFunction extends ExchangeFunction{
 
-    private User user                   = null;
-    private AutoTrade autoTrade         = null;
-    private Exchange exchange           = null;
-    private Liquidity liquidity         = null;
-    private Fishing fishing             = null;
-    private CoinService coinService     = null;
-    private String ACCESS_TOKEN         = "apiToken";
-    private String SECRET_KEY           = "secretKey";
-    private Map<String, String> keyList = new HashMap<>();
-    Gson gson                           = new Gson();
+    final private String ACCESS_TOKEN         = "apiToken";
+    final private String SECRET_KEY           = "secretKey";
+    private Map<String, String> keyList       = new HashMap<>();
     private ExchangeRepository exchageRepository;
 
-    /** 생성자로서, 생성될 때, injection**/
-    public DcoinFunction(){
-        exchageRepository   = (ExchangeRepository) BeanUtils.getBean(ExchangeRepository.class);
-    }
 
-    /**
-     * 호가 조회 시, 사용하기위해 Set
-     * @param exchange
-     */
-    public void setExchange(Exchange exchange){
-        this.exchange = exchange;
-    }
-
-    /**
-     * 호가 조회 시, 사용하기위해 get
-     * @param exchange
-     */
-    public Exchange getExchange(){
-        return this.exchange;
-    }
-
-    /**
-     * Dcoin Function initialize
-     * @param autoTrade
-     * @param user
-     */
-    public void initDcoin(AutoTrade autoTrade, User user, Exchange exchange) throws Exception{
-        this.autoTrade = autoTrade;
-
+    @Override
+    public void initClass(AutoTrade autoTrade, User user, Exchange exchange){
+        super.autoTrade = autoTrade;
         setCommonValue(user, exchange);
         setCoinToken(ServiceCommon.setCoinData(autoTrade.getCoin()));
     }
 
-    /**
-     * 호가 유동성을 이용하기 위한 초기값 설정
-     * @param liquidity
-     * @param user
-     */
-    public void initDcoin(Liquidity liquidity, User user, Exchange exchange) throws Exception{
-        this.liquidity = liquidity;
+    @Override
+    public void initClass(Liquidity liquidity, User user, Exchange exchange){
+        super.liquidity = liquidity;
         setCommonValue(user, exchange);
         setCoinToken(ServiceCommon.setCoinData(liquidity.getCoin()));
     }
 
-    public void initDcoin(Fishing fishing , User user,  Exchange exchange,CoinService coinService) throws Exception {
-        this.fishing     = fishing;
-        this.coinService = coinService;
+    @Override
+    public void initClass(Fishing fishing , User user,  Exchange exchange,CoinService coinService){
+        super.fishing     = fishing;
+        super.coinService = coinService;
         setCommonValue(user, exchange);
         setCoinToken(ServiceCommon.setCoinData(fishing.getCoin()));
     }
-
-    private void setCommonValue(User user,  Exchange exchange){
-        this.user     = user;
-        this.exchange = exchange;
-    }
-
-    private void setCoinToken(String[] coinData){
-        // Set token key
-        for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
-            if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1]) ){
-                keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
-                keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
-            }
-        }
-    }
-
-
 
     /**
      * Auto Trade Start
      * @param symbol - coin + currency
      */
+    @Override
     public int startAutoTrade(String price, String cnt){
 
         log.info("[DCOIN][AUTOTRADE] Start");
@@ -152,9 +100,8 @@ public class DcoinFunction {
         return returnCode;
     }
 
-    /**
-     * 호가유동성 메서드
-     */
+    /* 호가유동성 메서드 */
+    @Override
     public int startLiquidity(Map list){
         int returnCode = DataCommon.CODE_ERROR;
 
@@ -232,12 +179,7 @@ public class DcoinFunction {
         return returnCode;
     }
 
-    /**
-     * 매매 긁기 로직
-     * @param list
-     * @param intervalTime
-     * @return
-     */
+    @Override
     public int startFishingTrade(Map<String,List> list, int intervalTime){
         log.info("[DCOIN][FISHINGTRADE START]");
 
@@ -337,11 +279,46 @@ public class DcoinFunction {
         return returnCode;
     }
 
+
+    /** 생성자로서, 생성될 때, injection**/
+    public DcoinFunction(){
+        exchageRepository   = (ExchangeRepository) BeanUtils.getBean(ExchangeRepository.class);
+    }
+
+    /* 호가 조회 시, 사용하기위해 Set */
+    public void setExchange(Exchange exchange){
+        super.exchange = exchange;
+    }
+
+    /* 호가 조회 시, 사용하기위해 get */
+    public Exchange getExchange(){
+        return super.exchange;
+    }
+
+    private void setCommonValue(User user,  Exchange exchange){
+        super.user     = user;
+        super.exchange = exchange;
+    }
+
+    private void setCoinToken(String[] coinData){
+        // Set token key
+        try{
+            for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
+                if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1]) ){
+                    keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
+                    keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
+                }
+            }
+        }catch (Exception e){
+            log.error("[DCOIN][SET COIN TOKEN ERROR] error : {} ", e.getMessage());
+        }
+    }
+
+
     /**
      * 매수 매도 로직
      * @param side   - SELL, BUY
      * @param symbol - coin + currency
-     * @return
      */
     public String createOrder(String side, String price, String cnt, String symbol) {
 
@@ -380,8 +357,6 @@ public class DcoinFunction {
     /**
      * 매도/매수 거래 취소 로직
      * @param symbol   - coin + currency
-     * @param orderId  -
-     * @return
      */
     public int cancelOrder(String symbol, String orderId) {
 
@@ -409,9 +384,6 @@ public class DcoinFunction {
         }
         return returnValue;
     }
-
-
-
 
     /** Dcoin Order book api */
     public String getOrderBook(Exchange exchange, String coin, String coinId){
@@ -492,7 +464,7 @@ public class DcoinFunction {
         return returnVal;
     }
 
-    /** DCOIN 의 경우 통화 기준으로 필요함.*/
+    /* DCOIN 의 경우 통화 기준으로 필요함.*/
     public String getCurrency(Exchange exchange, String coin, String coinId){
         String returnVal = "";
         try {
@@ -510,12 +482,7 @@ public class DcoinFunction {
         return returnVal;
     }
 
-    /**
-     * HTTP POST Method for coinone
-     * @param targetUrl
-     * @param payload
-     * @return
-     */
+    /* HTTP POST Method for coinone */
     public JsonObject postHttpMethod(String targetUrl, String payload) {
         URL url;
         String inputLine;

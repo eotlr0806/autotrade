@@ -30,60 +30,39 @@ import java.util.Map;
  * Coin one 에서 사용할 class
  */
 @Slf4j
-public class CoinOneFunction {
+public class CoinOneFunction extends ExchangeFunction{
 
-    private User user                   = null;
-    private AutoTrade autoTrade         = null;
-    private Exchange exchange           = null;
-    private Liquidity liquidity         = null;
-    private Fishing fishing             = null;
-    private String ACCESS_TOKEN         = "access_token";
-    private String SECRET_KEY           = "secret_key";
-    private Map<String, String> keyList = new HashMap<>();
-    Gson gson                           = new Gson();
-    private String ALREADY_TRADED       = "116";
-    private int CANCEL_AGAIN            = 8;
-    private CoinService coinService     = null; // Fishing 시, 사용하기 위한 coin Service class
+    final private String ACCESS_TOKEN     = "access_token";
+    final private String SECRET_KEY       = "secret_key";
+    final private String ALREADY_TRADED   = "116";
+    final private int CANCEL_AGAIN        = 8;
+    private Map<String, String> keyList   = new HashMap<>();
+
+
 
     /** 자전 거래를 이용하기위한 초기값 설정 */
-    public void initCoinOne(AutoTrade autoTrade, User user, Exchange exchange) throws Exception {
-        this.autoTrade = autoTrade;
+    @Override
+    public void initClass(AutoTrade autoTrade, User user, Exchange exchange) {
+        super.autoTrade = autoTrade;
         setCommonValue(user, exchange, ServiceCommon.setCoinData(autoTrade.getCoin()));
     }
 
     /** 호가 유동성을 이용하기 위한 초기값 설정 */
-    public void initCoinOne(Liquidity liquidity, User user, Exchange exchange) throws Exception{
-        this.liquidity  = liquidity;
+    @Override
+    public void initClass(Liquidity liquidity, User user, Exchange exchange) {
+        super.liquidity  = liquidity;
         setCommonValue(user, exchange, ServiceCommon.setCoinData(liquidity.getCoin()));
     }
 
     /** 매매 긁기를 이용하기 위한 초기값 설정 */
-    public void initCoinOne(Fishing fishing, User user, Exchange exchange, CoinService coinService) throws Exception{
-        this.fishing     = fishing;
-        this.coinService = coinService;
+    @Override
+    public void initClass(Fishing fishing, User user, Exchange exchange, CoinService coinService) {
+        super.fishing     = fishing;
+        super.coinService = coinService;
         setCommonValue(user, exchange, ServiceCommon.setCoinData(fishing.getCoin()));
     }
 
-    // init 시, keyList 값 세팅
-    private void setCommonValue(User user, Exchange exchange, String[] coinData){
-        this.user       = user;
-        this.exchange   = exchange;
-
-        // Set token key
-        for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
-            if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1]) ){
-                keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
-                keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
-            }
-        }
-    }
-
-    /**
-     * Liquidity Trade Start
-     * @param price
-     * @param cnt
-     * @return
-     */
+    @Override
     public int startLiquidity(Map list){
         int returnCode = DataCommon.CODE_SUCCESS;
 
@@ -168,10 +147,7 @@ public class CoinOneFunction {
         return returnCode;
     }
 
-    /**
-     * Auto Trade Start
-     * @return
-     */
+    @Override
     public int startAutoTrade(String price, String cnt){
 
         log.info("[COINONE][AUTOTRADE] Start");
@@ -218,10 +194,7 @@ public class CoinOneFunction {
         return returnCode;
     }
 
-    /***
-     * Fishing Trade
-     * @return
-     */
+    @Override
     public int startFishingTrade(Map<String,List> list, int intervalTime){
 
         log.info("[COINONE][FISHINGTRADE] Start");
@@ -369,11 +342,24 @@ public class CoinOneFunction {
         return returnCode;
     }
 
+    // init 시, keyList 값 세팅
+    private void setCommonValue(User user, Exchange exchange, String[] coinData){
+        super.user       = user;
+        super.exchange   = exchange;
+        try{
+            // Set token key
+            for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
+                if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1]) ){
+                    keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
+                    keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
+                }
+            }
+        }catch (Exception e){
+            log.error("[COINONE][SET COMMON VALUE] error : {}", e.getMessage());
+        }
+    }
 
-    /**
-     * API for buy method
-     * @return
-     */
+    /** API for buy method */
     public String buyTrade(String price, String cnt ,String coin){
 
         String orderId   = "";
@@ -399,12 +385,7 @@ public class CoinOneFunction {
         return orderId;
     }
 
-    /**
-     * API for sell method
-     * @param price
-     * @param cnt
-     * @return
-     */
+    /* API for sell method */
     public String sellTrade(String price, String cnt,String coin){
 
         String orderId   = "";
@@ -429,11 +410,6 @@ public class CoinOneFunction {
         return orderId;
     }
 
-    /**
-     * cancel
-     * @param data
-     * @return
-     */
     public int cancelTrade(Map<String,String> data){
         int returnValue = DataCommon.CODE_ERROR;
 
@@ -466,12 +442,7 @@ public class CoinOneFunction {
 
 
 
-    /**
-     * HMAC Signature 만드는 method
-     * @param payload
-     * @param secret
-     * @return
-     */
+    /* HMAC Signature 만드는 method */
      public String makeHmacSignature(String payload, String secret) {
         String result;
         try {
@@ -495,8 +466,6 @@ public class CoinOneFunction {
     /**
      * Coin one Order book api
      * DESC : only krw market
-     * @param coin
-     * @return
      */
     public String getOrderBook(String coin){
          String returnRes = "";
@@ -530,13 +499,7 @@ public class CoinOneFunction {
         return returnRes;
     }
 
-    /**
-     * default 로 필요한 데이터를 받아 buy/sell/cancel 메서드에 전달
-     * @param cnt
-     * @param currency
-     * @param price
-     * @return
-     */
+    /* default 로 필요한 데이터를 받아 buy/sell/cancel 메서드에 전달 */
     private Map<String,String> setDefaultMap(String cnt, String currency, String price){
         Map<String, String> defaultMap = new HashMap<>();
         defaultMap.put("qty",cnt);
@@ -546,13 +509,7 @@ public class CoinOneFunction {
         return defaultMap;
     }
 
-    /**
-     * default 로 필요한 데이터를 받아 request 전 셋팅 후 반환
-     * @param cnt
-     * @param currency
-     * @param price
-     * @return
-     */
+    /* default 로 필요한 데이터를 받아 request 전 셋팅 후 반환 */
     private JsonObject setDefaultRequest(String cnt, String currency, String price){
 
         long nonce = System.currentTimeMillis();;
@@ -567,15 +524,7 @@ public class CoinOneFunction {
         return defaultRequest;
     }
 
-
-
-
-    /**
-     * HTTP POST Method for coinone
-     * @param targetUrl
-     * @param payload
-     * @return
-     */
+    /* HTTP POST Method for coinone */
     public JsonObject postHttpMethod(String targetUrl, String payload) {
         URL url;
         String inputLine;
