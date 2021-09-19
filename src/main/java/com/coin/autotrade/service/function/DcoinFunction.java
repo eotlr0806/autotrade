@@ -19,16 +19,15 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.security.MessageDigest;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Slf4j
 public class DcoinFunction extends ExchangeFunction{
 
     final private String ACCESS_TOKEN         = "apiToken";
     final private String SECRET_KEY           = "secretKey";
+    final private String BUY                  = "BUY";
+    final private String SELL                 = "SELL";
     private Map<String, String> keyList       = new HashMap<>();
     private ExchangeRepository exchageRepository;
 
@@ -103,79 +102,43 @@ public class DcoinFunction extends ExchangeFunction{
     /* 호가유동성 메서드 */
     @Override
     public int startLiquidity(Map list){
-        int returnCode = DataCommon.CODE_ERROR;
+        int returnCode = DataCommon.CODE_SUCCESS;
 
-        List<String> sellList = (ArrayList) list.get("sell");
-        List<String> buyList  = (ArrayList) list.get("buy");
-        List<HashMap<String,String>> sellCancelList = new ArrayList();
-        List<HashMap<String,String>> buyCancelList = new ArrayList();
+        Queue<String> sellQueue = (LinkedList) list.get("sell");
+        Queue<String> buyQueue  = (LinkedList) list.get("buy");
+        List<Map<String,String>> CancelList = new ArrayList();
 
         try{
+            log.info("[DCOIN][LIQUIDITY] Start");
             String[] coinData = ServiceCommon.setCoinData(liquidity.getCoin());
             String symbol     = coinData[0] + "" + getCurrency(getExchange(),coinData[0], coinData[1]);
             int minCnt        = liquidity.getMinCnt();
             int maxCnt        = liquidity.getMaxCnt();
 
-            Thread.sleep(1000);
-            /** 매도 **/
-            log.info("[DCOIN][LIQUIDITY-sell] Start");
-            for(int i = 0; i < sellList.size(); i++){
-
-                HashMap<String,String> sellValue = new HashMap<>();
-                String cnt          = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double)minCnt, (double)maxCnt) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
-                String orderId      = createOrder("SELL",sellList.get(i), cnt, symbol);
-                if(!orderId.equals("")){
-                    sellValue.put("orderId",orderId);
-                    sellCancelList.add(sellValue);
+            while(sellQueue.size() > 0 || buyQueue.size() > 0){
+                String randomMode = (ServiceCommon.getRandomInt(1,2) == 1) ? BUY : SELL;
+                String orderId    = "";
+                String price      = "";
+                String cnt        = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double)minCnt, (double)maxCnt) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
+                if(buyQueue.size() > 0 && randomMode.equals(BUY)){
+                    price   = buyQueue.poll();
+                    orderId = createOrder(BUY, price, cnt, symbol);
+                }else if(sellQueue.size() > 0 && randomMode.equals(SELL)){
+                    price   = sellQueue.poll();
+                    orderId = createOrder(SELL, price, cnt, symbol);
                 }
-                Thread.sleep(100);
-            }
-            log.info("[DCOIN][LIQUIDITY-sell] End");
-            Thread.sleep(500);
 
-            /** 매도 취소 **/
-            log.info("[DCOIN][LIQUIDITY-sell-cancel] Start");
-            for(int i=0; i < sellCancelList.size(); i++){
-                Map<String,String> cancelData = (HashMap) sellCancelList.get(i);
-                int returnStr = cancelOrder(symbol, cancelData.get("orderId"));
-
-                Thread.sleep(100);                  // Coinone 방어로직
-            }
-            log.info("[DCOIN][LIQUIDITY-sell-cancel] end");
-
-            Thread.sleep(1000);
-
-            /** 매수 **/
-            log.info("[DCOIN][LIQUIDITY-buy] Start");
-            for(int i = 0; i < buyList.size(); i++){
-
-                HashMap<String,String> buyValue = new HashMap<>();
-                String cnt          = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double)minCnt, (double)maxCnt) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
-                String orderId      = createOrder("BUY",buyList.get(i), cnt, symbol);
                 if(!orderId.equals("")){
-                    buyValue.put("orderId",orderId);
-                    buyCancelList.add(buyValue);
+                    Thread.sleep(1500);
+                    cancelOrder(symbol, orderId);
+                    Thread.sleep(1000);
                 }
-                Thread.sleep(100);                 // Coinone 방어로직
             }
-            log.info("[DCOIN][LIQUIDITY-buy] End");
-
-            Thread.sleep(500);
-
-
-            /** 매수 취소 **/
-            log.info("[DCOIN][LIQUIDITY-buy-cancel] Start");
-            for(int i=0; i < buyCancelList.size(); i++){
-                Map<String, String> cancelData = (HashMap) buyCancelList.get(i);
-                int returnStr = cancelOrder(symbol, cancelData.get("orderId"));
-                // Coinone 방어로직
-                Thread.sleep(100);
-            }
-            log.info("[DCOIN][LIQUIDITY-buy-cancel] end");
-
-        }catch(Exception e){
+        }catch (Exception e){
+            returnCode = DataCommon.CODE_ERROR;
             log.error("[DCOIN][ERROR][LIQUIDITY] {}", e.getMessage());
         }
+        log.info("[DCOIN][LIQUIDITY] End");
         return returnCode;
     }
 
