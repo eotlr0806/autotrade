@@ -117,24 +117,45 @@ public class BithumbGlobalFunction extends ExchangeFunction{
             int minCnt        = liquidity.getMinCnt();
             int maxCnt        = liquidity.getMaxCnt();
 
+
+
+
             while(sellQueue.size() > 0 || buyQueue.size() > 0){
                 String randomMode = (ServiceCommon.getRandomInt(1,2) == 1) ? BUY : SELL;
-                String orderId    = "";
-                String price      = "";
-                String cnt        = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double)minCnt, (double)maxCnt) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
-                cnt               = setCutCoinCnt(symbol, cnt);
-                if(buyQueue.size() > 0 && randomMode.equals(BUY)){
-                    price   = buyQueue.poll();
-                    orderId = createOrder(BUY, price, cnt, symbol);
-                }else if(sellQueue.size() > 0 && randomMode.equals(SELL)){
-                    price   = sellQueue.poll();
-                    orderId = createOrder(SELL, price, cnt, symbol);
+                String firstOrderId    = "";
+                String secondsOrderId  = "";
+                String firstPrice      = "";
+                String secondsPrice    = "";
+                String firstCnt        = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double)minCnt, (double)maxCnt) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
+                firstCnt               = setCutCoinCnt(symbol, firstCnt);
+                String secondsCnt      = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double)minCnt, (double)maxCnt) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
+                secondsCnt             = setCutCoinCnt(symbol, secondsCnt);
+
+                if(sellQueue.size() > 0 && buyQueue.size() > 0 && randomMode.equals(BUY)){
+                    firstPrice   = buyQueue.poll();
+                    firstOrderId = createOrder(BUY, firstPrice, firstCnt, symbol);
+
+                    Thread.sleep(300);
+                    secondsPrice   = sellQueue.poll();
+                    secondsOrderId = createOrder(SELL, secondsPrice, secondsCnt, symbol);
+                }else if(buyQueue.size() > 0 && sellQueue.size() > 0 && randomMode.equals(SELL)){
+                    firstPrice   = sellQueue.poll();
+                    firstOrderId = createOrder(SELL, firstPrice, firstCnt, symbol);
+
+                    Thread.sleep(300);
+                    secondsPrice   = buyQueue.poll();
+                    secondsOrderId = createOrder(BUY, secondsPrice, secondsCnt, symbol);
                 }
 
-                if(!orderId.equals("")){
-                    Thread.sleep(1500);
-                    cancelOrder(orderId, symbol);
+                if(!firstOrderId.equals("") || !secondsOrderId.equals("")){
                     Thread.sleep(1000);
+                    if(!firstOrderId.equals("")){
+                        cancelOrder(firstOrderId, symbol);
+                    }
+                    if(!secondsOrderId.equals("")){
+                        Thread.sleep(300);
+                        cancelOrder(secondsOrderId, symbol);
+                    }
                 }
             }
         }catch (Exception e){

@@ -32,7 +32,7 @@ public class CoinOneFunction extends ExchangeFunction{
     final private String ACCESS_TOKEN     = "access_token";
     final private String SECRET_KEY       = "secret_key";
     final private String ALREADY_TRADED   = "116";
-    final private int CANCEL_AGAIN        = 8;
+    final private int CANCEL_AGAIN        = 5;
     final private String BUY              = "BUY";
     final private String SELL             = "SELL";
     private Map<String, String> keyList   = new HashMap<>();
@@ -77,24 +77,44 @@ public class CoinOneFunction extends ExchangeFunction{
 
             while(sellQueue.size() > 0 || buyQueue.size() > 0){
                 String randomMode = (ServiceCommon.getRandomInt(1,2) == 1) ? BUY : SELL;
-                String orderId    = "";
-                String price      = "";
-                String cnt        = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double)minCnt, (double)maxCnt) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
-                if(buyQueue.size() > 0 && randomMode.equals(BUY)){
-                    price   = buyQueue.poll();
-                    orderId = createOrder(BUY, price, cnt, coin);
-                }else if(sellQueue.size() > 0 && randomMode.equals(SELL)){
-                    price   = sellQueue.poll();
-                    orderId = createOrder(SELL, price, cnt, coin);
+                String firstOrderId    = "";
+                String secondsOrderId  = "";
+                String firstPrice      = "";
+                String secondsPrice    = "";
+                String firstCnt        = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double)minCnt, (double)maxCnt) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
+                String secondsCnt      = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double)minCnt, (double)maxCnt) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
+
+                if(sellQueue.size() > 0 && buyQueue.size() > 0 && randomMode.equals(BUY)){
+                    firstPrice   = buyQueue.poll();
+                    firstOrderId = createOrder(BUY, firstPrice, firstCnt, coin);
+
+                    Thread.sleep(300);
+                    secondsPrice   = sellQueue.poll();
+                    secondsOrderId = createOrder(SELL, secondsPrice, secondsCnt, coin);
+                }else if(buyQueue.size() > 0 && sellQueue.size() > 0 && randomMode.equals(SELL)){
+                    firstPrice   = sellQueue.poll();
+                    firstOrderId = createOrder(SELL, firstPrice, firstCnt, coin);
+
+                    Thread.sleep(300);
+                    secondsPrice   = buyQueue.poll();
+                    secondsOrderId = createOrder(BUY, secondsPrice, secondsCnt, coin);
                 }
 
-                if(!orderId.equals("")){
-                    Thread.sleep(1500);
-                    Map<String, String> cancelMap = setDefaultMap(cnt, coin, price);
-                    cancelMap.put("order_id",orderId);
-                    cancelMap.put("is_ask","1");
-                    cancelTrade(cancelMap);
+                if(!firstOrderId.equals("") || !secondsOrderId.equals("")){
                     Thread.sleep(1000);
+                    if(!firstOrderId.equals("")){
+                        Map<String, String> cancelMap = setDefaultMap(firstCnt, coin, firstPrice);
+                        cancelMap.put("order_id",firstOrderId);
+                        cancelMap.put("is_ask","1");
+                        cancelTrade(cancelMap);
+                    }
+                    if(!secondsOrderId.equals("")){
+                        Thread.sleep(300);
+                        Map<String, String> cancelMap = setDefaultMap(secondsCnt, coin, secondsPrice);
+                        cancelMap.put("order_id",secondsOrderId);
+                        cancelMap.put("is_ask","1");
+                        cancelTrade(cancelMap);
+                    }
                 }
             }
         }catch (Exception e){
