@@ -183,9 +183,9 @@ public class CoinService {
         String list     = "";
         Gson gson       = new Gson();
 
-        Map<String, ArrayList<String>> returnMap = new HashMap<>();
-        ArrayList<String> sellList = new ArrayList<>();
-        ArrayList<String> buyList  = new ArrayList<>();
+        Map<String, LinkedList<String>> returnMap = new HashMap<>();
+        LinkedList<String> sellList = new LinkedList<>();
+        LinkedList<String> buyList  = new LinkedList<>();
         returnMap.put("sell" , sellList);
         returnMap.put("buy", buyList);
 

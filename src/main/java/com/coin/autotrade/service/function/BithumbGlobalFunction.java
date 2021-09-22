@@ -17,10 +17,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.math.BigDecimal;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Slf4j
 public class BithumbGlobalFunction extends ExchangeFunction{
@@ -107,89 +104,65 @@ public class BithumbGlobalFunction extends ExchangeFunction{
     /** 호가유동성 function */
     @Override
     public int startLiquidity(Map list){
+        int returnCode = DataCommon.CODE_SUCCESS;
 
-        int returnCode = DataCommon.CODE_ERROR;
-        List sellList  = (ArrayList) list.get("sell");
-        List buyList   = (ArrayList) list.get("buy");
-        List<HashMap<String,String>> sellCancelList = new ArrayList();
-        List<HashMap<String,String>> buyCancelList  = new ArrayList();
+        Queue<String> sellQueue = (LinkedList) list.get("sell");
+        Queue<String> buyQueue  = (LinkedList) list.get("buy");
+        List<Map<String,String>> CancelList = new ArrayList();
 
         try{
+            log.info("[BITHUMBGLOBAL][LIQUIDITY] Start");
             String[] coinData = ServiceCommon.setCoinData(liquidity.getCoin());
             String symbol     = coinData[0] + "-" + getCurrency(getExchange(), coinData[0], coinData[1]);
             int minCnt        = liquidity.getMinCnt();
             int maxCnt        = liquidity.getMaxCnt();
 
-            Thread.sleep(1000);
-            /** 매도 **/
-            log.info("[BITHUMBGLOBAL][LIQUIDITY SELL START]");
-            for(int i = 0; i < sellList.size(); i++){
 
-                HashMap<String,String> sellValue = new HashMap<>();
-                String price        = String.valueOf(sellList.get(i));
-                String cnt          = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double)minCnt, (double)maxCnt) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
-                cnt                 = setCutCoinCnt(symbol, cnt);
 
-                String orderId      = createOrder(SELL, price, cnt, symbol);
-                if(!orderId.equals("0")){
-                    sellValue.put("orderId",orderId);
-                    sellCancelList.add(sellValue);
+
+            while(sellQueue.size() > 0 || buyQueue.size() > 0){
+                String randomMode = (ServiceCommon.getRandomInt(1,2) == 1) ? BUY : SELL;
+                String firstOrderId    = "";
+                String secondsOrderId  = "";
+                String firstPrice      = "";
+                String secondsPrice    = "";
+                String firstCnt        = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double)minCnt, (double)maxCnt) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
+                firstCnt               = setCutCoinCnt(symbol, firstCnt);
+                String secondsCnt      = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double)minCnt, (double)maxCnt) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
+                secondsCnt             = setCutCoinCnt(symbol, secondsCnt);
+
+                if(sellQueue.size() > 0 && buyQueue.size() > 0 && randomMode.equals(BUY)){
+                    firstPrice   = buyQueue.poll();
+                    firstOrderId = createOrder(BUY, firstPrice, firstCnt, symbol);
+
+                    Thread.sleep(300);
+                    secondsPrice   = sellQueue.poll();
+                    secondsOrderId = createOrder(SELL, secondsPrice, secondsCnt, symbol);
+                }else if(buyQueue.size() > 0 && sellQueue.size() > 0 && randomMode.equals(SELL)){
+                    firstPrice   = sellQueue.poll();
+                    firstOrderId = createOrder(SELL, firstPrice, firstCnt, symbol);
+
+                    Thread.sleep(300);
+                    secondsPrice   = buyQueue.poll();
+                    secondsOrderId = createOrder(BUY, secondsPrice, secondsCnt, symbol);
                 }
-                Thread.sleep(300);
-            }
-            log.info("[BITHUMBGLOBAL][LIQUIDITY SELL END]");
-            Thread.sleep(700);
 
-            /** 매도 취소 **/
-            log.info("[BITHUMBGLOBAL][LIQUIDITY SELL CANCEL START]");
-            for(int i=0; i < sellCancelList.size(); i++){
-                Map<String,String> cancelData = (HashMap) sellCancelList.get(i);
-                String orderId = cancelData.get("orderId");
-                int returnStr  = cancelOrder(orderId, symbol);
-                // Coinone 방어로직
-                Thread.sleep(300);
-            }
-            log.info("[BITHUMBGLOBAL][LIQUIDITY SELL CANCEL END]");
-
-            Thread.sleep(1500);
-
-            /** 매수 **/
-            log.info("[BITHUMBGLOBAL][LIQUIDITY BUY START]");
-            for(int i = 0; i < buyList.size(); i++){
-
-                HashMap<String,String> buyValue = new HashMap<>();
-                String price        = ServiceCommon.setFormatNum(String.valueOf(buyList.get(i)));
-                String cnt          = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double)minCnt, (double)maxCnt) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
-                cnt                 = setCutCoinCnt(symbol, cnt);
-
-                String orderId      = createOrder(BUY, price, cnt, symbol);
-                if(!orderId.equals("0")){
-                    buyValue.put("orderId",orderId);
-                    buyCancelList.add(buyValue);
+                if(!firstOrderId.equals("") || !secondsOrderId.equals("")){
+                    Thread.sleep(1000);
+                    if(!firstOrderId.equals("")){
+                        cancelOrder(firstOrderId, symbol);
+                    }
+                    if(!secondsOrderId.equals("")){
+                        Thread.sleep(300);
+                        cancelOrder(secondsOrderId, symbol);
+                    }
                 }
-                // Coinone 방어로직
-                Thread.sleep(300);
             }
-            log.info("[BITHUMBGLOBAL][LIQUIDITY BUY END]");
-
-            // sleep
-            Thread.sleep(700);
-
-            /** 매수 취소 **/
-            log.info("[BITHUMBGLOBAL][LIQUIDITY BUY CANCEL START]");
-            for(int i=0; i < buyCancelList.size(); i++){
-                Map<String, String> cancelData = (HashMap) buyCancelList.get(i);
-                String orderId = cancelData.get("orderId");
-                int returnStr  = cancelOrder(orderId, symbol);
-                // Coinone 방어로직
-                Thread.sleep(300);
-            }
-            log.info("[BITHUMBGLOBAL][LIQUIDITY BUY CANCEL END]");
-
-            Thread.sleep(1000);
-        }catch(Exception e){
-            log.error("[ERROR][BITHUMBGLOBAL] {}", e.getMessage());
+        }catch (Exception e){
+            returnCode = DataCommon.CODE_ERROR;
+            log.error("[BITHUMBGLOBAL][ERROR][LIQUIDITY] {}", e.getMessage());
         }
+        log.info("[BITHUMBGLOBAL][LIQUIDITY] End");
         return returnCode;
     }
 

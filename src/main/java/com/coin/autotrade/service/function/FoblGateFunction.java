@@ -17,10 +17,7 @@ import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.net.URL;
 import java.security.MessageDigest;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Slf4j
 public class FoblGateFunction extends ExchangeFunction{
@@ -108,14 +105,14 @@ public class FoblGateFunction extends ExchangeFunction{
     /** 호가유동성 function */
     @Override
     public int startLiquidity(Map list){
-
         int returnCode = DataCommon.CODE_SUCCESS;
-        List sellList = (ArrayList) list.get("sell");
-        List buyList  = (ArrayList) list.get("buy");
-        List<HashMap<String,String>> sellCancelList = new ArrayList();
-        List<HashMap<String,String>> buyCancelList = new ArrayList();
+
+        Queue<String> sellQueue = (LinkedList) list.get("sell");
+        Queue<String> buyQueue  = (LinkedList) list.get("buy");
+        List<Map<String,String>> CancelList = new ArrayList();
 
         try{
+            log.info("[FOBLGATE][LIQUIDITY] Start");
             String[] coinData = ServiceCommon.setCoinData(liquidity.getCoin());
             String coin       = coinData[0];
             String coinId     = coinData[1];
@@ -124,77 +121,58 @@ public class FoblGateFunction extends ExchangeFunction{
             int minCnt = liquidity.getMinCnt();
             int maxCnt = liquidity.getMaxCnt();
 
-            Thread.sleep(1000);
-            /** 매도 **/
-            log.info("[FOBLGATE][LIQUIDITY SELL START]");
-            for(int i = 0; i < sellList.size(); i++){
 
-                HashMap<String,String> sellValue = new HashMap<>();
-                String price        = (String) sellList.get(i);
-                String cnt          = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double)minCnt, (double)maxCnt) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
-                String orderId      = createOrder(SELL, price, cnt, symbol);
-                if(!orderId.equals("0")){
-                    sellValue.put("orderId",orderId);
-                    sellValue.put("price",price);
-                    sellCancelList.add(sellValue);
+            while(sellQueue.size() > 0 || buyQueue.size() > 0){
+                String randomMode = (ServiceCommon.getRandomInt(1,2) == 1) ? BUY : SELL;
+                String firstOrderId    = "";
+                String secondsOrderId  = "";
+                String firstPrice      = "";
+                String secondsPrice    = "";
+                String firstCnt        = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double)minCnt, (double)maxCnt) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
+                String secondsCnt      = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double)minCnt, (double)maxCnt) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
+
+                if(sellQueue.size() > 0 && buyQueue.size() > 0 && randomMode.equals(BUY)){
+                    firstPrice   = buyQueue.poll();
+                    firstOrderId = createOrder(BUY, firstPrice, firstCnt, symbol);
+
+                    Thread.sleep(300);
+                    secondsPrice   = sellQueue.poll();
+                    secondsOrderId = createOrder(SELL, secondsPrice, secondsCnt, symbol);
+                }else if(buyQueue.size() > 0 && sellQueue.size() > 0 && randomMode.equals(SELL)){
+                    firstPrice   = sellQueue.poll();
+                    firstOrderId = createOrder(SELL, firstPrice, firstCnt, symbol);
+
+                    Thread.sleep(300);
+                    secondsPrice   = buyQueue.poll();
+                    secondsOrderId = createOrder(BUY, secondsPrice, secondsCnt, symbol);
                 }
-                Thread.sleep(300);
-            }
-            log.info("[FOBLGATE][LIQUIDITY SELL END]");
-            Thread.sleep(700);
 
-            /** 매도 취소 **/
-            log.info("[FOBLGATE][LIQUIDITY SELL CANCEL START]");
-            for(int i=0; i < sellCancelList.size(); i++){
-                Map<String,String> cancelData = (HashMap) sellCancelList.get(i);
-                String orderId = cancelData.get("orderId");
-                String price   = cancelData.get("price");
-                int returnStr = cancelOrder(orderId, SELL, price, symbol);
-                // Coinone 방어로직
-                Thread.sleep(300);
-            }
-            log.info("[FOBLGATE][LIQUIDITY SELL CANCEL END]");
-
-            Thread.sleep(1000);
-
-            /** 매수 **/
-            log.info("[FOBLGATE][LIQUIDITY BUY START]");
-            for(int i = 0; i < buyList.size(); i++){
-
-                HashMap<String,String> buyValue = new HashMap<>();
-                String price        = (String) buyList.get(i);
-                String cnt          = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double)minCnt, (double)maxCnt) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
-                String orderId      = createOrder(BUY, price, cnt, symbol);
-                if(!orderId.equals("0")){
-                    buyValue.put("orderId",orderId);
-                    buyValue.put("price",price);
-                    buyCancelList.add(buyValue);
+                if(!firstOrderId.equals("") || !secondsOrderId.equals("")){
+                    Thread.sleep(1000);
+                    if(randomMode.equals(BUY)){
+                        if(!firstOrderId.equals("")){
+                            cancelOrder(firstOrderId,   BUY, firstPrice, symbol);
+                        }
+                        Thread.sleep(300);
+                        if(!secondsOrderId.equals("")){
+                            cancelOrder(secondsOrderId, SELL, secondsPrice, symbol);
+                        }
+                    }else if(randomMode.equals(SELL)){
+                        if(!firstOrderId.equals("")){
+                            cancelOrder(firstOrderId,   SELL, firstPrice, symbol);
+                        }
+                        Thread.sleep(300);
+                        if(!secondsOrderId.equals("")){
+                            cancelOrder(secondsOrderId, BUY, secondsPrice, symbol);
+                        }
+                    }
                 }
-                // Coinone 방어로직
-                Thread.sleep(300);
             }
-            log.info("[FOBLGATE][LIQUIDITY BUY END]");
-
-            // sleep
-            Thread.sleep(700);
-
-            /** 매수 취소 **/
-            log.info("[FOBLGATE][LIQUIDITY BUY CANCEL START]");
-            for(int i=0; i < buyCancelList.size(); i++){
-                Map<String, String> cancelData = (HashMap) buyCancelList.get(i);
-                String orderId = cancelData.get("orderId");
-                String price   = cancelData.get("price");
-                int returnStr = cancelOrder(orderId,BUY, price, symbol);
-                // Coinone 방어로직
-                Thread.sleep(300);
-            }
-            log.info("[FOBLGATE][LIQUIDITY BUY CANCEL END]");
-
-            Thread.sleep(1000);
-        }catch(Exception e){
+        }catch (Exception e){
             returnCode = DataCommon.CODE_ERROR;
-            log.error("[FOBLGATE][ERROR] {}", e.getMessage());
+            log.error("[FOBLGATE][ERROR][LIQUIDITY] {}", e.getMessage());
         }
+        log.info("[FOBLGATE][LIQUIDITY] End");
         return returnCode;
     }
 
