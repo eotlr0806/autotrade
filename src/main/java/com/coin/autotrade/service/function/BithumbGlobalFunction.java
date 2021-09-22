@@ -6,7 +6,6 @@ import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import jdk.nashorn.internal.ir.Symbol;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.crypto.Mac;
@@ -18,74 +17,47 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.math.BigDecimal;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Slf4j
-public class BithumbGlobalFunction {
+public class BithumbGlobalFunction extends ExchangeFunction{
 
-    Exchange  exchange            = null;
-    AutoTrade autoTrade           = null;
-    Liquidity liquidity           = null;
-    Fishing fishing               = null;
-    User      user                = null;
-    CoinService coinService       = null;
-    Gson      gson                = new Gson();
-    String ACCESS_TOKEN           = "access_token";
-    String SECRET_KEY             = "secret_key";
-    Map<String, String> keyList   = new HashMap<>();
+    final private String ACCESS_TOKEN  = "access_token";
+    final private String SECRET_KEY    = "secret_key";
+    final private String BUY           = "buy";
+    final private String SELL          = "sell";
+    final private String version       = "V1.0.0";
+    Map<String, String> keyList        = new HashMap<>();
 
-    final String BUY        = "buy";
-    final String SELL       = "sell";
-    final String version    = "V1.0.0";
 
-    /** init */
-    public void initBithumbGlobal(AutoTrade autoTrade, User user, Exchange exchange){
-        this.autoTrade = autoTrade;
+
+    @Override
+    public void initClass(AutoTrade autoTrade, User user, Exchange exchange){
+        super.autoTrade = autoTrade;
         setCommonValue(user, exchange);
         setCoinToken(ServiceCommon.setCoinData(autoTrade.getCoin()));
     }
 
-    /** init */
-    public void initBithumbGlobal(Liquidity liquidity, User user, Exchange exchange){
-        this.liquidity = liquidity;
+    @Override
+    public void initClass(Liquidity liquidity, User user, Exchange exchange){
+        super.liquidity = liquidity;
         setCommonValue(user, exchange);
         setCoinToken(ServiceCommon.setCoinData(liquidity.getCoin()));
     }
 
-    /** init */
-    public void initBithumbGlobal(Fishing fishing, User user, Exchange exchange, CoinService coinService){
-        this.fishing     = fishing;
-        this.coinService = coinService;
+    @Override
+    public void initClass(Fishing fishing, User user, Exchange exchange, CoinService coinService){
+        super.fishing     = fishing;
+        super.coinService = coinService;
         setCommonValue(user, exchange);
         setCoinToken(ServiceCommon.setCoinData(fishing.getCoin()));
     }
 
-    private void setCommonValue(User user,  Exchange exchange){
-        this.user     = user;
-        this.exchange = exchange;
-    }
-
-    /** 코인 토큰 정보 셋팅 **/
-    private void setCoinToken(String[] coinData){
-        // Set token key
-        for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
-            if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1])){
-                keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
-                keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
-            }
-        }
-    }
-
-
-
     /**
      * Bithumb global 자전 거래
      * @param symbol coin + "-" + symbol
-     * @return
      */
+    @Override
     public int startAutoTrade(String price, String cnt){
         log.info("[BITHUMBGLOBAL][AUTOTRADE START]");
         int returnCode    = DataCommon.CODE_SUCCESS;
@@ -129,102 +101,72 @@ public class BithumbGlobalFunction {
         return returnCode;
     }
 
-
     /** 호가유동성 function */
+    @Override
     public int startLiquidity(Map list){
+        int returnCode = DataCommon.CODE_SUCCESS;
 
-        int returnCode = DataCommon.CODE_ERROR;
-        List sellList  = (ArrayList) list.get("sell");
-        List buyList   = (ArrayList) list.get("buy");
-        List<HashMap<String,String>> sellCancelList = new ArrayList();
-        List<HashMap<String,String>> buyCancelList  = new ArrayList();
+        Queue<String> sellQueue = (LinkedList) list.get("sell");
+        Queue<String> buyQueue  = (LinkedList) list.get("buy");
+        List<Map<String,String>> CancelList = new ArrayList();
 
         try{
+            log.info("[BITHUMBGLOBAL][LIQUIDITY] Start");
             String[] coinData = ServiceCommon.setCoinData(liquidity.getCoin());
             String symbol     = coinData[0] + "-" + getCurrency(getExchange(), coinData[0], coinData[1]);
             int minCnt        = liquidity.getMinCnt();
             int maxCnt        = liquidity.getMaxCnt();
 
-            Thread.sleep(1000);
-            /** 매도 **/
-            log.info("[BITHUMBGLOBAL][LIQUIDITY SELL START]");
-            for(int i = 0; i < sellList.size(); i++){
 
-                HashMap<String,String> sellValue = new HashMap<>();
-                String price        = String.valueOf(sellList.get(i));
-                String cnt          = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double)minCnt, (double)maxCnt) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
-                cnt                 = setCutCoinCnt(symbol, cnt);
 
-                String orderId      = createOrder(SELL, price, cnt, symbol);
-                if(!orderId.equals("0")){
-                    sellValue.put("orderId",orderId);
-                    sellCancelList.add(sellValue);
+
+            while(sellQueue.size() > 0 || buyQueue.size() > 0){
+                String randomMode = (ServiceCommon.getRandomInt(1,2) == 1) ? BUY : SELL;
+                String firstOrderId    = "";
+                String secondsOrderId  = "";
+                String firstPrice      = "";
+                String secondsPrice    = "";
+                String firstCnt        = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double)minCnt, (double)maxCnt) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
+                firstCnt               = setCutCoinCnt(symbol, firstCnt);
+                String secondsCnt      = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double)minCnt, (double)maxCnt) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
+                secondsCnt             = setCutCoinCnt(symbol, secondsCnt);
+
+                if(sellQueue.size() > 0 && buyQueue.size() > 0 && randomMode.equals(BUY)){
+                    firstPrice   = buyQueue.poll();
+                    firstOrderId = createOrder(BUY, firstPrice, firstCnt, symbol);
+
+                    Thread.sleep(300);
+                    secondsPrice   = sellQueue.poll();
+                    secondsOrderId = createOrder(SELL, secondsPrice, secondsCnt, symbol);
+                }else if(buyQueue.size() > 0 && sellQueue.size() > 0 && randomMode.equals(SELL)){
+                    firstPrice   = sellQueue.poll();
+                    firstOrderId = createOrder(SELL, firstPrice, firstCnt, symbol);
+
+                    Thread.sleep(300);
+                    secondsPrice   = buyQueue.poll();
+                    secondsOrderId = createOrder(BUY, secondsPrice, secondsCnt, symbol);
                 }
-                Thread.sleep(300);
-            }
-            log.info("[BITHUMBGLOBAL][LIQUIDITY SELL END]");
-            Thread.sleep(700);
 
-            /** 매도 취소 **/
-            log.info("[BITHUMBGLOBAL][LIQUIDITY SELL CANCEL START]");
-            for(int i=0; i < sellCancelList.size(); i++){
-                Map<String,String> cancelData = (HashMap) sellCancelList.get(i);
-                String orderId = cancelData.get("orderId");
-                int returnStr  = cancelOrder(orderId, symbol);
-                // Coinone 방어로직
-                Thread.sleep(300);
-            }
-            log.info("[BITHUMBGLOBAL][LIQUIDITY SELL CANCEL END]");
-
-            Thread.sleep(1500);
-
-            /** 매수 **/
-            log.info("[BITHUMBGLOBAL][LIQUIDITY BUY START]");
-            for(int i = 0; i < buyList.size(); i++){
-
-                HashMap<String,String> buyValue = new HashMap<>();
-                String price        = ServiceCommon.setFormatNum(String.valueOf(buyList.get(i)));
-                String cnt          = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double)minCnt, (double)maxCnt) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
-                cnt                 = setCutCoinCnt(symbol, cnt);
-
-                String orderId      = createOrder(BUY, price, cnt, symbol);
-                if(!orderId.equals("0")){
-                    buyValue.put("orderId",orderId);
-                    buyCancelList.add(buyValue);
+                if(!firstOrderId.equals("") || !secondsOrderId.equals("")){
+                    Thread.sleep(1000);
+                    if(!firstOrderId.equals("")){
+                        cancelOrder(firstOrderId, symbol);
+                    }
+                    if(!secondsOrderId.equals("")){
+                        Thread.sleep(300);
+                        cancelOrder(secondsOrderId, symbol);
+                    }
                 }
-                // Coinone 방어로직
-                Thread.sleep(300);
             }
-            log.info("[BITHUMBGLOBAL][LIQUIDITY BUY END]");
-
-            // sleep
-            Thread.sleep(700);
-
-            /** 매수 취소 **/
-            log.info("[BITHUMBGLOBAL][LIQUIDITY BUY CANCEL START]");
-            for(int i=0; i < buyCancelList.size(); i++){
-                Map<String, String> cancelData = (HashMap) buyCancelList.get(i);
-                String orderId = cancelData.get("orderId");
-                int returnStr  = cancelOrder(orderId, symbol);
-                // Coinone 방어로직
-                Thread.sleep(300);
-            }
-            log.info("[BITHUMBGLOBAL][LIQUIDITY BUY CANCEL END]");
-
-            Thread.sleep(1000);
-        }catch(Exception e){
-            log.error("[ERROR][BITHUMBGLOBAL] {}", e.getMessage());
+        }catch (Exception e){
+            returnCode = DataCommon.CODE_ERROR;
+            log.error("[BITHUMBGLOBAL][ERROR][LIQUIDITY] {}", e.getMessage());
         }
+        log.info("[BITHUMBGLOBAL][LIQUIDITY] End");
         return returnCode;
     }
 
-
-    /**
-     * 매매 긁기 로직
-     * @param list
-     * @param intervalTime
-     * @return
-     */
+    @Override
     public int startFishingTrade(Map<String,List> list, int intervalTime){
         log.info("[BITHUMBGLOBAL][FISHINGTRADE START]");
 
@@ -330,6 +272,27 @@ public class BithumbGlobalFunction {
         return returnCode;
     }
 
+
+    private void setCommonValue(User user,  Exchange exchange){
+        super.user     = user;
+        super.exchange = exchange;
+    }
+
+    /** 코인 토큰 정보 셋팅 **/
+    private void setCoinToken(String[] coinData){
+        // Set token key
+        try{
+            for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
+                if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1])){
+                    keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
+                    keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
+                }
+            }
+        }catch (Exception e){
+            log.error("[ERROR][BITHUMBGLOBAL][SET COIN TOKEN] {}", e.getMessage());
+        }
+    }
+
     /** Biyhumb global 매수/매도 로직 */
     public String createOrder(String type, String price, String cnt, String symbol){
 
@@ -364,12 +327,7 @@ public class BithumbGlobalFunction {
         return orderId;
     }
 
-    /**
-     * Bithumb global 거래 취소
-     * @param symbol
-     * @param orderId
-     * @return
-     */
+    /* Bithumb global 거래 취소 */
     public int cancelOrder(String orderId, String symbol) {
 
         int returnValue = DataCommon.CODE_ERROR;
@@ -400,11 +358,7 @@ public class BithumbGlobalFunction {
     }
 
 
-    /**
-     * Bithumb global Order book api
-     * @param coin
-     * @return
-     */
+    /* Bithumb global Order book api */
     public String getOrderBook(Exchange exchange, String coin, String coinId) {
         String returnRes = "";
         try{
@@ -439,12 +393,7 @@ public class BithumbGlobalFunction {
     }
 
 
-    /**
-     * Get 각 코인에 등록한 통화
-     * @param exchange
-     * @param coin
-     * @return
-     */
+    /* Get 각 코인에 등록한 통화 */
     public String getCurrency(Exchange exchange,String coin, String coinId){
         String returnVal = "";
         try {
@@ -463,12 +412,7 @@ public class BithumbGlobalFunction {
     }
 
 
-    /**
-     * Http post method
-     * @param targetUrl
-     * @param payload
-     * @return
-     */
+    /* Http post method */
     public JsonObject postHttpMethod(String targetUrl, String payload) {
         URL url;
         String inputLine;
@@ -512,9 +456,7 @@ public class BithumbGlobalFunction {
     }
 
 
-    /**
-     *  Hmac sha 256 start
-     *  **/
+    /* Hmac sha 256 start **/
     public String getHmacSha256(String message){
         String returnVal = "";
         try{
@@ -531,7 +473,8 @@ public class BithumbGlobalFunction {
         return returnVal.toLowerCase();
     }
 
-    private static String byteArrayToHexString(byte[] b) {
+    /* Hmac sha 256 end */
+    private String byteArrayToHexString(byte[] b) {
         StringBuilder hs = new StringBuilder();
         String stmp;
         for (int n = 0; b != null && n < b.length; n++) {
@@ -542,15 +485,8 @@ public class BithumbGlobalFunction {
         }
         return hs.toString().toLowerCase();
     }
-    /**
-     *  Hmac sha 256 end
-     *  **/
 
-    /**
-     * Cnt 를 소수점 첫째짜리 까지만 하도록 변경
-     * @param symbol
-     * @param cnt
-     */
+    /* Cnt 를 소수점 첫째짜리 까지만 하도록 변경 */
     private String setCutCoinCnt(String symbol, String cnt){
         int dot = 0;
         if(symbol.split("-")[1].equals("BTC")) {
@@ -566,11 +502,7 @@ public class BithumbGlobalFunction {
         return cutCnt;
     }
 
-    /**
-     * making signature method
-     * @param header
-     * @return
-     */
+    /* making signature method */
     public String setSignature(JsonObject header){
         String sign = "";
         int idx = 0;
@@ -583,7 +515,7 @@ public class BithumbGlobalFunction {
     }
 
 
-    public Exchange getExchange() {  return exchange;  }
-    public void setExchange(Exchange exchange) {  this.exchange = exchange; }
+    public Exchange getExchange() {  return super.exchange;  }
+    public void setExchange(Exchange exchange) {  super.exchange = exchange; }
 
 }

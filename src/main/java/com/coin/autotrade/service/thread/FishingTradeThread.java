@@ -29,11 +29,7 @@ public class FishingTradeThread implements Runnable{
     CoinService           coinService;
     FishingRepository     fishingRepository;
     ExchangeRepository    exchangeRepository;
-    CoinOneFunction       coinOne;
-    DcoinFunction         dCoin;
-    FlataFunction         flata;
-    FoblGateFunction      foblGate;
-    BithumbGlobalFunction bithumbGlobal;
+    ExchangeFunction exchangeFunction;
 
     boolean run                  = true;
     Fishing fishing              = null;
@@ -59,35 +55,10 @@ public class FishingTradeThread implements Runnable{
      */
     public void initExchangeValue(Fishing fishing, User user, Exchange exchange){
         try{
-
-            /** Coin one **/
-            if(DataCommon.COINONE.equals(fishing.getExchange())){
-                coinOne = new CoinOneFunction();
-                coinOne.initCoinOne(fishing, user, exchange, coinService);
-            }
-            /** FoblGate **/
-            else if(DataCommon.FOBLGATE.equals(fishing.getExchange())){
-                foblGate = new FoblGateFunction();
-                foblGate.initFoblGate(fishing, user, exchange, coinService);
-            }
-            /** Flata **/
-            else if(DataCommon.FLATA.equals(fishing.getExchange())){
-                flata = new FlataFunction();
-                flata.initFlata(fishing, user, exchange, coinService);
-            }
-            /** Dcoin **/
-            else if(DataCommon.DCOIN.equals(fishing.getExchange())){
-                dCoin = new DcoinFunction();
-                dCoin.initDcoin(fishing, user, exchange, coinService);
-            }
-            /** BithumGlobal **/
-            else if(DataCommon.BITHUMB_GLOBAL.equals(fishing.getExchange())){
-                bithumbGlobal = new BithumbGlobalFunction();
-                bithumbGlobal.initBithumbGlobal(fishing, user, exchange, coinService);
-            }
-
+            exchangeFunction = ServiceCommon.initExchange(fishing.getExchange());
+            exchangeFunction.initClass(fishing, user, exchange, coinService);
         }catch (Exception e){
-            log.error("[Fishing Start fail][ERROR] exchange : {} ", exchange.getExchangeCode());
+            log.error("[ERROR][FISHING THREAD INIT ERROR] error : {}" , e.getMessage());
         }
         return;
     }
@@ -100,7 +71,7 @@ public class FishingTradeThread implements Runnable{
             fishing.setStatus(NO_BEST_OFFER);
             fishingRepository.save(fishing);
         }
-        log.info("[FishingTrade-Thread] temporarily Stop , There is no best offer");
+        log.info("[FISHINGTRADE THREAD] Temporarily Stop , There is no best offer");
     }
 
     // Stop thread
@@ -114,7 +85,6 @@ public class FishingTradeThread implements Runnable{
             int intervalTime = 100;
             while(run){
 
-                // 매도 매수에 따른 값 설정
                 /** Check is there best offer */
                 Map<String, List> list     = coinService.getFishingList(fishing);
                 intervalTime = ServiceCommon.getRandomInt(fishing.getMinSeconds(), fishing.getMaxSeconds()) * 1000;
@@ -128,57 +98,17 @@ public class FishingTradeThread implements Runnable{
                 }else{
                     if(!fishing.getStatus().equals("RUN")){
                         fishing.setStatus("RUN");
-                        log.info("[FishingTrade-Thread] Restart , Find best offer");
+                        log.info("[FISHINGTRADE THREAD][RESTART] Find best offer");
                         fishingRepository.save(fishing);
                     }
                     /** Start Fishing Thread **/
-                    startProcess(list, intervalTime,  fishing);
+                    exchangeFunction.startFishingTrade(list, intervalTime);
                 }
-                log.info("[Fishing-Thread] Start , intervalTime : {} seconds", intervalTime/1000);
+                log.info("[FISHING THREAD][START] , intervalTime : {} seconds", intervalTime/1000);
                 Thread.sleep(intervalTime);
             }
         }catch(Exception e){
-            log.error("[Fishing-Thread][ERROR] Start error {}", e.getMessage());
+            log.error("[ERROR][FISHING THREAD] Run is failed {}", e.getMessage());
         }
     }
-
-    /**
-     * 거래소에 맞게 Thread 시작
-     * @param exchange
-     */
-    public void startProcess(Map list, int intervalTime, Fishing fishing) {
-        try{
-            /** Auto Trade start **/
-            // Coin one
-            if(DataCommon.COINONE.equals(fishing.getExchange())){
-                if(coinOne.startFishingTrade(list, intervalTime) == DataCommon.CODE_SUCCESS){
-                }
-            }
-            /** 거래소가 포블게이트일 경우 **/
-            else if(DataCommon.FOBLGATE.equals(fishing.getExchange())){
-                if(foblGate.startFishingTrade(list, intervalTime) == DataCommon.CODE_SUCCESS){
-                }
-            }
-            /** 거래소가 포블게이트일 경우 **/
-            else if(DataCommon.FLATA.equals(fishing.getExchange())){
-                if(flata.startFishingTrade(list, intervalTime) == DataCommon.CODE_SUCCESS){
-                }
-            }
-            else if(DataCommon.DCOIN.equals(fishing.getExchange())){
-                if(dCoin.startFishingTrade(list, intervalTime) == DataCommon.CODE_SUCCESS){
-
-                }
-            }
-            else if(DataCommon.BITHUMB_GLOBAL.equals(fishing.getExchange())){
-                if(bithumbGlobal.startFishingTrade(list, intervalTime) == DataCommon.CODE_SUCCESS){
-
-                }
-            }
-        }catch (Exception e){
-            log.error("[FishingThread - StartProcess][ERROR] exchange {}, error {}", fishing.getExchange(), e.getMessage());
-        }
-        return;
-    }
-
-
 }
