@@ -1,17 +1,18 @@
 package com.coin.autotrade.controller.restcontroller;
 
 import com.coin.autotrade.model.Liquidity;
-import com.coin.autotrade.model.User;
 import com.coin.autotrade.service.LiquidityService;
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
 
 @RestController
-//@SessionAttributes("user")      // TODO : 제거 가능하지 않니?
 @Slf4j
 public class LiquidityRestController {
 
@@ -54,7 +55,10 @@ public class LiquidityRestController {
                 case "RUN":
                     returnVal = service.postLiquidity(liquidity, request.getSession().getAttribute("userId").toString());
                     break;
-                case "STOP":
+                case "STOP" :
+                    returnVal = service.stopLiquidity(liquidity);
+                    break;
+                case "DELETE":
                     returnVal = service.deleteLiquidity(liquidity);
                     break;
                 default:

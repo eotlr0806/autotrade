@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ATS - Auto Trading Solution</title>
+
+    <!-- Global stylesheets -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,300,100,500,700,900" rel="stylesheet" type="text/css">
+    <link href="../bootstrap/assets/css/icons/icomoon/styles.css" rel="stylesheet" type="text/css">
+    <link href="../bootstrap/assets/css/bootstrap.css" rel="stylesheet" type="text/css">
+    <link href="../bootstrap/assets/css/core.css" rel="stylesheet" type="text/css">
+    <link href="../bootstrap/assets/css/components.css" rel="stylesheet" type="text/css">
+    <link href="../bootstrap/assets/css/colors.css" rel="stylesheet" type="text/css">
+    <!-- /global stylesheets -->
+</head>
+
+
+
+<body>
+    <!-- Page container -->
+    <div class="page-container">
+
+        <!-- Page content -->
+        <div class="page-content">
+            <!-- Main content -->
+            <div class="content-wrapper">
+
+                <!-- Page header -->
+                <div class="page-header">
+                    <div class="page-header-content">
+                        <div class="page-title">
+                            <h4><i class="icon-arrow-left52 position-left"></i> <span class="text-semibold">트레이딩</span> - 거래 설정</h4>
+                        </div>
+                    </div>
+                </div>
+                <!-- /page header -->
+
+                <!-- Content area -->
+                <div class="content">
+					<!-- Form horizontal -->
+                    <div class="row">
+                        <div class="panel panel-flat col-lg-4">
+                            <div class="panel-heading">
+                                <h5 class="panel-title">거래 유형 설정</h5>
+                            </div>
+
+                            <div class="panel-body">
+                                <fieldset class="content-group">
+                                    <label class="control-label col-lg-2">거래 유형</label>
+                                    <div class="col-lg-4">
+                                        <select name="trade_select" id="trade_select" class="form-control">
+                                            <option value="-1000">거래 유형 선택</option>
+                                            <option value="AUTOTRADE">자전 거래</option>
+                                            <option value="LIQUIDITY">호가 유동성</option>
+                                            <option value="FISHING">매매 긁기</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <input onclick="fncObj.getTrade()" type="button" class="btn btn-info"  value="조회">
+                                    </div>
+
+                                </fieldset>
+                            </div>
+                        </div>
+                    </div>
+					<!-- /form horizontal -->
+
+                    <!-- Basic table -->
+                    <div class="row">
+                        <div class="panel panel-flat">
+                            <div class="panel-heading">
+                                <h5 class="panel-title text-bold">거래 정보</h5>
+                                <div class="heading-elements">
+                                    <ul class="icons-list">
+                                        <li><a data-action="collapse"></a></li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="panel-body">
+                            </div>
+                            <div class="table-responsive">
+                                <table id="trade_table" class="table table-bordered table-striped"></table>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- /basic table -->
+                    <!-- Footer -->
+                    <div class="footer text-muted">
+                    </div>
+                    <!-- /footer -->
+
+                </div>
+                <!-- /content area -->
+            </div>
+            <!-- /main content -->
+        </div>
+    </div>
+
+</body>
+
+
+
+<!-- Core JS files -->
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/loaders/pace.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/core/libraries/jquery.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/core/libraries/bootstrap.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/loaders/blockui.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/tables/datatables/datatables.min.js"></script>
+<script type="text/javascript" src="../common/js/datatables_basic.js"></script>
+<!-- /core JS files -->
+
+<!-- Theme JS files -->
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/forms/styling/uniform.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/editors/wysihtml5/wysihtml5.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/editors/wysihtml5/toolbar.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/editors/wysihtml5/parsers.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/editors/wysihtml5/locales/bootstrap-wysihtml5.ua-UA.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/notifications/jgrowl.min.js"></script>
+
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/notifications/pnotify.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/core/app.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/pages/editor_wysihtml5.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/pages/components_notifications_pnotify.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/pages/extension_blockui.js"></script>
+<!-- /theme JS files -->
+
+<!-- Common Lib -->
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script type="text/javascript" src="../common/js/commonScript.js"></script>
+<!-- /Common Lib -->
+
+
+<script>
+
+    const DELETE             = "DELETE";
+    const INSERT             = "INSERT";
+    const UPDATE             = "UPDATE";
+
+    let autotradeColumn = [
+        {title: "id",   orderable: true},
+        {title: "거래소",   orderable: true},
+        {title: "코인",   orderable: true},
+        {title: "수량",   orderable: true},
+        {title: "시간",   orderable: true},
+
+        {title: "모드",   orderable: true},
+        {title: "상태",   orderable: true},
+        {title: "동작",   orderable: true},
+        {title: "삭제",   orderable: true},
+    ];
+
+    let liquidityColumn = [
+        {title: "id",   orderable: true},
+        {title: "거래소",   orderable: true},
+        {title: "코인",   orderable: true},
+        {title: "수량",   orderable: true},
+        {title: "시간",   orderable: true},
+
+        {title: "랜덤틱수",   orderable: true},
+        {title: "틱간격",   orderable: true},
+        {title: "수동틱",   orderable: true},
+
+        {title: "모드",   orderable: true},
+        {title: "상태",   orderable: true},
+        {title: "동작",   orderable: true},
+        {title: "삭제",   orderable: true},
+    ];
+
+    let fishingColumn = [
+        {title: "id",   orderable: true},
+        {title: "거래소",   orderable: true},
+        {title: "코인",   orderable: true},
+
+        {title: "주문 범위",   orderable: true},
+        {title: "체결 범위",   orderable: true},
+        {title: "시간 범위",   orderable: true},
+        {title: "활성틱수",   orderable: true},
+        {title: "틱간격",   orderable: true},
+
+        {title: "모드",   orderable: true},
+        {title: "상태",   orderable: true},
+        {title: "동작",   orderable: true},
+        {title: "삭제",   orderable: true},
+    ];
+
+
+    let tradeList   = [];
+    let clickedRow  = '';
+
+    /** table row click 시 발생하는 이벤트 **/
+    $('#trade_table').on('click', 'tr', function () {
+        clickedRow = $('#trade_table').DataTable().row(this).data();
+        console.log('^^^^^^^^^^^^^^^', clickedRow);
+    })
+
+    // init page
+    $(document).ready(() => {
+        fncObj.initPage();
+    })
+
+
+    /** Function object **/
+    let fncObj = {
+
+        // 페이지 로드 시 초기값 셋팅을 위한 함수
+        initPage : async () => {
+            loginUserId = $('#server_user_id').val();                   // Set user id
+        },
+
+        // trade type 에 따라 리스트 조회
+        getTradeByType : async (type) => {
+            let returnVal;
+            if (type === TRADE_LIST.AUTOTRADE){
+                returnVal = await common.get(API.AUTO_TRADE);
+            }else if (type === TRADE_LIST.LIQUIDITY){
+                returnVal = await common.get(API.LIQUIDITY);
+            }else if (type === TRADE_LIST.FISHING){
+                returnVal = await common.get(API.FISHING);
+            }
+
+            if(returnVal.data != null){
+                if (returnVal.data.length !== undefined){
+                    tradeList = returnVal.data;
+                    dataObj.makeTradeTable();
+                }else{
+                    return common.noti("거래 유형 조회","해당 유형에 대해 저장된 거래가 없습니다.","error");
+                }
+            }
+        },
+
+        getTrade : () => {
+            let type = $('#trade_select option:selected').val();
+            if (type == -1000){
+                return common.noti("거래 유형 조회","거래 유형을 선택해주세요.","error");
+            }else{
+                dataObj.clearTradeTable();
+                fncObj.getTradeByType(type);
+            }
+        },
+
+        postTrade : async (mode, runType, tradeId) => {
+            let api;
+            let title;
+            if (mode === TRADE_LIST.AUTOTRADE){
+                api   = API.AUTO_TRADE;
+                title = "자전 거래";
+            }else if (mode === TRADE_LIST.LIQUIDITY){
+                api = API.LIQUIDITY;
+                title = "호가 유동성";
+            }else if (mode === TRADE_LIST.FISHING){
+                api = API.FISHING;
+                title = "매매 긁기";
+            }
+
+            params = {
+                id: tradeId,
+                status: runType
+            }
+            let returnVal = await common.post(api, params);
+            if(returnVal.data != null){
+                if(returnVal.data.code == SUCCESS){
+                    if (runType === TRADE_STATUS.DELETE){
+                        common.noti(title,"해당 거래가 삭제 됩니다.","success");
+                    }else if (runType === TRADE_STATUS.STOP){
+                        common.noti(title,"해당 거래가 정지 됩니다.","success");
+                    }else if (runType === TRADE_STATUS.RUN){
+                        common.noti(title,"해당 거래가 시작 됩니다.","success");
+                    }
+                    fncObj.getTrade();
+                }else{
+                    if (runType === TRADE_STATUS.DELETE){
+                        common.noti(title,"해당 거래가 정상적으로 삭제되지 않았습니다.\n로그아웃 후 다시 시도해주세요.","error");
+                    }else if (runType === TRADE_STATUS.STOP){
+                        common.noti(title,"해당 거래가 정상적으로 정지되지 않았습니다.\n로그아웃 후 다시 시도해주세요.","error");
+                    }else if (runType === TRADE_STATUS.RUN){
+                        common.noti(title,"해당 거래가 정상적으로 시작되지 않았습니다.\n로그아웃 후 다시 시도해주세요.","error");
+                    }
+                }
+            }else{
+                common.noti(title,"해당 거래가 동작하지 않았습니다.\n로그아웃 후 다시 시도해주세요.","error");
+            }
+        }
+    };
+    /** Function object **/
+
+
+
+
+    /** Function object for data setter / getter **/
+    let dataObj = {
+        setParamParser : (mode) => {
+            let params = {};
+            if (mode === TRADE_LIST.AUTOTRADE){
+                let dataIdList = ['id','exchange','coin','minCnt','maxCnt','minSeconds','maxSeconds','mode','status'];
+                for (let i = 0; i < dataIdList.length; i++) {
+                    // 모드만 변경 필요
+                    if (dataIdList[i] !== 'mode'){
+                        params[dataIdList[i]] = clickedRow[i];
+                    }else{
+                        params[dataIdList[i]] = 'RUN';
+                    }
+                }
+            }else if (mode === TRADE_LIST.LIQUIDITY){
+
+            }else if (mode === TRADE_LIST.FISHING){
+
+            }
+
+            return params;
+        },
+
+        // Data table clear method
+        clearTradeTable : () => {
+            $('#trade_table').DataTable().destroy();
+            $('#trade_table').empty();
+        },
+
+        makeTradeTable : () => {
+            let dataSet = dataObj.makeTradeTableArr();
+
+            let type = $('#trade_select option:selected').val();
+            let tableColumn = (type === TRADE_LIST.AUTOTRADE) ? autotradeColumn :
+                                                ((type === TRADE_LIST.LIQUIDITY) ? liquidityColumn : fishingColumn)
+
+            $('#trade_table').DataTable({
+                data: dataSet,
+                columns: tableColumn
+            });
+        },
+
+        makeTradeTableArr : () => {
+            parseTrade = [];
+            let type = $('#trade_select option:selected').val();
+
+            tradeList.forEach((item, index) => {
+                let innerTrade = [];
+                let runBtn;
+                let stopBtn;
+                let delBtn;
+
+                innerTrade.push(item.id);
+                innerTrade.push(item.exchange);
+                innerTrade.push(item.coin);
+
+                if (type === TRADE_LIST.AUTOTRADE){
+                    runBtn  = `<input onclick="fncObj.postTrade('${TRADE_LIST.AUTOTRADE}', '${TRADE_STATUS.RUN}',    ${item.id});" type="button" class="btn btn-info"    value="시작">`;
+                    stopBtn = `<input onclick="fncObj.postTrade('${TRADE_LIST.AUTOTRADE}', '${TRADE_STATUS.STOP}',   ${item.id});" type="button" class="btn btn-warning" value="정지">`;
+                    delBtn  = `<input onclick="fncObj.postTrade('${TRADE_LIST.AUTOTRADE}', '${TRADE_STATUS.DELETE}', ${item.id});" type="button" class="btn btn-danger"  value="삭제">`
+
+                    innerTrade.push(`${item.minCnt} ~ ${item.maxCnt}`);
+                    innerTrade.push(`${item.minSeconds} ~ ${item.maxSeconds}`);
+                }else if (type === TRADE_LIST.LIQUIDITY){
+                    runBtn  = `<input onclick="fncObj.postTrade('${TRADE_LIST.LIQUIDITY}', '${TRADE_STATUS.RUN}',    ${item.id});" type="button" class="btn btn-info"    value="시작">`;
+                    stopBtn = `<input onclick="fncObj.postTrade('${TRADE_LIST.LIQUIDITY}', '${TRADE_STATUS.STOP}',   ${item.id});" type="button" class="btn btn-warning" value="정지">`;
+                    delBtn  = `<input onclick="fncObj.postTrade('${TRADE_LIST.LIQUIDITY}', '${TRADE_STATUS.DELETE}', ${item.id});" type="button" class="btn btn-danger"  value="삭제">`
+
+                    innerTrade.push(`${item.minCnt} ~ ${item.maxCnt}`);
+                    innerTrade.push(`${item.minSeconds} ~ ${item.maxSeconds}`);
+                    innerTrade.push(item.randomTick);
+                    innerTrade.push(item.rangeTick);
+                    innerTrade.push(item.selfTick);
+                }else if (type === TRADE_LIST.FISHING){
+                    runBtn  = `<input onclick="fncObj.postTrade('${TRADE_LIST.FISHING}', '${TRADE_STATUS.RUN}',    ${item.id});" type="button" class="btn btn-info"    value="시작">`;
+                    stopBtn = `<input onclick="fncObj.postTrade('${TRADE_LIST.FISHING}', '${TRADE_STATUS.STOP}',   ${item.id});" type="button" class="btn btn-warning" value="정지">`;
+                    delBtn  = `<input onclick="fncObj.postTrade('${TRADE_LIST.FISHING}', '${TRADE_STATUS.DELETE}', ${item.id});" type="button" class="btn btn-danger"  value="삭제">`
+
+                    innerTrade.push(`${item.minContractCnt} ~ ${item.maxContractCnt}`);
+                    innerTrade.push(`${item.minExecuteCnt} ~ ${item.maxExecuteCnt}`);
+                    innerTrade.push(`${item.minSeconds} ~ ${item.maxSeconds}`);
+                    innerTrade.push(item.tickCnt);
+                    innerTrade.push(item.rangeTick);
+                }
+
+                innerTrade.push(item.mode);
+                innerTrade.push(item.status);
+
+                // Set status
+                if (item.status === 'RUN' || item.status === 'NO_BEST_OFFER') {
+                    innerTrade.push(stopBtn);
+                }else{
+                    innerTrade.push(runBtn)
+                }
+
+                innerTrade.push(delBtn);
+
+                parseTrade.push(innerTrade);
+            });
+
+            return parseTrade;
+        },
+        /***** Make Data table End *****/
+    }
+    /** Function object for data setter,getter **/
+
+
+   
+
+</script>
+
+
+
+<input type="hidden" id="server_user_id" th:value="${userId}" />

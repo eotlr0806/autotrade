@@ -2,6 +2,7 @@ package com.coin.autotrade.service;
 
 import com.coin.autotrade.common.DataCommon;
 import com.coin.autotrade.common.ServiceCommon;
+import com.coin.autotrade.model.AutoTrade;
 import com.coin.autotrade.model.Exchange;
 import com.coin.autotrade.model.Liquidity;
 import com.coin.autotrade.model.User;
@@ -14,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.transaction.Transactional;
 import java.util.List;
 
 @Service
@@ -44,7 +46,6 @@ public class LiquidityService {
                 String msg = "msg:There is no active liquidity";
                 returnVal =  ServiceCommon.makeReturnValue(DataCommon.CODE_ERROR, msg);
             }else{
-                // TODO
                 Gson gson = new Gson();
                 returnVal = gson.toJson(liquidityList);
             }
@@ -58,31 +59,31 @@ public class LiquidityService {
 
 
     // Start schedule
+    @Transactional
     public String postLiquidity(Liquidity liquidity, String userId){
 
         String returnValue = "";
         String msg         = "";
         Thread thread      = null;
-        Long id            = null;
+        Long id            = liquidity.getId();
 
         try{
-            Gson gson = new Gson();
-            log.info("[LiquidityTradeService - Start] Data : {} ", gson.toJson(liquidity));
+            log.info("[LiquidityTradeService - Start] ThreadId : {} ", id);
 
+            Gson gson = new Gson();
+
+            Liquidity savedLiquidity = liquidityRepository.getById(id);
+            savedLiquidity.setStatus(DataCommon.STATUS_RUN);
             User user         = userRepository.findByUserId(userId);
-            Exchange exchange = exchangeRepository.findByexchangeCode(liquidity.getExchange());
-            // JPA 테이블에 max schedule 값 반환
-            id = liquidityRepository.selectMaxId();
-            liquidity.setId(id);
-            liquidity.setDate(ServiceCommon.getNowData());
+            Exchange exchange = exchangeRepository.findByexchangeCode(savedLiquidity.getExchange());
 
             // Thread 생성
             LiquidityTradeThread liquidityTrade = new LiquidityTradeThread();
-            liquidityTrade.initClass(liquidity, user, exchange);
+            liquidityTrade.initClass(savedLiquidity, user, exchange);
             thread = new Thread(liquidityTrade);
 
             if(ServiceCommon.setLiquidityThread(id,liquidityTrade)){   // Thread pool에 넣기 성공
-                liquidityRepository.save(liquidity);              // DB에 해당 liquidity 저장
+                liquidityRepository.save(savedLiquidity);              // DB에 해당 liquidity 저장
                 msg = "msg:start thread, id:" + id;
                 returnValue = ServiceCommon.makeReturnValue(DataCommon.CODE_SUCCESS, msg);
             }else{                                              // 실패
@@ -103,26 +104,67 @@ public class LiquidityService {
         return returnValue;
     }
 
-    // Stop schedule
+    // Delete schedule
     public String deleteLiquidity(Liquidity liquidity){
         String msg         = "";
         String returnValue = "";
 
         try{
+            log.info("[LiquidityTradeService - Delete] Thread Id : {} ", liquidity.getId());
+
             // Thread pool 에서 thread를 가져와 멈춘다.
             LiquidityTradeThread thread = ServiceCommon.getLiquidityThread(liquidity.getId());
             if(thread != null){
                 thread.setStop();
+                log.info("[SUCCESS][LiquidityTradeService - Delete Thread] Thread Id : {} ", liquidity.getId());
+            }else{
+                log.error("[ERROR][LiquidityTradeService - Delete] No Thread Id : {} ", liquidity.getId());
             }
             // DB의 스케줄을 삭제한다.
             if(liquidityRepository.existsById(liquidity.getId())){
                 liquidityRepository.deleteById(liquidity.getId());
+                log.info("[SUCCESS][LiquidityTradeService - Delete Data] Thread Id : {} ", liquidity.getId());
             }
+        }catch(Exception e){
+            msg = "msg:fail delete thread, id:" + liquidity.getId();
+            returnValue = ServiceCommon.makeReturnValue(DataCommon.CODE_ERROR, msg);
+
+            log.error("[ERROR][Delete Liquidity Trade] {}",e.getMessage());
+        }
+        msg = "msg:success delete thread, id:" + liquidity.getId();
+        returnValue = ServiceCommon.makeReturnValue(DataCommon.CODE_SUCCESS, msg);
+
+        return returnValue;
+    }
+
+
+    // Delete schedule
+    @Transactional
+    public String stopLiquidity(Liquidity liquidity){
+        String msg         = "";
+        String returnValue = "";
+
+        try{
+            log.info("[LiquidityTradeService - Stop] Thread Id : {} ", liquidity.getId());
+
+            // Thread pool 에서 thread를 가져와 멈춘다.
+            LiquidityTradeThread thread = ServiceCommon.getLiquidityThread(liquidity.getId());
+            if(thread != null){
+                thread.setStop();
+                log.info("[SUCCESS][LiquidityTradeService - Stop Thread] Thread Id : {} ", liquidity.getId());
+            }else{
+                log.error("[ERROR][AutoTradeService - Stop] No Thread Id : {} ", liquidity.getId());
+            }
+
+            // 현재 값을 STOP 으로 변경
+            Liquidity savedLiquidity = liquidityRepository.getById(liquidity.getId());
+            savedLiquidity.setStatus(DataCommon.STATUS_STOP);
+            liquidityRepository.save(savedLiquidity);
         }catch(Exception e){
             msg = "msg:fail stop thread, id:" + liquidity.getId();
             returnValue = ServiceCommon.makeReturnValue(DataCommon.CODE_ERROR, msg);
 
-            log.error("[ERROR][Delete Liquidity Trade] {}",e.getMessage());
+            log.error("[ERROR][Stop Liquidity Trade] {}",e.getMessage());
         }
         msg = "msg:success stop thread, id:" + liquidity.getId();
         returnValue = ServiceCommon.makeReturnValue(DataCommon.CODE_SUCCESS, msg);
