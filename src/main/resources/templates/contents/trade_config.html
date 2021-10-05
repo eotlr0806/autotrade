@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ATS - Auto Trading Solution</title>
+
+    <!-- Global stylesheets -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,300,100,500,700,900" rel="stylesheet" type="text/css">
+    <link href="../bootstrap/assets/css/icons/icomoon/styles.css" rel="stylesheet" type="text/css">
+    <link href="../bootstrap/assets/css/bootstrap.css" rel="stylesheet" type="text/css">
+    <link href="../bootstrap/assets/css/core.css" rel="stylesheet" type="text/css">
+    <link href="../bootstrap/assets/css/components.css" rel="stylesheet" type="text/css">
+    <link href="../bootstrap/assets/css/colors.css" rel="stylesheet" type="text/css">
+    <!-- /global stylesheets -->
+</head>
+
+<style>
+    .row {
+        margin-bottom:7px;
+    }
+    
+    .ask-header {
+        background-color: #E6EBFF;
+        color:blue;
+    }
+
+    .ask-body {
+        color:blue;
+    }
+
+    .bid-header {
+        background-color: #FFE7E9;
+        color:red;
+    }
+
+    .bid-body {
+        color : red;
+    }
+</style>
+
+<body>
+    <!-- Page container -->
+    <div class="page-container">
+
+        <!-- Page content -->
+        <div class="page-content">
+            <div class="content-wrapper">
+                <!-- Page header -->
+                <div class="page-header">
+                    <div class="page-header-content">
+                        <div class="page-title">
+                            <h4><i class="icon-arrow-left52 position-left"></i> <span class="text-semibold">운영 관리</span> - 거래 관리</h4>
+                        </div>
+                    </div>
+                </div>
+                <!-- /page header -->
+
+                <!-- Content area -->
+                <div class="content">
+                    <!-- bot field -->
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="panel">
+                                <div class="panel-heading">
+                                    <h5 class="panel-title text-bold">코인 설정</h5>
+                                    <div class="heading-elements">
+                                        <ul class="icons-list">
+                                            <li><a data-action="collapse"></a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="panel-body">
+                                    <div class="form-inline">
+                                        <div class="form-group">
+                                            <label class="text-bold" for="filter_exchange">거래소</label>
+                                            <select name="fSpot" id="filter_exchange" class="form-control">
+                                                <!--<option value="NONE"> 선택 </option>-->
+                                            </select>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label class="text-bold" for="filter_coin">코인</label>
+                                            <select name="fSpot" id="filter_coin" class="form-control"></select>
+                                            <button onclick="fncObj.onClickRealPriceBtn()" class="btn btn-primary" style="margin-left:10px;">호가 조회</button>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- /bot field -->
+
+                    <!-- 2 columns form -->
+                    <div class="row">
+                        <!-- 자전 거래 -->
+                        <div class="col-md-6">
+                            <div class="panel panel-flat">
+                                <div class="panel-heading">
+                                    <h5 class="panel-title text-bold">자전 거래 설정</h5>
+                                    <div class="heading-elements">
+                                        <ul class="icons-list">
+                                            <li><a data-action="collapse"></a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="panel-body">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="row">
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label>수량 범위</label>
+                                                        <input id="min_cnt" type="text" placeholder="0" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label>　　</label>
+                                                        <input id="max_cnt" type="text" placeholder="100" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label>　　</label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label>시간 범위</label>
+                                                        <input id="min_seconds" type="text" placeholder="30" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label>　　</label>
+                                                        <input id="max_seconds" type="text" placeholder="60" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label>　　</label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="form-group">
+                                                    <label class="control-label col-sm-2">모드 설정</label>
+                                                    <div class="radio col-sm-8" style="margin-top:0px;">
+                                                        <div class="radio" style="margin-top:0px;">
+                                                            <div>
+                                                                <input id="RANDOM" type="radio" name="autotrade" class="custom-radio">
+                                                                <span style="padding-left:25px; font-size:12px; color:#999999;">무작위</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="radio">
+                                                            <div>
+                                                                <input id="SELL" type="radio" name="autotrade" class="custom-radio">
+                                                                <span style="padding-left:25px; font-size:12px; color:#999999;">매도 우선</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="radio">
+                                                            <div>
+                                                                <input id="BUY" type="radio" name="autotrade" class="custom-radio">
+                                                                <span style="padding-left:25px; font-size:12px; color:#999999;">매수 우선</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label>　　</label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label>　　</label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="text-right">
+                                                <button onclick="fncObj.postTrade(TRADE_LIST.AUTOTRADE);" type="submit" class="btn btn-primary">저 장</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 호가 유동성 -->
+                        <div class="col-md-6">
+                            <div class="panel panel-flat">
+                                <div class="panel-heading">
+                                    <h5 class="panel-title text-bold">호가 유동성 설정</h5>
+                                    <div class="heading-elements">
+                                        <ul class="icons-list">
+                                            <li><a data-action="collapse"></a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="panel-body">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="row">
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label>랜덤 틱수</label>
+                                                        <input id="random_tick_liquidity" type="text" placeholder="0" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label>틱 간격</label>
+                                                        <input id="range_tick_liquidity" type="text" placeholder="0" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="row">
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label>수량 범위</label>
+                                                        <input id="min_cnt_liquidity" type="text" placeholder="0" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label>　　</label>
+                                                        <input id="max_cnt_liquidity" type="text" placeholder="100" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="row">
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label>시간 범위</label>
+                                                        <input id="min_seconds_liquidity" type="text" placeholder="30" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label>　　</label>
+                                                        <input id="max_seconds_liquidity" type="text" placeholder="60" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="form-group">
+                                                    <label class="control-label col-sm-2">수동 틱 선택</label>
+                                                    <div class="col-sm-10" id="self_tick_liquidity">
+                                                        <div class="row">
+                                                            <div class="col-sm-2">
+                                                                <label class="checkbox-inline">
+                                                                    <div>
+                                                                        <span>
+                                                                            <input id="0" type="checkbox" class="styled" name="checkbox">
+                                                                        </span>
+                                                                    </div>
+                                                                    <span style="font-size:12px; color:#999999;">0
+                                                                    </span>
+                                                                </label>
+                                                            </div>
+
+                                                            <div class="col-sm-2">
+                                                                <label class="checkbox-inline">
+                                                                    <div>
+                                                                        <span>
+                                                                            <input id="1" type="checkbox" class="styled" name="checkbox">
+                                                                        </span>
+                                                                    </div>
+                                                                    <span style="font-size:12px; color:#999999;">1
+                                                                    </span>
+                                                                </label>
+                                                            </div>
+
+                                                            <div class="col-sm-2">
+                                                                <label class="checkbox-inline">
+                                                                    <div>
+                                                                        <span>
+                                                                            <input id="2" type="checkbox" class="styled" name="checkbox">
+                                                                        </span>
+                                                                    </div>
+                                                                    <span style="font-size:12px; color:#999999;">2
+                                                                    </span>
+                                                                </label>
+                                                            </div>
+
+                                                            <div class="col-sm-2">
+                                                                <label class="checkbox-inline">
+                                                                    <div>
+                                                                        <span>
+                                                                            <input id="3" type="checkbox" class="styled" name="checkbox">
+                                                                        </span>
+                                                                    </div>
+                                                                    <span style="font-size:12px; color:#999999;">3
+                                                                    </span>
+                                                                </label>
+                                                            </div>
+
+                                                            <div class="col-sm-2">
+                                                                <label class="checkbox-inline">
+                                                                    <div>
+                                                                        <span>
+                                                                            <input id="4" type="checkbox" class="styled" name="checkbox">
+                                                                        </span>
+                                                                    </div>
+                                                                    <span style="font-size:12px; color:#999999;">4
+                                                                    </span>
+                                                                </label>
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="row">
+                                                            <div class="col-sm-2">
+                                                                <label class="checkbox-inline">
+                                                                    <div>
+                                                                        <span>
+                                                                            <input id="5" type="checkbox" class="styled" name="checkbox">
+                                                                        </span>
+                                                                    </div>
+                                                                    <span style="font-size:12px; color:#999999;">5
+                                                                    </span>
+                                                                </label>
+                                                            </div>
+
+                                                            <div class="col-sm-2">
+                                                                <label class="checkbox-inline">
+                                                                    <div>
+                                                                        <span>
+                                                                            <input id="6" type="checkbox" class="styled" name="checkbox">
+                                                                        </span>
+                                                                    </div>
+                                                                    <span style="font-size:12px; color:#999999;">6
+                                                                    </span>
+                                                                </label>
+                                                            </div>
+
+                                                            <div class="col-sm-2">
+                                                                <label class="checkbox-inline">
+                                                                    <div>
+                                                                        <span>
+                                                                            <input id="7" type="checkbox" class="styled" name="checkbox">
+                                                                        </span>
+                                                                    </div>
+                                                                    <span style="font-size:12px; color:#999999;">7
+                                                                    </span>
+                                                                </label>
+                                                            </div>
+
+                                                            <div class="col-sm-2">
+                                                                <label class="checkbox-inline">
+                                                                    <div>
+                                                                        <span>
+                                                                            <input id="8" type="checkbox" class="styled" name="checkbox">
+                                                                        </span>
+                                                                    </div>
+                                                                    <span style="font-size:12px; color:#999999;">8
+                                                                    </span>
+                                                                </label>
+                                                            </div>
+
+                                                            <div class="col-sm-2">
+                                                                <label class="checkbox-inline">
+                                                                    <div>
+                                                                        <span>
+                                                                            <input id="9"  type="checkbox" class="styled" name="checkbox">
+                                                                        </span>
+                                                                    </div>
+                                                                    <span style="font-size:12px; color:#999999;">9
+                                                                    </span>
+                                                                </label>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="form-group">
+                                                    <label class="control-label col-sm-2">모드 설정</label>
+                                                    <div class="radio col-sm-8" style="margin-top:0px;">
+                                                        <div class="radio" style="margin-top:0px;">
+                                                            <div>
+                                                                <input id="RANDOM_L" type="radio" name="liquidity" class="custom-radio">
+                                                                <span style="padding-left:25px; font-size:12px; color:#999999;">무작위</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="radio">
+                                                            <div>
+                                                                <input id="SELF_L" type="radio" name="liquidity" class="custom-radio">
+                                                                <span style="padding-left:25px; font-size:12px; color:#999999;">수동</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="text-right">
+                                                <button  onclick="fncObj.postTrade(TRADE_LIST.LIQUIDITY)" type="submit" class="btn btn-primary">저 장</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- 1 columns form -->
+                    <div class="row">
+                        <!-- 호가 긁기 -->
+                        <div class="col-md-12">
+                            <div class="panel panel-flat">
+                                <div class="panel-heading">
+                                    <h5 class="panel-title text-bold">호가 긁기</h5>
+                                    <div class="heading-elements">
+                                        <ul class="icons-list">
+                                            <li><a data-action="collapse"></a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="panel-body">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="row">
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label>활성 틱수</label>
+                                                        <input id="tick_cnt_fishing" type="text" placeholder="0" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label>틱 간격</label>
+                                                        <input id="range_tick_fishing" type="text" placeholder="0" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="row">
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label>주문 범위</label>
+                                                        <input id="min_contract_fishing" type="text" placeholder="0" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label>　　</label>
+                                                        <input id="max_contract_fishing" type="text" placeholder="100" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="row">
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label>체결 범위</label>
+                                                        <input id="min_execute_fishing" type="text" placeholder="0" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label>　　</label>
+                                                        <input id="max_execute_fishing" type="text" placeholder="100" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="row">
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label>시간 범위</label>
+                                                        <input id="min_seconds_fishing" type="text" placeholder="30" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label>　　</label>
+                                                        <input id="max_seconds_fishing" type="text" placeholder="60" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="row">
+                                                <div class="form-group">
+                                                    <label class="control-label col-sm-2">모드 설정</label>
+                                                    <div class="radio col-sm-8" style="margin-top:0px;">
+                                                        <div class="radio" style="margin-top:0px;">
+                                                            <div>
+                                                                <input id="RANDOM_FISHING_L" type="radio" name="fishing" class="custom-radio">
+                                                                <span style="padding-left:25px; font-size:12px; color:#999999;">무작위</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="radio">
+                                                            <div>
+                                                                <input id="SELL_FISHING_L" type="radio" name="fishing" class="custom-radio">
+                                                                <span style="padding-left:25px; font-size:12px; color:#999999;">매도우선</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="radio">
+                                                            <div>
+                                                                <input id="BUY_FISHING_L" type="radio" name="fishing" class="custom-radio">
+                                                                <span style="padding-left:25px; font-size:12px; color:#999999;">매수우선</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="text-right">
+                                                <button  onclick="fncObj.postTrade(TRADE_LIST.FISHING)" type="submit" class="btn btn-primary">저 장</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                <!-- /content area -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Real Time Price Modal container -->
+    <div id="modal_coin_price" class="modal fade">
+        <div class="modal-dialog modal-mg" >
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h5 class="modal-title text-bold">실시간 호가</h5>
+                </div>
+                <div class="form-horizontal">
+                    <div class="modal-body" >
+                        <div class="form-group">
+                            <label class="control-label text-bold col-sm-12">호가</label>
+                            <div class="col-sm-12" style="font-size:11px;">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th class="text-bold">가격</th>
+                                                <th class="text-bold">수량</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="modal_coin_price_body">
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+                            <input onclick="fncObj.makerealPriceTable()" type="button" class="btn btn-info" value="갱신">
+                            <input type="button" class="btn" data-dismiss="modal" value="닫기">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- /Real Time Price Modal container -->
+    
+</body>
+
+
+
+<!-- Core JS files -->
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/loaders/pace.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/core/libraries/jquery.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/core/libraries/bootstrap.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/loaders/blockui.min.js"></script>
+<!-- /core JS files -->
+
+<!-- Theme JS files -->
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/forms/styling/uniform.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/editors/wysihtml5/wysihtml5.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/editors/wysihtml5/toolbar.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/editors/wysihtml5/parsers.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/editors/wysihtml5/locales/bootstrap-wysihtml5.ua-UA.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/notifications/jgrowl.min.js"></script>
+
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/notifications/pnotify.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/core/app.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/pages/editor_wysihtml5.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/pages/components_notifications_pnotify.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/pages/extension_blockui.js"></script>
+<!-- /theme JS files -->
+
+<!-- Common Lib -->
+<script type="text/javascript" src="../common/js/commonScript.js"></script>
+<!-- /Common Lib -->
+
+<!-- -->
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+
+<script>
+
+    const STOP               = "STOP";
+ 
+    let clickedAutoMode      = '';
+    let clickedLiquidityMode = '';
+    let clickedFishingMode   = '';
+    let exchangesList        = [];
+    let loginUserId          = '';
+    let liquiditySelfTick    = [];
+
+    // init page
+    $(document).ready(() => {
+        fncObj.initPage();
+    })
+
+
+    /** Function object **/
+    let fncObj = {
+
+        // 페이지 로드 시 초기값 셋팅을 위한 함수
+        initPage : async () => {
+            let response = await common.get(API.EXCHANGE);   // Get excahgne, coin list
+            if(response.data != null){
+                if(response.status == SUCCESS){
+                    exchangesList = response.data;
+                }
+            }
+
+            dataObj.setExchangeCoin();                                  // Set exchange
+            loginUserId = $('#server_user_id').val();                   // Set user id
+            
+            // checker class로 인해 span 태그가 생성 이후 해당 태그에 이벤트 부여.
+            setTimeout(() => {
+                // class checker에 대한 click event
+                $('.checker').on('click',item => {
+                    let str   = item.currentTarget.id.toString();
+                    let index = str.indexOf('-') + 1;
+                    let id    = str.substring(index);
+
+                    // 값이있다면
+                    if(liquiditySelfTick.includes(id)){
+                        liquiditySelfTick = liquiditySelfTick.filter(item => item != id);
+                    }
+                    // 값이 없다면
+                    else{
+                        liquiditySelfTick.push(id);
+                    }                
+                });
+            },1000)
+        },
+
+        // 호가 조회 함수
+        onClickRealPriceBtn : async () =>{
+            if($('#filter_exchange').val() == 'NONE' || $('#filter_coin').val() == 'NONE'){
+                common.noti("호가 조회", "거래소와 코인을 선택해주세요","error");
+                return;
+            }
+            await fncObj.makerealPriceTable();
+
+            $('#modal_coin_price').modal('show');
+        },
+
+        // 호가 조회 시, 데이터 조회 및 셋팅
+        makerealPriceTable : async () => {
+            $('#modal_coin_price_body').empty();
+
+            let filterExchangeNm = $('#filter_exchange').val();
+            let coin             = $('#filter_coin').val();
+            let url              = API.ORDER_BOOK + `?exchange=${filterExchangeNm}&currency=${coin}&userId=${loginUserId}`;
+            let response         = await common.get(url);
+            let data             = response.data;
+
+            let dynamicText = dataObj.setRealPriceTable(filterExchangeNm, data);
+            
+            $('#modal_coin_price_body').append(dynamicText);
+
+        },
+
+        postTrade : async (mode) => {
+            // check mode
+            let title;
+            let params;
+            if (mode === TRADE_LIST.AUTOTRADE){
+                title  = "자전거래";
+                params = fncObj.setDataBeforeAutoTradeRun();
+            }else if (mode === TRADE_LIST.LIQUIDITY){
+                title  = "호가 유동성";
+                params = fncObj.setDataBeforeLiquidityTrade();
+            }else if (mode === TRADE_LIST.FISHING){
+                title  = "매매 긁기";
+                params = fncObj.setDataBeforeFishingTrade();
+            }
+
+            if(params != CODE_ERROR){
+                let returnVal = await common.post(API.SAVE_TRADE, params);
+                if(returnVal.data != undefined){
+                    if(returnVal.data == SUCCESS){
+                        common.noti(title,"해당 내역으로 거래가 저장됩니다.","success");
+                    }else{
+                        common.noti(title,"해당 거래가 정상적으로 저장되지 않았습니다.\n로그아웃 후 다시 시도해주세요.","error");
+                    }
+                }else{
+                    common.noti("자전거래","해당 거래가 정상적으로 저장되지 않았습니다.\n로그아웃 후 다시 시도해주세요.","error");
+                }
+            }
+        },
+
+        // 자전 거래 데이터 셋팅
+        setDataBeforeAutoTradeRun : () => {
+            
+            if(!fncObj.validateCommon() || !fncObj.validateAutoTrade()){
+                return CODE_ERROR;
+            }
+
+            let body = {
+                minCnt      : $('#min_cnt').val(),
+                maxCnt      : $('#max_cnt').val(),
+                minSeconds  : $('#min_seconds').val(),
+                maxSeconds  : $('#max_seconds').val(),
+                exchange    : $('#filter_exchange').val(),
+                coin        : $('#filter_coin').val(),
+                mode        : clickedAutoMode,
+                status      : STOP,
+                userId      : loginUserId,
+                tradeType   : TRADE_LIST.AUTOTRADE,
+            };
+        
+            return body;
+        },
+
+        // 호가유동성 데이터 셋팅
+        setDataBeforeLiquidityTrade : () => {
+            if(!fncObj.validateCommon() || !fncObj.validateLiquidityTrade()){
+                return CODE_ERROR
+            }
+
+            let body = {
+                minCnt      : $('#min_cnt_liquidity').val(),
+                maxCnt      : $('#max_cnt_liquidity').val(),
+                minSeconds  : $('#min_seconds_liquidity').val(),
+                maxSeconds  : $('#max_seconds_liquidity').val(),
+                randomTick  : $('#random_tick_liquidity').val(),
+                rangeTick   : $('#range_tick_liquidity').val(),
+                selfTick    : liquiditySelfTick.toString(),
+                status      : STOP,
+                mode        : clickedLiquidityMode,
+                exchange    : $('#filter_exchange').val(),
+                coin        : $('#filter_coin').val(),
+                userId      : loginUserId,
+                tradeType   : TRADE_LIST.LIQUIDITY,
+            }
+
+            return body;
+        },
+
+        // 매매 긁기 데이터 셋팅
+        setDataBeforeFishingTrade : () => {
+            if(!fncObj.validateCommon() || !fncObj.validateFishingTrade()){
+                return CODE_ERROR
+            }
+
+            let body = {
+                minContractCnt     : $('#min_contract_fishing').val(),
+                maxContractCnt     : $('#max_contract_fishing').val(),
+                minExecuteCnt      : $('#min_execute_fishing').val(),
+                maxExecuteCnt      : $('#max_execute_fishing').val(),
+                minSeconds         : $('#min_seconds_fishing').val(),
+                maxSeconds         : $('#max_seconds_fishing').val(),
+                rangeTick          : $('#range_tick_fishing').val(),
+                tickCnt            : $('#tick_cnt_fishing').val(),
+                status             : STOP,
+                mode               : (clickedFishingMode === 'RANDOM_FISHING_L') ? 'RANDOM' : ((clickedFishingMode === 'SELL_FISHING_L') ? 'SELL' : 'BUY'),
+                exchange           : $('#filter_exchange').val(),
+                coin               : $('#filter_coin').val(),
+                userId             : loginUserId,
+                tradeType          : TRADE_LIST.FISHING,
+            }
+
+            return body;
+        },
+
+
+        // setDataBeforeAutoTrade 에서 값이 유효한지 체크하는 로직
+        validateAutoTrade : () => {
+            
+            if($('#min_cnt').val() == "" || $('#max_cnt').val() == ""){
+                return common.noti("자전거래","수량을 모두 입력해주세요.","error");
+            }else if(Number($('#min_cnt').val()) > Number($('#max_cnt').val())){
+                return common.noti("자전거래","최소 수량이 최대보다 큽니다.","error");
+            }else if($('#min_seconds').val() == "" || $('#max_seconds').val() == ""){
+                return common.noti("자전거래","시간을 모두 입력해주세요.","error");
+            }else if(Number($('#min_seconds').val()) > Number($('#max_seconds').val())){
+                return common.noti("자전거래","최소 시간이 최대보다 큽니다.","error");
+            } else if(clickedAutoMode == "" || clickedAutoMode == undefined){
+                return common.noti("자전거래","모드를 설정해주세요.","error");
+            }else if(loginUserId == "" || loginUserId == undefined){
+                return common.noti("자전거래","세션 정보가 없습니다. \n다시 로그인해주세요.","error");
+            }
+
+            return true;
+        },
+
+        // liquidityTrade 유효성 검사
+        validateLiquidityTrade : () => {
+
+            if($('#range_tick_liquidity').val() == ""){
+                return common.noti("호가 유동성","틱 간격을 입력해주세요.","error");
+            }else if($('#min_cnt_liquidity').val() == "" || $('#max_cnt_liquidity').val() == ""){
+                return common.noti("호가 유동성","수량을 모두 입력해주세요.","error");
+            }else if(Number($('#min_cnt_liquidity').val()) > Number($('#max_cnt_liquidity').val())){
+                return common.noti("호가 유동성","최소 수량이 최대보다 큽니다.","error");
+            }else if($('#min_seconds_liquidity').val() == "" || $('#max_seconds_liquidity').val() == ""){
+                return common.noti("호가 유동성","시간을 모두 입력해주세요.","error");
+            }else if(Number($('#min_seconds_liquidity').val()) > Number($('#max_seconds_liquidity').val())){
+                return common.noti("호가 유동성","최소 시간이 최대보다 큽니다.","error");
+            }else if(clickedLiquidityMode == "" || clickedLiquidityMode == undefined){
+                return common.noti("호가 유동성","모드를 설정해주세요.","error");
+            }else if(loginUserId == "" || loginUserId == undefined){
+                return common.noti("호가 유동성","세션 정보가 없습니다. \n다시 로그인해주세요.","error");
+            }
+
+            // 모드가 무작위일 경우, 랜덤 틱수 필수 값
+            if(clickedLiquidityMode == "RANDOM_L" && $('#random_tick_liquidity').val() == ""){
+                return common.noti("호가 유동성","무작위 모드에서는 랜덤 틱수 값이 필수입니다.","error");
+            }
+            if(clickedLiquidityMode == "SELF_L" && liquiditySelfTick.length < 1){
+                return common.noti("호가 유동성","수동 모드에서는 수동 틱 선택이 필수입니다.","error");
+            }
+
+            return true;
+        },
+
+        // fishingTrade 유효성 검사
+        validateFishingTrade : () => {
+            
+            if($('#tick_cnt_fishing').val() == ""){
+                return common.noti("호가 긁기","활성 틱수를 입력해주세요.","error");
+            }else if($('#range_tick_fishing').val() == ""){
+                return common.noti("호가 긁기","틱 간격을 입력해주세요.","error");
+            }else if($('#min_contract_fishing').val() == "" || $('#max_contract_fishing').val() == ""){
+                return common.noti("호가 긁기","주문 범위를 모두 입력해주세요.","error");
+            }else if(Number($('#min_contract_fishing').val()) > Number($('#max_contract_fishing').val())){
+                return common.noti("호가 긁기","최소 수량이 최대보다 큽니다.","error");
+            }else if($('#min_execute_fishing').val() == "" || $('#max_execute_fishing').val() == ""){
+                return common.noti("호가 긁기","체결 범위를 모두 입력해주세요.","error");
+            }else if(Number($('#min_execute_fishing').val()) > Number($('#max_execute_fishing').val())){
+                return common.noti("호가 긁기","최소 체결 수량이 최대보다 큽니다.","error");
+            }else if($('#min_seconds_fishing').val() == "" || $('#max_seconds_fishing').val() == ""){
+                return common.noti("호가 긁기","시간을 모두 입력해주세요.","error");
+            }else if(Number($('#min_seconds_fishing').val()) > Number($('#max_seconds_fishing').val())){
+                return common.noti("호가 긁기","최소 시간이 최대보다 큽니다.","error");
+            }else if(clickedFishingMode == "" || clickedFishingMode == undefined){
+                return common.noti("호가 긁기","모드를 설정해주세요.","error");
+            }else if(loginUserId == "" || loginUserId == undefined){
+                return common.noti("호가 긁기","세션 정보가 없습니다. \n다시 로그인해주세요.","error");
+            }
+            return true;
+        },
+
+        // 공통 부분
+        validateCommon : () => {
+            if($('#filter_exchange').val() == '' || $('#filter_exchange').val() == undefined || $('#filter_exchange').val() == 'NONE'){
+                return common.noti("호가 유동성","상단의 거래소를 선택해주세요.","error");
+            }else if($('#filter_coin').val() == '' || $('#filter_coin').val() == undefined || $('#filter_coin').val() == 'NONE'){
+                return common.noti("호가 유동성","상단의 코인을 선택해주세요.","error");
+            }
+            return true;
+        },
+    };
+    /** Function object **/
+
+
+
+
+
+
+
+
+
+
+
+
+    /** Function object for data setter / getter **/
+    let dataObj = {
+        // 호가 리스트 조회
+        setRealPriceTable : (exchange, data) => {
+            let dynamicText = "";
+            try{
+                ask = data.ask.slice(0,10).reverse() || []   // sell
+                bid = data.bid.slice(0,10) || []             // buy
+
+                ask.forEach(item => {
+                    dynamicText += `
+                    <tr>
+                        <td class="text-bold ask-header">${item.price}</td>
+                        <td class="text-bold ask-body">${item.qty}</td>
+                    </tr>`;
+                })
+
+                bid.forEach(item => {
+                    dynamicText += `
+                    <tr>
+                        <td class="text-bold bid-header">${item.price}</td>
+                        <td class="text-bold bid-body">${item.qty}</td>
+                    </tr>`;
+
+                });
+            }catch(e){
+                common.noti("실시간 호가 조회","코인 정보를 확인해주세요.\n 이상이 없을 시, 다시 시도해주세요.","success");
+            }
+
+
+            return dynamicText;
+            
+        },
+          
+        // 페이지 로드 이후, 거래소 정보 셋팅을 위한 함수
+        setExchangeCoin : () => {
+            $('#filter_exchange').empty();
+            $('#filter_coin').empty();
+            let dynamicText = "<option value='NONE'>선택</option>";
+            exchangesList.forEach(exchange => {
+                dynamicText += `
+                    <option value=${exchange.exchangeCode}>
+                        ${exchange.exchangeName}
+                    </option>`;
+            });
+            $('#filter_exchange').append(dynamicText);
+        },
+
+        
+    }
+    /** Function object for data setter,getter **/
+
+
+
+
+
+    /** Event **/
+    $('.custom-radio').on('click', event => {
+        let name = event.currentTarget.name;
+        if(name == 'autotrade'){
+            clickedAutoMode      = event.currentTarget.id;
+        }else if(name == 'liquidity'){
+            clickedLiquidityMode = event.currentTarget.id;
+        }else if(name = 'fishing'){
+            clickedFishingMode   = event.currentTarget.id;
+        }
+    })
+
+    // 거래소 선택 시, 코인 정보 등록
+    $('#filter_exchange').on('change', () => {
+        $('#filter_coin').empty();
+
+        let selectedExchange = $('#filter_exchange').val();
+        if(selectedExchange == 'NONE'){
+            $('#filter_coin').empty();
+        }else{
+            let dynamicText = "<option value='NONE'>선택</option>";
+            exchangesList.forEach(exchange => {
+                if(Object.keys(exchange).length > 0){
+                    if(exchange.exchangeCode == selectedExchange){
+                    exchange.exchangeCoin.forEach(coin => {
+                        dynamicText += `
+                            <option value=${coin.coinCode};${coin.id}>
+                                ${coin.coinName}
+                            </option>`;
+                        })
+                    }
+                }
+            })
+            $('#filter_coin').append(dynamicText);
+        }
+
+        if(selectedExchange == EXCHANGE_LIST.COINONE){
+            common.noti("거래소","코인원의 경우 모든 서비스는 원화 기준입니다.","success");
+        }else if(selectedExchange == EXCHANGE_LIST.FOBLGATE){
+            common.noti("거래소","포블게이트의 모든 서비스는 각 코인 등록시 등록한 통화 기준입니다.","success");
+        }else if(selectedExchange == EXCHANGE_LIST.DCOIN){
+            common.noti("거래소","DCOIN의 모든 서비스는 각 코인 등록시 등록한 통화 기준입니다.","success");
+        }else if(selectedExchange == EXCHANGE_LIST.BITHUMBGLOBAL){
+            common.noti("거래소","빗썸글로벌의 경우 모든 서비스는 각 코인 등록시 등록한 통화 기준입니다.","success");
+        }
+    })
+    /** Event **/
+
+</script>
+
+
+
+<input type="hidden" id="server_user_id" th:value="${userId}" />
+<!-- TODO :
+ 1. 요청 시 예외 처리-->

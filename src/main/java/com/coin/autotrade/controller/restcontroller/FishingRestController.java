@@ -1,9 +1,7 @@
 package com.coin.autotrade.controller.restcontroller;
 
 import com.coin.autotrade.model.Fishing;
-import com.coin.autotrade.model.Liquidity;
 import com.coin.autotrade.service.FishingService;
-import com.coin.autotrade.service.LiquidityService;
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,7 +55,10 @@ public class FishingRestController {
                 case "RUN":
                     returnVal = service.postFishing(fishing, request.getSession().getAttribute("userId").toString());
                     break;
-                case "STOP":
+                case "STOP" :
+                    returnVal = service.stopFishing(fishing);
+                    break;
+                case "DELETE":
                     returnVal = service.deleteFishing(fishing);
                     break;
                 default:
