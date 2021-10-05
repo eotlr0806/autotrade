@@ -1,6 +1,9 @@
 # project config
 server :
   port : 8080
+  servlet:
+    session:
+      timeout: 9999m
 
 spring:
   datasource:

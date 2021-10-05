@@ -3,6 +3,7 @@ package com.coin.autotrade.controller.restcontroller;
 import com.coin.autotrade.model.AutoTrade;
 import com.coin.autotrade.service.AutoTradeService;
 import com.google.gson.Gson;
+import com.sun.xml.bind.v2.TODO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,7 +32,6 @@ public class AutoTradeRestController {
         }catch(Exception e){
             log.error("[ERROR][API - GET Autotrade] {}", e.getMessage());
         }
-
         return returnVal;
     }
 
@@ -55,7 +55,10 @@ public class AutoTradeRestController {
                 case "RUN":
                     returnVal = service.postAutoTrade(autoTrade, request.getSession().getAttribute("userId").toString());
                     break;
-                case "STOP":
+                case "STOP" :
+                    returnVal = service.stopAutoTrade(autoTrade);
+                    break;
+                case "DELETE":
                     returnVal = service.deleteAutoTrade(autoTrade);
                     break;
                 default:

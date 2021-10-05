@@ -89,43 +89,7 @@
 
         </div>
     </div>
-
-    <!-- Real Time Price Modal container -->
-    <div id="modal_coin_price" class="modal fade">
-        <div class="modal-dialog modal-lg" >
-            <div class="modal-content">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal">&times;</button>
-                    <h5 class="modal-title text-bold">실시간 호가</h5>
-                </div>
-                <div class="form-horizontal">
-                    <div class="modal-body" >
-                        <div class="form-group">
-                            <label class="control-label text-bold col-sm-12">호가</label>
-                            <div class="col-sm-12">
-                                <div class="table-responsive">
-                                    <table class="table table-bordered table-hover">
-                                        <thead>
-                                            <tr>
-                                                <th class="text-bold">가격</th>
-                                                <th class="text-bold">수량</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="modal_coin_price_body">
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- /Real Time Price Modal container -->
-
-
+ 
     <!-- Add coin  -->
     <div id="modal_coin_info" class="modal fade">
         <div class="modal-dialog modal-lg" >
@@ -283,7 +247,7 @@
 
         // coin 정보를 서버에서 가져온다.
         getExchangeList : async () => {
-            let response = await common.get(EXCHANGE);   // Get excahgne, coin list
+            let response = await common.get(API.EXCHANGE);   // Get excahgne, coin list
             if(response.data != null){
                 if(response.status == SUCCESS){
                     exchangesList = response.data;
@@ -356,7 +320,7 @@
                 data.id = onClickUpdateCoin.id;
             }
 
-            let response = await common.post(COIN,data);
+            let response = await common.post(API.COIN,data);
             if(response.status == SUCCESS){
                 common.noti("코인 등록", "코인 등록을 완료하였습니다.","success");
                 
@@ -370,7 +334,7 @@
 
         // 코인 정보 삭제
         deleteCoin : async (id) => {
-            let response = await common.delete(COIN, { "id": id });
+            let response = await common.delete(API.COIN, { "id": id });
 
             if(response.status == SUCCESS){
                 common.noti("코인 삭제", "코인 삭제를 완료하였습니다.","success");

@@ -5,13 +5,10 @@ import com.coin.autotrade.common.ServiceCommon;
 import com.coin.autotrade.model.User;
 import com.coin.autotrade.service.ExchangeService;
 import com.coin.autotrade.service.UserService;
-import com.coin.autotrade.service.function.FlataFunction;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.SessionAttributes;
 import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
@@ -28,13 +25,7 @@ public class MainController {
     @Autowired
     ExchangeService exchangeService;
 
-    /**
-     * 혹시 몰라서..
-     * @param request
-     * @param user
-     * @return
-     * @throws Exception
-     */
+    /* 혹시 몰라서.. */
     @GetMapping(value ="/main")
     public ModelAndView main( HttpServletRequest request) throws Exception{
         ModelAndView mav = new ModelAndView();
@@ -48,9 +39,7 @@ public class MainController {
         return mav;
     }
 
-    /**
-     * Login action controller
-     */
+    /* Login action controller */
     @PostMapping(value ="/main")
     public ModelAndView main( HttpServletRequest request,  HttpServletResponse response) throws Exception{
 
@@ -83,10 +72,7 @@ public class MainController {
         return mav;
     }
 
-    /**
-     * main/auto trading
-     * @return
-     */
+    /* main/auto trading */
     @GetMapping(value = "/main/auto_trading")
     public ModelAndView autoTrading(HttpServletRequest request) throws Exception{
         ModelAndView mav = new ModelAndView();
@@ -95,10 +81,7 @@ public class MainController {
         return mav;
     }
 
-    /**
-     * main/coin coinfig
-     * @return
-     */
+    /* main/coin coinfig */
     @GetMapping(value = "/main/coin_config")
     public ModelAndView coinConfig(HttpServletRequest request) throws Exception{
         ModelAndView mav = new ModelAndView();
@@ -107,5 +90,22 @@ public class MainController {
         return mav;
     }
 
+    /* main/trade trading */
+    @GetMapping(value = "/main/trade_config")
+    public ModelAndView tradeConfig(HttpServletRequest request) throws Exception{
+        ModelAndView mav = new ModelAndView();
+        mav.setViewName("contents/trade_config");
+        mav.addObject("userId",request.getSession().getAttribute("userId"));
+        return mav;
+    }
+
+    /* main/trade trading */
+    @GetMapping(value = "/main/trade")
+    public ModelAndView trade(HttpServletRequest request) throws Exception{
+        ModelAndView mav = new ModelAndView();
+        mav.setViewName("contents/trade");
+        mav.addObject("userId",request.getSession().getAttribute("userId"));
+        return mav;
+    }
 
 }

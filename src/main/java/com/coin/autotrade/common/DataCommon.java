@@ -24,6 +24,8 @@ public class DataCommon {
     public static String MODE_BUY       = "BUY";
     public static String MODE_RANDOM_L  = "RANDOM_L";
     public static String MODE_SELF_L    = "SELF_L";
+    public static String STATUS_RUN     = "RUN";
+    public static String STATUS_STOP    = "STOP";
 
 
     /** Define Public Api URL */

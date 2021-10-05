@@ -14,7 +14,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.transaction.Transactional;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Slf4j
@@ -44,7 +46,6 @@ public class AutoTradeService {
                 String msg = "msg:There is no active autoTrade";
                 returnVal =  ServiceCommon.makeReturnValue(DataCommon.CODE_ERROR, msg);
             }else{
-                // TODO
                 Gson gson = new Gson();
                 returnVal = gson.toJson(autoTradeList);
             }
@@ -58,32 +59,40 @@ public class AutoTradeService {
 
 
     // Start autoTrade
+    @Transactional
     public String postAutoTrade(AutoTrade autoTrade, String userId){
 
         String returnValue = "";
         String msg         = "";
         Thread thread      = null;
-        Long id            = null;
+        Long id            = autoTrade.getId();
 
         try{
+            log.info("[AutoTradeService - Start] Thread Id : {} ", id);
+
             Gson gson = new Gson();
-            log.info("[AutoTradeService - Start] Data : {} ", gson.toJson(autoTrade));
 
+            // 중복 체크
+            AutoTradeThread threadForCheck = ServiceCommon.getAutoTradeThread(autoTrade.getId());
+            if(threadForCheck != null){
+                log.error("[ERROR][Post AutoTrade Trade][Thread started already] thread Id: {}", autoTrade.getId());
+                msg = "msg:can not push thread object in list";
+                returnValue = ServiceCommon.makeReturnValue(DataCommon.CODE_ERROR, msg);
+                return returnValue;
+            }
+            // 기존의 Autotrade 값을 가져온다.
+            AutoTrade savedAutotrade = autotradeRepository.getById(id);
+            savedAutotrade.setStatus(DataCommon.STATUS_RUN);
             User user         = userRepository.findByUserId(userId);
-            Exchange exchange = exchangeRepository.findByexchangeCode(autoTrade.getExchange());
-
-            // JPA 테이블에 max autoTrade 값 반환
-            id = autotradeRepository.selectMaxId();
-            autoTrade.setId(id);
-            autoTrade.setDate(ServiceCommon.getNowData());
+            Exchange exchange = exchangeRepository.findByexchangeCode(savedAutotrade.getExchange());
 
             // Thread 생성
             AutoTradeThread autoTradeThread = new AutoTradeThread();
-            autoTradeThread.initClass(autoTrade,user,exchange);
+            autoTradeThread.initClass(savedAutotrade,user,exchange);
             thread = new Thread(autoTradeThread);
 
-            if(ServiceCommon.setAutoTradeThread(id,autoTradeThread)){  // Thread pool에 넣기 성공
-                autotradeRepository.save(autoTrade);              // DB에 해당 autoTrade 저장
+            if(ServiceCommon.setAutoTradeThread(id, autoTradeThread)){  // Thread pool에 넣기 성공
+                autotradeRepository.save(savedAutotrade);              // DB에 해당 autoTrade 저장
                 msg = "msg:start thread, id:" + id;
                 returnValue = ServiceCommon.makeReturnValue(DataCommon.CODE_SUCCESS, msg);
             }else{                                              // 실패
@@ -110,20 +119,60 @@ public class AutoTradeService {
         String returnValue = "";
 
         try{
+            log.info("[AutoTradeService - Delete] Thread Id : {} ", autoTrade.getId());
+
             // Thread pool 에서 thread를 가져와 멈춘다.
             AutoTradeThread thread = ServiceCommon.getAutoTradeThread(autoTrade.getId());
             if(thread != null){
                 thread.setStop();
+                log.info("[SUCCESS][AutoTradeService - Delete Thread] Thread Id : {} ", autoTrade.getId());
+            }else{
+                log.error("[ERROR][AutoTradeService - Delete] No Thread Id : {} ", autoTrade.getId());
             }
             // DB의 스케줄을 삭제한다.
             if(autotradeRepository.existsById(autoTrade.getId())){
                 autotradeRepository.deleteById(autoTrade.getId());
+                log.info("[SUCCESS][AutoTradeService - Delete Data] Thread Id : {} ", autoTrade.getId());
             }
+        }catch(Exception e){
+            msg = "msg:fail delete thread, id:" + autoTrade.getId();
+            returnValue = ServiceCommon.makeReturnValue(DataCommon.CODE_ERROR, msg);
+
+            log.error("[ERROR][Delete AutoTrade Trade] {}",e.getMessage());
+        }
+        msg = "msg:success delete thread, id:" + autoTrade.getId();
+        returnValue = ServiceCommon.makeReturnValue(DataCommon.CODE_SUCCESS, msg);
+
+        return returnValue;
+    }
+
+    @Transactional
+    public String stopAutoTrade(AutoTrade autoTrade){
+        String msg         = "";
+        String returnValue = "";
+
+        try{
+            log.info("[AutoTradeService - Stop] Thread Id : {} ", autoTrade.getId());
+
+            // Thread pool 에서 thread를 가져와 멈춘다.
+            AutoTradeThread thread = ServiceCommon.getAutoTradeThread(autoTrade.getId());
+            if(thread != null){
+                thread.setStop();
+                log.info("[SUCCESS][AutoTradeService - Stop Thread] Thread Id : {} ", autoTrade.getId());
+            }else{
+                log.error("[ERROR][AutoTradeService - Stop] No Thread Id : {} ", autoTrade.getId());
+            }
+
+            // 현재 값을 STOP 으로 변경
+            AutoTrade savedAutoTrade = autotradeRepository.getById(autoTrade.getId());
+            savedAutoTrade.setStatus(DataCommon.STATUS_STOP);
+            autotradeRepository.save(savedAutoTrade);
+
         }catch(Exception e){
             msg = "msg:fail stop thread, id:" + autoTrade.getId();
             returnValue = ServiceCommon.makeReturnValue(DataCommon.CODE_ERROR, msg);
 
-            log.error("[ERROR][Delete AutoTrade Trade] {}",e.getMessage());
+            log.error("[ERROR][Stop AutoTrade Trade] {}",e.getMessage());
         }
         msg = "msg:success stop thread, id:" + autoTrade.getId();
         returnValue = ServiceCommon.makeReturnValue(DataCommon.CODE_SUCCESS, msg);
