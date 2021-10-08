@@ -358,6 +358,8 @@ public class ServiceCommon {
             exchangeFunction = new DcoinFunction();
         } else if(DataCommon.BITHUMB_GLOBAL.equals(exchange)){
             exchangeFunction = new BithumbGlobalFunction();
+        } else if(DataCommon.BITHUMB.equals(exchange)){
+            exchangeFunction = new BithumbFunction();
         }
 
         return exchangeFunction;

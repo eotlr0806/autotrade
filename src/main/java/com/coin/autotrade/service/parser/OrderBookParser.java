@@ -60,6 +60,11 @@ public class OrderBookParser {
                     BithumbGlobalFunction bithumbGlobal = new BithumbGlobalFunction();
                     returnVal = bithumbGlobal.getOrderBook(exchangeObj, coin[0], coin[1]);
                     break;
+                case "BITHUMB" :
+                    BithumbFunction bitumb = new BithumbFunction();
+                    returnVal = bitumb.getOrderBook(exchangeObj, coin[0], coin[1]);
+                    System.out.println(">>>>>>>>>>>"+ returnVal);
+                    break;
                 default :
                     returnVal = "No data";
                     break;
@@ -138,6 +143,34 @@ public class OrderBookParser {
                     JsonObject newBid = new JsonObject();
                     newBid.addProperty("price", bidObj.get("price").toString().replace("\"",""));
                     newBid.addProperty("qty"  , bidObj.get("amount").toString().replace("\"",""));
+                    parseBid.add(newBid);
+                }
+                JsonObject returnObj = new JsonObject();
+                returnObj.add("ask",parseAsk);
+                returnObj.add("bid",parseBid);
+
+                returnValue = gson.toJson(returnObj);
+            }
+            // BITHUMB
+            else if(exchange.equals(DataCommon.BITHUMB)){
+                JsonObject dataObj = object.getAsJsonObject("data");
+                JsonArray ask       = gson.fromJson(dataObj.get("asks"), JsonArray.class);
+                JsonArray bid       = gson.fromJson(dataObj.get("bids"), JsonArray.class);
+
+                for(int i=0; i < ask.size(); i++){
+                    JsonObject askObj = (JsonObject) ask.get(i);
+
+                    JsonObject newAsk = new JsonObject();
+                    newAsk.addProperty("price", askObj.get("price").toString().replace("\"","") );
+                    newAsk.addProperty("qty"  , askObj.get("quantity").toString().replace("\"","") );
+                    parseAsk.add(newAsk);
+                }
+                for(int i=0; i < bid.size(); i++){
+                    JsonObject bidObj = (JsonObject) bid.get(i);
+
+                    JsonObject newBid = new JsonObject();
+                    newBid.addProperty("price", bidObj.get("price").toString().replace("\"",""));
+                    newBid.addProperty("qty"  , bidObj.get("quantity").toString().replace("\"",""));
                     parseBid.add(newBid);
                 }
                 JsonObject returnObj = new JsonObject();
