@@ -86,17 +86,15 @@ public class BithumbFunction extends ExchangeFunction{
                 String buyOrderId  = "";
                 if( !(buyOrderId = createOrder(BUY, price, cnt, coinData[0],currency)).equals("")){   // 매수
                     Thread.sleep(300);
-                    if(createOrder(SELL,price, cnt,  coinData[0],currency).equals("")){               // 매도
-                        cancelOrder(BUY,buyOrderId, coinData[0], currency);                      // 매도 실패 시, 매수 취소
-                    }
+                    createOrder(SELL,price, cnt,  coinData[0],currency);
+                    cancelOrder(BUY,buyOrderId, coinData[0], currency);                      // 매도 실패 시, 매수 취소
                 }
             }else if(DataCommon.MODE_SELL.equals(mode)){
                 String sellOrderId  = "";
                 if( !(sellOrderId = createOrder(SELL,price, cnt,  coinData[0],currency)).equals("")){
                     Thread.sleep(300);
-                    if(createOrder(BUY,price, cnt,  coinData[0],currency).equals("")){
-                        cancelOrder(SELL, sellOrderId, coinData[0], currency);
-                    }
+                    createOrder(BUY,price, cnt,  coinData[0],currency);
+                    cancelOrder(SELL, sellOrderId, coinData[0], currency);
                 }
             }
         }catch (Exception e){
