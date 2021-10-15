@@ -287,6 +287,46 @@ public class FoblGateFunction extends ExchangeFunction{
         return returnCode;
     }
 
+    @Override
+    public String getOrderBook(Exchange exchange, String[] coinWithId) {
+        if(getExchange() == null){ setExchange(exchange); } // Exchange setting
+        String coin   = coinWithId[0];
+        String coinId = coinWithId[1];
+        setApiKey(coin, coinId);
+
+        String returnRes = "";
+        try{
+            log.info("[FOBLGATE][ORDER BOOK START]");
+            String currency = getCurrency(exchange, coin, coinId);
+            if(currency.equals("")){
+                log.error("[FOBLGATE][ERROR][ORDER BOOK] There is no coin");
+            }
+            String pairName = coin+"/"+currency;
+
+            Map<String, String> header = new HashMap<>();
+            header.put("apiKey",keyList.get(API_KEY));
+            header.put("pairName",pairName);
+            String secretHash = makeApiHash(keyList.get(API_KEY) + pairName + keyList.get(SECRET_KEY));
+            log.info("[FOBLGATE][ORDER BOOK - REQUEST] request:{}, hash:{}", header.toString(), secretHash);
+
+            JsonObject returnVal = postHttpMethod(DataCommon.FOBLGATE_ORDERBOOK, secretHash, header);
+            String status        = gson.fromJson(returnVal.get("status"), String.class);
+            if(status.equals("0")){
+                returnRes = gson.toJson(returnVal);
+                log.info("[FOBLGATE][SUCCESS][ORDER BOOK]");
+            }else{
+                log.error("[FOBLGATE][ERROR][ORDER BOOK - RESPONSE] response:{}", gson.toJson(returnVal));
+            }
+
+            log.info("[FOBLGATE][ORDER BOOK END]");
+
+        }catch (Exception e){
+            log.error("[FOBLGATE][ERROR][ORDER BOOK] {}",e.getMessage());
+        }
+
+        return returnRes;
+    }
+
     /** 생성자로서, 생성될 때, injection**/
     public FoblGateFunction(){
         exchageRepository   = (ExchangeRepository) BeanUtils.getBean(ExchangeRepository.class);
@@ -372,43 +412,6 @@ public class FoblGateFunction extends ExchangeFunction{
         return returnCode;
     }
 
-    /* Fobl Gate Order book api */
-    public String getOrderBook(Exchange exchange, String coin, String coinId){
-        if(getExchange() == null){ setExchange(exchange); } // Exchange setting
-        setApiKey(coin, coinId);
-
-        String returnRes = "";
-        try{
-            log.info("[FOBLGATE][ORDER BOOK START]");
-            String currency = getCurrency(exchange, coin, coinId);
-            if(currency.equals("")){
-                log.error("[FOBLGATE][ERROR][ORDER BOOK] There is no coin");
-            }
-            String pairName = coin+"/"+currency;
-
-            Map<String, String> header = new HashMap<>();
-            header.put("apiKey",keyList.get(API_KEY));
-            header.put("pairName",pairName);
-            String secretHash = makeApiHash(keyList.get(API_KEY) + pairName + keyList.get(SECRET_KEY));
-            log.info("[FOBLGATE][ORDER BOOK - REQUEST] request:{}, hash:{}", header.toString(), secretHash);
-
-            JsonObject returnVal = postHttpMethod(DataCommon.FOBLGATE_ORDERBOOK, secretHash, header);
-            String status        = gson.fromJson(returnVal.get("status"), String.class);
-            if(status.equals("0")){
-                returnRes = gson.toJson(returnVal);
-                log.info("[FOBLGATE][SUCCESS][ORDER BOOK]");
-            }else{
-                log.error("[FOBLGATE][ERROR][ORDER BOOK - RESPONSE] response:{}", gson.toJson(returnVal));
-            }
-
-            log.info("[FOBLGATE][ORDER BOOK END]");
-
-        }catch (Exception e){
-            log.error("[FOBLGATE][ERROR][ORDER BOOK] {}",e.getMessage());
-        }
-
-        return returnRes;
-    }
 
 
     /* Fobl Gate 의 경우 통화 기준으로 필요함. */

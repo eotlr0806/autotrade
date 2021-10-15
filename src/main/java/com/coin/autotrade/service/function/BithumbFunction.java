@@ -286,6 +286,42 @@ public class BithumbFunction extends ExchangeFunction{
         return returnCode;
     }
 
+    @Override
+    public String getOrderBook(Exchange exchange, String[] coinWithId) {
+        String returnRes = "";
+        try{
+            log.info("[BITHUMB][ORDER BOOK START]");
+            String coin = coinWithId[0];
+            String coinId = coinWithId[1];
+            String inputLine;
+            String symbol   = getCurrency(exchange, coin, coinId);
+            String request  = DataCommon.BITHUMB_ORDERBOOK + "/" + coin + "_" + symbol;
+            URL url = new URL(request);
+
+            HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
+            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
+            connection.setRequestMethod("GET");
+
+            log.info("[BITHUMB][ORDER BOOK - REQUEST] symbol:{}", "BITHUMB",  coin);
+
+            int returnCode = connection.getResponseCode();
+            BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+            StringBuffer response = new StringBuffer();
+            while ((inputLine = br.readLine()) != null) {
+                response.append(inputLine);
+            }
+            br.close();
+            returnRes = response.toString();
+
+            log.info("[BITHUMB][ORDER BOOK END]");
+
+        }catch (Exception e){
+            log.error("[ERROR][BITHUMB][ORDER BOOK] {}",e.getMessage());
+        }
+
+        return returnRes;
+    }
+
 
     private void setCommonValue(User user,  Exchange exchange){
         super.user     = user;
@@ -372,42 +408,6 @@ public class BithumbFunction extends ExchangeFunction{
         }
         return returnValue;
     }
-
-
-    /* Bithumb Order book api */
-    public String getOrderBook(Exchange exchange, String coin, String coinId) {
-        String returnRes = "";
-        try{
-            log.info("[BITHUMB][ORDER BOOK START]");
-            String inputLine;
-            String symbol   = getCurrency(exchange, coin, coinId);
-            String request  = DataCommon.BITHUMB_ORDERBOOK + "/" + coin + "_" + symbol;
-            URL url = new URL(request);
-
-            HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
-            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
-            connection.setRequestMethod("GET");
-
-            log.info("[BITHUMB][ORDER BOOK - REQUEST] symbol:{}", "BITHUMB",  coin);
-
-            int returnCode = connection.getResponseCode();
-            BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            StringBuffer response = new StringBuffer();
-            while ((inputLine = br.readLine()) != null) {
-                response.append(inputLine);
-            }
-            br.close();
-            returnRes = response.toString();
-
-            log.info("[BITHUMB][ORDER BOOK END]");
-
-        }catch (Exception e){
-            log.error("[ERROR][BITHUMB][ORDER BOOK] {}",e.getMessage());
-        }
-
-        return returnRes;
-    }
-
 
     /* Get 각 코인에 등록한 통화 */
     public String getCurrency(Exchange exchange,String coin, String coinId){

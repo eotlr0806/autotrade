@@ -19,6 +19,7 @@ public class DataCommon {
     public static String FLATA          = "FLATA";
     public static String BITHUMB_GLOBAL = "BITHUMBGLOBAL";
     public static String BITHUMB        = "BITHUMB";
+    public static String KUCOIN         = "KUCOIN";
 
     public static String MODE_RANDOM    = "RANDOM";
     public static String MODE_SELL      = "SELL";
@@ -37,6 +38,7 @@ public class DataCommon {
     public static String FLATA_COININFO           = "https://www.flata.exchange/out/api/InstList";
     public static String BITHUMB_GLOBAL_ORDERBOOK = "https://global-openapi.bithumb.pro/openapi/v1/spot/orderBook";
     public static String BITHUMB_ORDERBOOK        = "https://api.bithumb.com/public/orderbook";
+    public static String KUCOIN_ORDERBOOK         = "https://api.kucoin.com/api/v1/market/orderbook/level2_100";
 
     /** Define Private Api URL */
     public static String COINONE_LIMIT_BUY           = "https://api.coinone.co.kr/v2/order/limit_buy/";

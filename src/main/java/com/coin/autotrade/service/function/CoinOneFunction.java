@@ -272,6 +272,40 @@ public class CoinOneFunction extends ExchangeFunction{
 
     }
 
+    @Override
+    public String getOrderBook(Exchange exchange, String[] coinWithId) {
+        String returnRes = "";
+        try{
+            log.info("[COINONE][Order book] Start");
+            String coin = coinWithId[0];
+            String inputLine;
+            String request = DataCommon.COINONE_ORDERBOOK + "?currency=" + coin;
+            URL url = new URL(request);
+
+            HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(DataCommon.TIMEOUT_VALUE);
+            connection.setReadTimeout(DataCommon.TIMEOUT_VALUE);
+
+            log.info("[COINONE][Order book - Request] exchagne:{},   currency:{}", "COINONE",  coin);
+
+            int returnCode = connection.getResponseCode();
+            BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+            StringBuffer response = new StringBuffer();
+            while ((inputLine = br.readLine()) != null) {
+                response.append(inputLine);
+            }
+            br.close();
+            returnRes = response.toString();
+            log.info("[COINONE][Order book] End");
+
+        }catch (Exception e){
+            log.error("[COINONE][ERROR][ORDER BOOK] {}",e.getMessage());
+        }
+
+        return returnRes;
+    }
+
     // init 시, keyList 값 세팅
     private void setCommonValue(User user, Exchange exchange, String[] coinData){
         super.user       = user;
@@ -346,8 +380,6 @@ public class CoinOneFunction extends ExchangeFunction{
         return returnValue;
     }
 
-
-
     /* HMAC Signature 만드는 method */
      public String makeHmacSignature(String payload, String secret) {
         String result;
@@ -366,43 +398,6 @@ public class CoinOneFunction extends ExchangeFunction{
             throw new RuntimeException("Problemas calculando HMAC", ex);
         }
         return result;
-    }
-
-
-    /**
-     * Coin one Order book api
-     * DESC : only krw market
-     */
-    public String getOrderBook(String coin){
-         String returnRes = "";
-         try{
-             log.info("[COINONE][Order book] Start");
-             String inputLine;
-             String request = DataCommon.COINONE_ORDERBOOK + "?currency=" + coin;
-             URL url = new URL(request);
-
-             HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
-             connection.setRequestMethod("GET");
-             connection.setConnectTimeout(DataCommon.TIMEOUT_VALUE);
-             connection.setReadTimeout(DataCommon.TIMEOUT_VALUE);
-
-             log.info("[COINONE][Order book - Request] exchagne:{},   currency:{}", "COINONE",  coin);
-
-             int returnCode = connection.getResponseCode();
-             BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-             StringBuffer response = new StringBuffer();
-             while ((inputLine = br.readLine()) != null) {
-                 response.append(inputLine);
-             }
-             br.close();
-             returnRes = response.toString();
-             log.info("[COINONE][Order book] End");
-
-         }catch (Exception e){
-             log.error("[COINONE][ERROR][ORDER BOOK] {}",e.getMessage());
-         }
-
-        return returnRes;
     }
 
     /* default 로 필요한 데이터를 받아 buy/sell/cancel 메서드에 전달 */

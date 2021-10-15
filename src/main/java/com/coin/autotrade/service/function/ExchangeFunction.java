@@ -27,6 +27,6 @@ public abstract class ExchangeFunction {
     public abstract int startAutoTrade(String price, String cnt);
     public abstract int startLiquidity(Map list);
     public abstract int startFishingTrade(Map<String, List> list, int intervalTime);
-
+    public abstract String getOrderBook(Exchange exchange, String[] coinWithId);
 
 }
