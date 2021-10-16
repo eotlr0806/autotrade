@@ -19,13 +19,8 @@ public class OrderBookParser {
 
     @Autowired
     ExchangeRepository exchangeRepository;
-    /**
-     * Order book 의 Parser Layer
-     * @param exchange
-     * @param coin
-     * @param userId
-     * @return
-     */
+
+    /** Order book 의 Parser Layer **/
     public String getOrderBook(String exchange, String coinData, String userId){
 
         String returnVal ="";
@@ -35,46 +30,8 @@ public class OrderBookParser {
             Exchange exchangeObj = exchangeRepository.findByexchangeCode(exchange);
             String[] coinWithId  = ServiceCommon.setCoinData(coinData);
 
-
-
-            /** 거래소별 ORDER BOOK API **/
-            switch(exchange){
-                case "COINONE" :
-                    // 코인원의 경우 코인 정보만 있으면 조회 가능.
-                    CoinOneFunction coinOneService   = new CoinOneFunction();
-                    returnVal = coinOneService.getOrderBook(exchangeObj, coinWithId);
-                    break;
-                case "DCOIN" :
-                    // 디코인의 경우 코인정보만 있으면 조회 가능.
-                    DcoinFunction dCoinService = new DcoinFunction();
-                    returnVal = dCoinService.getOrderBook(exchangeObj, coinWithId);
-                    break;
-                case "FOBLGATE" :
-                    // 포블게이트의 경우 코인정보&마켓정보가 있어야 조회 가능
-                    FoblGateFunction foblGateService = new FoblGateFunction();
-                    returnVal = foblGateService.getOrderBook(exchangeObj, coinWithId);
-                    break;
-                case "FLATA" :
-                    FlataFunction flatService = new FlataFunction();
-                    returnVal = flatService.getOrderBook(exchangeObj, coinWithId);
-                    break;
-                case "BITHUMBGLOBAL" :
-                    BithumbGlobalFunction bithumbGlobal = new BithumbGlobalFunction();
-                    returnVal = bithumbGlobal.getOrderBook(exchangeObj, coinWithId);
-                    break;
-                case "BITHUMB" :
-                    BithumbFunction bitumb = new BithumbFunction();
-                    returnVal = bitumb.getOrderBook(exchangeObj, coinWithId);
-                    break;
-                case "KUCOIN" :
-                    KucoinFunction kucoinFunction = new KucoinFunction();
-                    returnVal = kucoinFunction.getOrderBook(exchangeObj, coinWithId);
-                    break;
-                default :
-                    returnVal = "No data";
-                    break;
-            }
-            returnVal = parseData(exchange, returnVal);
+            ExchangeFunction exchangeFunction = ServiceCommon.initExchange(exchange);
+            returnVal = parseData(exchange, exchangeFunction.getOrderBook(exchangeObj, coinWithId));
 
         }catch(Exception e){
             log.error("[ERROR][API Get Order book] {}",e.getMessage());
@@ -82,12 +39,7 @@ public class OrderBookParser {
         return returnVal;
     }
 
-    /**
-     * 거래소에서 받은 데이터를 기준에 맞춰 파싱해서 보내준다.
-     * @param exchange
-     * @param data
-     * @return
-     */
+    /** 거래소에서 받은 데이터를 기준에 맞춰 파싱해서 보내준다. **/
     public String parseData(String exchange, String data){
         String returnValue     = "";
         JsonArray parseAsk   = new JsonArray();

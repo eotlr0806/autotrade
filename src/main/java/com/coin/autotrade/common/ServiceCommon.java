@@ -360,6 +360,8 @@ public class ServiceCommon {
             exchangeFunction = new BithumbGlobalFunction();
         } else if(DataCommon.BITHUMB.equals(exchange)){
             exchangeFunction = new BithumbFunction();
+        } else if(DataCommon.KUCOIN.equals(exchange)){
+            exchangeFunction = new KucoinFunction();
         }
 
         return exchangeFunction;
