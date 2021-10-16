@@ -33,32 +33,42 @@ public class OrderBookParser {
         try{
             // 거래소 정보
             Exchange exchangeObj = exchangeRepository.findByexchangeCode(exchange);
-            String[] coin   = ServiceCommon.setCoinData(coinData);
+            String[] coinWithId  = ServiceCommon.setCoinData(coinData);
+
+
 
             /** 거래소별 ORDER BOOK API **/
             switch(exchange){
                 case "COINONE" :
                     // 코인원의 경우 코인 정보만 있으면 조회 가능.
                     CoinOneFunction coinOneService   = new CoinOneFunction();
-                    returnVal = coinOneService.getOrderBook(coin[0]);
+                    returnVal = coinOneService.getOrderBook(exchangeObj, coinWithId);
                     break;
                 case "DCOIN" :
                     // 디코인의 경우 코인정보만 있으면 조회 가능.
                     DcoinFunction dCoinService = new DcoinFunction();
-                    returnVal = dCoinService.getOrderBook(exchangeObj, coin[0], coin[1]);
+                    returnVal = dCoinService.getOrderBook(exchangeObj, coinWithId);
                     break;
                 case "FOBLGATE" :
                     // 포블게이트의 경우 코인정보&마켓정보가 있어야 조회 가능
                     FoblGateFunction foblGateService = new FoblGateFunction();
-                    returnVal = foblGateService.getOrderBook(exchangeObj, coin[0], coin[1]);
+                    returnVal = foblGateService.getOrderBook(exchangeObj, coinWithId);
                     break;
                 case "FLATA" :
                     FlataFunction flatService = new FlataFunction();
-                    returnVal = flatService.getOrderBook(exchangeObj, coin[0], coin[1]);
+                    returnVal = flatService.getOrderBook(exchangeObj, coinWithId);
                     break;
                 case "BITHUMBGLOBAL" :
                     BithumbGlobalFunction bithumbGlobal = new BithumbGlobalFunction();
-                    returnVal = bithumbGlobal.getOrderBook(exchangeObj, coin[0], coin[1]);
+                    returnVal = bithumbGlobal.getOrderBook(exchangeObj, coinWithId);
+                    break;
+                case "BITHUMB" :
+                    BithumbFunction bitumb = new BithumbFunction();
+                    returnVal = bitumb.getOrderBook(exchangeObj, coinWithId);
+                    break;
+                case "KUCOIN" :
+                    KucoinFunction kucoinFunction = new KucoinFunction();
+                    returnVal = kucoinFunction.getOrderBook(exchangeObj, coinWithId);
                     break;
                 default :
                     returnVal = "No data";
@@ -146,6 +156,34 @@ public class OrderBookParser {
 
                 returnValue = gson.toJson(returnObj);
             }
+            // BITHUMB
+            else if(exchange.equals(DataCommon.BITHUMB)){
+                JsonObject dataObj = object.getAsJsonObject("data");
+                JsonArray ask       = gson.fromJson(dataObj.get("asks"), JsonArray.class);
+                JsonArray bid       = gson.fromJson(dataObj.get("bids"), JsonArray.class);
+
+                for(int i=0; i < ask.size(); i++){
+                    JsonObject askObj = (JsonObject) ask.get(i);
+
+                    JsonObject newAsk = new JsonObject();
+                    newAsk.addProperty("price", askObj.get("price").toString().replace("\"","") );
+                    newAsk.addProperty("qty"  , askObj.get("quantity").toString().replace("\"","") );
+                    parseAsk.add(newAsk);
+                }
+                for(int i=0; i < bid.size(); i++){
+                    JsonObject bidObj = (JsonObject) bid.get(i);
+
+                    JsonObject newBid = new JsonObject();
+                    newBid.addProperty("price", bidObj.get("price").toString().replace("\"",""));
+                    newBid.addProperty("qty"  , bidObj.get("quantity").toString().replace("\"",""));
+                    parseBid.add(newBid);
+                }
+                JsonObject returnObj = new JsonObject();
+                returnObj.add("ask",parseAsk);
+                returnObj.add("bid",parseBid);
+
+                returnValue = gson.toJson(returnObj);
+            }
             // Dcoin
             else if(exchange.equals(DataCommon.DCOIN)){
                 JsonObject dataObj = object.getAsJsonObject("data");
@@ -196,6 +234,32 @@ public class OrderBookParser {
 
                 returnValue = gson.toJson(returnObj);
             }
+            // KUCOIN
+            else if(exchange.equals(DataCommon.KUCOIN)){
+                JsonObject dataObj = object.getAsJsonObject("data");
+                String[][] ask = gson.fromJson(dataObj.get("asks"),String[][].class);
+                String[][] bid = gson.fromJson(dataObj.get("bids"),String[][].class);
+
+                for(int i=0; i < ask.length; i++){
+                    JsonObject askObj = new JsonObject();
+                    askObj.addProperty("price", ask[i][0]);
+                    askObj.addProperty("qty",   ask[i][1]);
+                    parseAsk.add(askObj);
+                }
+
+                for(int i=0; i < bid.length; i++){
+                    JsonObject bidObj = new JsonObject();
+                    bidObj.addProperty("price", bid[i][0]);
+                    bidObj.addProperty("qty",   bid[i][1]);
+                    parseBid.add(bidObj);
+                }
+                JsonObject returnObj = new JsonObject();
+                returnObj.add("ask",parseAsk);
+                returnObj.add("bid",parseBid);
+
+                returnValue = gson.toJson(returnObj);
+            }
+
         }catch (Exception e){
             log.error("[ERROR][Parse Order book] {}",e.getMessage());
         }

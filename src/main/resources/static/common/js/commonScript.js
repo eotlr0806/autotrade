@@ -3,9 +3,10 @@
 const EXCHANGE_LIST = {
     COINONE  : "COINONE",
     FOBLGATE : "FOBLGATE",
-    DCOIN    : "DCOIN", 
+    DCOIN    : "DCOIN",
     FLATA    : "FLATA",
     BITHUMBGLOBAL: "BITHUMBGLOBAL",
+    KUCOIN: "KUCOIN",
 }
 
 const TRADE_LIST = {
@@ -31,13 +32,6 @@ const API = {
     ORDER_BOOK  :"/v1/orderbook",
 }
 
-// const AUTO_TRADE         = "/v1/trade/auto";
-// const LIQUIDITY          = "/v1/trade/liquidity";
-// const FISHING            = "/v1/trade/fishing";
-// const SAVE_TRADE         = "/v1/trade/save";
-// const EXCHANGE           = "/v1/exchanges";
-// const COIN               = "/v1/exchanges/coin";
-// const ORDER_BOOK         = "/v1/orderbook";
 const CODE_ERROR         = -1000;
 const SUCCESS            = 200;
 

@@ -999,12 +999,8 @@
 
         if(selectedExchange == EXCHANGE_LIST.COINONE){
             common.noti("거래소","코인원의 경우 모든 서비스는 원화 기준입니다.","success");
-        }else if(selectedExchange == EXCHANGE_LIST.FOBLGATE){
-            common.noti("거래소","포블게이트의 모든 서비스는 각 코인 등록시 등록한 통화 기준입니다.","success");
-        }else if(selectedExchange == EXCHANGE_LIST.DCOIN){
-            common.noti("거래소","DCOIN의 모든 서비스는 각 코인 등록시 등록한 통화 기준입니다.","success");
-        }else if(selectedExchange == EXCHANGE_LIST.BITHUMBGLOBAL){
-            common.noti("거래소","빗썸글로벌의 경우 모든 서비스는 각 코인 등록시 등록한 통화 기준입니다.","success");
+        }else {
+            common.noti("거래소","모든 서비스는 각 코인 등록시 등록한 통화 기준입니다.","success");
         }
     })
     /** Event **/

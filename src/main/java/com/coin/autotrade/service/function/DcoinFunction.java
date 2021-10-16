@@ -261,6 +261,49 @@ public class DcoinFunction extends ExchangeFunction{
         return returnCode;
     }
 
+    @Override
+    public String getOrderBook(Exchange exchange, String[] coinWithId) {
+        String returnRes = "";
+        try{
+            String coin = coinWithId[0];
+            String coinId = coinWithId[1];
+            String inputLine;
+            String currency = getCurrency(exchange, coin, coinId);
+            if(currency.equals("")){
+                log.error("[DCOIN][ERROR][ORDER BOOK] There is no coin");
+                return "";
+            }
+            String symbol = coin.toLowerCase().concat(currency);
+
+            String encodedData = "symbol=" + URLEncoder.encode(symbol) + "&type=" + URLEncoder.encode("step0");
+
+            String request = DataCommon.DCOIN_ORDERBOOK + "?" + encodedData;
+            URL url = new URL(request);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestProperty("Context-Type", "application/x-www-form-urlencoded");
+            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
+            connection.setConnectTimeout(DataCommon.TIMEOUT_VALUE);
+            connection.setReadTimeout(DataCommon.TIMEOUT_VALUE);
+
+            log.info("[DCOIN][ORDER BOOK - Request]  symbol:{}, type:{}", symbol, "step0");
+
+            int returnCode = connection.getResponseCode();
+            BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+            StringBuffer response = new StringBuffer();
+            while ((inputLine = br.readLine()) != null) {
+                response.append(inputLine);
+            }
+            br.close();
+
+            returnRes = response.toString();
+
+        }catch (Exception e){
+            log.error("[DCOIN][ERROR][ORDER BOOK] {}",e.getMessage());
+        }
+
+        return returnRes;
+    }
+
 
     /** 생성자로서, 생성될 때, injection**/
     public DcoinFunction(){
@@ -365,47 +408,6 @@ public class DcoinFunction extends ExchangeFunction{
             log.error("[DCOIN][ERROR][CANCEL ORDER] {}", e.getMessage());
         }
         return returnValue;
-    }
-
-    /** Dcoin Order book api */
-    public String getOrderBook(Exchange exchange, String coin, String coinId){
-        String returnRes = "";
-        try{
-            String inputLine;
-            String currency = getCurrency(exchange, coin, coinId);
-            if(currency.equals("")){
-                log.error("[DCOIN][ERROR][ORDER BOOK] There is no coin");
-                return "";
-            }
-            String symbol = coin.toLowerCase().concat(currency);
-
-            String encodedData = "symbol=" + URLEncoder.encode(symbol) + "&type=" + URLEncoder.encode("step0");
-
-            String request = DataCommon.DCOIN_ORDERBOOK + "?" + encodedData;
-            URL url = new URL(request);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestProperty("Context-Type", "application/x-www-form-urlencoded");
-            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
-            connection.setConnectTimeout(DataCommon.TIMEOUT_VALUE);
-            connection.setReadTimeout(DataCommon.TIMEOUT_VALUE);
-
-            log.info("[DCOIN][ORDER BOOK - Request]  symbol:{}, type:{}", symbol, "step0");
-
-            int returnCode = connection.getResponseCode();
-            BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            StringBuffer response = new StringBuffer();
-            while ((inputLine = br.readLine()) != null) {
-                response.append(inputLine);
-            }
-            br.close();
-
-            returnRes = response.toString();
-
-        }catch (Exception e){
-            log.error("[DCOIN][ERROR][ORDER BOOK] {}",e.getMessage());
-        }
-
-        return returnRes;
     }
 
     /** 암호화된 값 생성 */

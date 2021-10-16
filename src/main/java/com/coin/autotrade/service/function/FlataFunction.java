@@ -266,6 +266,42 @@ public class FlataFunction extends ExchangeFunction{
         return returnCode;
     }
 
+    @Override
+    public String getOrderBook(Exchange exchange, String[] coinWithId) {
+        String returnRes = "";
+        try{
+            log.info("[FLATA][ORDER BOOK] START");
+            String coin   = coinWithId[0];
+            String coinId = coinWithId[1];
+            String inputLine;
+            String symbol = getCurrency(exchange, coin, coinId);
+            String request  = DataCommon.FLATA_ORDERBOOK + "?symbol=" + coin + "/" + symbol + "&level=10";
+            URL url = new URL(request);
+
+            HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(DataCommon.TIMEOUT_VALUE);
+            connection.setReadTimeout(DataCommon.TIMEOUT_VALUE);
+
+            log.info("[FLATA][ORDER BOOK - REQUEST] symbol:{}", coin);
+
+            int returnCode = connection.getResponseCode();
+            BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+            StringBuffer response = new StringBuffer();
+            while ((inputLine = br.readLine()) != null) {
+                response.append(inputLine);
+            }
+            br.close();
+            returnRes = response.toString();
+            log.info("[FLATA][ORDER BOOK] End");
+
+        }catch (Exception e){
+            log.error("[FLATA][ERROR][ORDER BOOK] {}",e.getMessage());
+        }
+
+        return returnRes;
+    }
+
 
     /** 생성자로서, 생성될 때, injection**/
     public FlataFunction(){
@@ -437,39 +473,6 @@ public class FlataFunction extends ExchangeFunction{
         return returnVal;
     }
 
-    /* 호가 조회 API */
-    public String getOrderBook(Exchange exchange, String coin, String coinId) {
-        String returnRes = "";
-        try{
-            log.info("[FLATA][ORDER BOOK] START");
-            String inputLine;
-            String symbol = getCurrency(exchange, coin, coinId);
-            String request  = DataCommon.FLATA_ORDERBOOK + "?symbol=" + coin + "/" + symbol + "&level=10";
-            URL url = new URL(request);
-
-            HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
-            connection.setRequestMethod("GET");
-            connection.setConnectTimeout(DataCommon.TIMEOUT_VALUE);
-            connection.setReadTimeout(DataCommon.TIMEOUT_VALUE);
-
-            log.info("[FLATA][ORDER BOOK - REQUEST] symbol:{}", coin);
-
-            int returnCode = connection.getResponseCode();
-            BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            StringBuffer response = new StringBuffer();
-            while ((inputLine = br.readLine()) != null) {
-                response.append(inputLine);
-            }
-            br.close();
-            returnRes = response.toString();
-            log.info("[FLATA][ORDER BOOK] End");
-
-        }catch (Exception e){
-            log.error("[FLATA][ERROR][ORDER BOOK] {}",e.getMessage());
-        }
-
-        return returnRes;
-    }
 
     /* 해당 코인의 최소 매수/매도 단위 조회 */
     public String getCoinMinCount(String symbol) {

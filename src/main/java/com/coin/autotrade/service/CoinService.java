@@ -34,6 +34,7 @@ public class CoinService {
     private FlataFunction         flataFunction;
     private FoblGateFunction      foblGateFunction;
     private BithumbGlobalFunction bithumbGlobalFunction;
+    private BithumbFunction       bithumbFunction;
 
     private String BUY_CODE  = "BUY";
     private String SELL_CODE = "SELL";
@@ -54,6 +55,9 @@ public class CoinService {
         }
         if(bithumbGlobalFunction == null){
             bithumbGlobalFunction = new BithumbGlobalFunction();
+        }
+        if(bithumbFunction == null){
+            bithumbFunction = new BithumbFunction();
         }
     }
 
@@ -105,6 +109,13 @@ public class CoinService {
                         // Exchange가 없을 경우 setting
                         if(bithumbGlobalFunction.getExchange() == null) bithumbGlobalFunction.setExchange(findedEx);
                         String value = bithumbGlobalFunction.getOrderBook(findedEx, coinData[0], coinData[1]);
+                        list = orderBookParser.parseData(findedEx.getExchangeCode(), value);
+                    }
+                    /** Bithumb **/
+                    else if(DataCommon.BITHUMB.equals(autoTrade.getExchange())){
+                        // Exchange가 없을 경우 setting
+                        if(bithumbFunction.getExchange() == null) bithumbFunction.setExchange(findedEx);
+                        String value = bithumbFunction.getOrderBook(findedEx, coinData[0], coinData[1]);
                         list = orderBookParser.parseData(findedEx.getExchangeCode(), value);
                     }
 
@@ -416,6 +427,14 @@ public class CoinService {
                 String value = bithumbGlobalFunction.getOrderBook(findedEx, coinData[0], coinData[1]);
                 list         = orderBookParser.parseData(findedEx.getExchangeCode(), value);
             }
+            /** Bithumb **/
+            else if(DataCommon.BITHUMB.equals(findedEx.getExchangeCode())){
+                // Exchange가 없을 경우 setting
+                if(bithumbFunction.getExchange() == null) bithumbFunction.setExchange(findedEx);
+                String value = bithumbFunction.getOrderBook(findedEx, coinData[0], coinData[1]);
+                list = orderBookParser.parseData(findedEx.getExchangeCode(), value);
+            }
+
         }catch(Exception e){
             log.error("[ERROR][Get getOrderBookByExchange] {}",e.getMessage());
         }
