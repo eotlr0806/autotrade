@@ -18,6 +18,8 @@ public class DataCommon {
     public static String FOBLGATE       = "FOBLGATE";
     public static String FLATA          = "FLATA";
     public static String BITHUMB_GLOBAL = "BITHUMBGLOBAL";
+    public static String BITHUMB        = "BITHUMB";
+    public static String KUCOIN         = "KUCOIN";
 
     public static String MODE_RANDOM    = "RANDOM";
     public static String MODE_SELL      = "SELL";
@@ -35,6 +37,8 @@ public class DataCommon {
     public static String FLATA_ORDERBOOK          = "https://www.flata.exchange/out/api/getSnapshot";
     public static String FLATA_COININFO           = "https://www.flata.exchange/out/api/InstList";
     public static String BITHUMB_GLOBAL_ORDERBOOK = "https://global-openapi.bithumb.pro/openapi/v1/spot/orderBook";
+    public static String BITHUMB_ORDERBOOK        = "https://api.bithumb.com/public/orderbook";
+    public static String KUCOIN_ORDERBOOK         = "https://api.kucoin.com/api/v1/market/orderbook/level2_100";
 
     /** Define Private Api URL */
     public static String COINONE_LIMIT_BUY           = "https://api.coinone.co.kr/v2/order/limit_buy/";
@@ -49,6 +53,10 @@ public class DataCommon {
     public static String FOBLGATE_CANCEL_ORDER       = "https://api2.foblgate.com/api/trade/orderCancel";
     public static String BITHUMB_GLOBAL_CREATE_ORDER = "https://global-openapi.bithumb.pro/openapi/v1/spot/placeOrder";
     public static String BITHUMB_GLOBAL_CANCEL_ORDER = "https://global-openapi.bithumb.pro/openapi/v1/spot/cancelOrder";
+
+    public static String BITHUMB_URL                    = "https://api.bithumb.com";
+    public static String BITHUMB_ENDPOINT_CREATE_ORDER  = "/trade/place";
+    public static String BITHUMB_ENDPOINT_CANCEL_ORDER  = "/trade/cancel";
 
     /** Define Variable */
     public static int TICK_DECIMAL  = 1000;

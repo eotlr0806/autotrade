@@ -9,6 +9,7 @@ import com.coin.autotrade.service.parser.OrderBookParser;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.sun.xml.bind.v2.runtime.SwaRefAdapter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -16,54 +17,60 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.*;
 
-/**
- * Coin 이용에 필요한 서비스
- */
+/** Coin 이용에 필요한 서비스 */
 @Service
 @Slf4j
 public class CoinService {
 
+    /** TODO : Service 어노테이션을 주었기때문에 Spring 이 올라오면서 주입됨.
+     *  그렇기때문에 여러 거래소에 대해서 getOrderBook 을 사용해야 되는데 어떻게 설계를 해야될까...
+     *
+      */
     @Autowired
     ExchangeRepository exchangeRepository;
 
     @Autowired
     OrderBookParser orderBookParser;
 
-    private CoinOneFunction       coinOneFunction;
-    private DcoinFunction         dCoinFunction;
-    private FlataFunction         flataFunction;
-    private FoblGateFunction      foblGateFunction;
+    private BithumbFunction bithumbFunction;
     private BithumbGlobalFunction bithumbGlobalFunction;
+    private CoinOneFunction coinOneFunction;
+    private DcoinFunction dcoinFunction;
+    private FlataFunction flataFunction;
+    private FoblGateFunction foblGateFunction;
+    private KucoinFunction kucoinFunction;
 
+    private ExchangeFunction exchangeFunction;
     private String BUY_CODE  = "BUY";
     private String SELL_CODE = "SELL";
 
     // Coinone function 은 single tone으로
-    public void checkFunction(){
-        if(coinOneFunction == null){
-            coinOneFunction = new CoinOneFunction();
-        }
-        if(dCoinFunction == null){
-            dCoinFunction = new DcoinFunction();
-        }
-        if(flataFunction == null){
-            flataFunction = new FlataFunction();
-        }
-        if(foblGateFunction == null){
-            foblGateFunction = new FoblGateFunction();
-        }
-        if(bithumbGlobalFunction == null){
-            bithumbGlobalFunction = new BithumbGlobalFunction();
-        }
-    }
+//    public void checkFunction(String exchange) throws Exception {
+//
+//        if(exchange.equals(DataCommon.BITHUMB)){
+//            if(bithumbFunction == null) bithumbFunction = new BithumbFunction();
+//        }else if(exchange.equals(DataCommon.BITHUMB_GLOBAL)){
+//            if(bithumbGlobalFunction == null) bithumbGlobalFunction = new BithumbGlobalFunction();
+//        }else if(exchange.equals(DataCommon.COINONE)){
+//            if(coinOneFunction == null) coinOneFunction = new CoinOneFunction();
+//        }else if(exchange.equals(DataCommon.DCOIN)){
+//            if(dcoinFunction == null) dcoinFunction = new DcoinFunction();
+//        }else if(exchange.equals(DataCommon.FLATA)){
+//            if(flataFunction == null) flataFunction = new FlataFunction();
+//        }else if(exchange.equals(DataCommon.FOBLGATE)){
+//            if(foblGateFunction == null) foblGateFunction = new FoblGateFunction();
+//        }else if(exchange.equals(DataCommon.KUCOIN)){
+//            if(kucoinFunction == null) kucoinFunction = new KucoinFunction();
+//        }
+//
+//        if(exchangeFunction == null){
+//            exchangeFunction = ServiceCommon.initExchange(exchange);
+//        }
+//    }
 
-    /**
-     * best offer 구간 여부를 구하는 메서드
-     * @param autoTrade
-     * @return
-     */
+    /** best offer 구간 여부를 구하는 메서드
+     * AutoTrade 를 이용하는데 사용됨. */
     public String getBestOffer(AutoTrade autoTrade){
-        checkFunction();
 
         String returnVal  = "false";
         String list       = "";
@@ -71,42 +78,11 @@ public class CoinService {
 
         try{
             String[] coinData = ServiceCommon.setCoinData(autoTrade.getCoin());
-
             Exchange findedEx = exchangeRepository.findByexchangeCode(autoTrade.getExchange());
+
             for(ExchangeCoin coin : findedEx.getExchangeCoin()){
                 if(coin.getCoinCode().equals(coinData[0]) && coin.getId() == Long.parseLong(coinData[1])){
-                    /** Coin one **/
-                    if(DataCommon.COINONE.equals(autoTrade.getExchange())){
-                        list = coinOneFunction.getOrderBook(coin.getCoinCode());
-                    }
-                    /** Dcoin one **/
-                    else if(DataCommon.DCOIN.equals(autoTrade.getExchange())){
-                        // Exchange가 없을 경우 setting
-                        if(dCoinFunction.getExchange() == null) dCoinFunction.setExchange(findedEx);
-                        String value = dCoinFunction.getOrderBook(findedEx, coinData[0], coinData[1]);
-                        list = orderBookParser.parseData(findedEx.getExchangeCode(), value);
-                    }
-                    /** Flata **/
-                    else if(DataCommon.FLATA.equals(autoTrade.getExchange())){
-                        // Exchange가 없을 경우 setting
-                        if(flataFunction.getExchange() == null) flataFunction.setExchange(findedEx);
-                        String value = flataFunction.getOrderBook(findedEx, coinData[0], coinData[1]);
-                        list = orderBookParser.parseData(findedEx.getExchangeCode(), value);
-                    }
-                    /** Folbgate **/
-                    else if(DataCommon.FOBLGATE.equals(autoTrade.getExchange())){
-                        // Exchange가 없을 경우 setting
-                        if(foblGateFunction.getExchange() == null) foblGateFunction.setExchange(findedEx);
-                        String value = foblGateFunction.getOrderBook(findedEx, coinData[0], coinData[1]);
-                        list = orderBookParser.parseData(findedEx.getExchangeCode(), value);
-                    }
-                    /** Bithub Global **/
-                    else if(DataCommon.BITHUMB_GLOBAL.equals(autoTrade.getExchange())){
-                        // Exchange가 없을 경우 setting
-                        if(bithumbGlobalFunction.getExchange() == null) bithumbGlobalFunction.setExchange(findedEx);
-                        String value = bithumbGlobalFunction.getOrderBook(findedEx, coinData[0], coinData[1]);
-                        list = orderBookParser.parseData(findedEx.getExchangeCode(), value);
-                    }
+                    list = getOrderBookByExchange(findedEx, coinData);
 
                     JsonObject json = gson.fromJson(list, JsonObject.class);
 
@@ -178,7 +154,6 @@ public class CoinService {
     }
 
     public Map getLiquidityList(Liquidity liquidity){
-        checkFunction();
 
         String list     = "";
         Gson gson       = new Gson();
@@ -196,7 +171,7 @@ public class CoinService {
             Exchange findedEx = exchangeRepository.findByexchangeCode(liquidity.getExchange());
             for(ExchangeCoin coin : findedEx.getExchangeCoin()) {
                 if(coin.getCoinCode().equals(coinData[0]) && coin.getId() == Long.parseLong(coinData[1])){
-                    list = getOrderBookByExchange(findedEx,coin,coinData);
+                    list = getOrderBookByExchange(findedEx,coinData);
 
                     JsonObject json = gson.fromJson(list, JsonObject.class);
                     JsonArray ask       = json.getAsJsonArray("ask");             // 매도
@@ -249,7 +224,6 @@ public class CoinService {
         }catch(Exception e){
             log.error("[ERROR][GET Liquidity List] {}",e.getMessage());
         }
-
         return returnMap;
     }
 
@@ -260,7 +234,6 @@ public class CoinService {
      * @return
      */
     public Map getFishingList(Fishing fishing){
-        checkFunction();
 
         Map<String, List>  returnMap    = new HashMap();
         String list                     = "";
@@ -273,8 +246,7 @@ public class CoinService {
             Exchange findedEx = exchangeRepository.findByexchangeCode(fishing.getExchange());
             for(ExchangeCoin coin : findedEx.getExchangeCoin()){
                 if(coin.getCoinCode().equals(coinData[0]) && coin.getId() == Long.parseLong(coinData[1])){
-
-                    list = getOrderBookByExchange(findedEx,coin,coinData);
+                    list = getOrderBookByExchange(findedEx,coinData);
 
                     JsonObject json     = gson.fromJson(list, JsonObject.class);
                     JsonArray bid       = json.getAsJsonArray("bid");
@@ -306,7 +278,6 @@ public class CoinService {
             log.error("[ERROR][Get Best Offer] {}",e.getMessage());
         }
 
-
         return returnMap;
     }
 
@@ -337,7 +308,6 @@ public class CoinService {
      * @return
      */
     public Map<String, String> getFirstTick(String coinBeforeSplit, String exchange){
-        checkFunction();
 
         String list                   = "";
         Gson gson                     = new Gson();
@@ -350,7 +320,7 @@ public class CoinService {
             Exchange findedEx = exchangeRepository.findByexchangeCode(exchange);
             for(ExchangeCoin coin : findedEx.getExchangeCoin()){
                 if(coin.getCoinCode().equals(coinData[0]) && coin.getId() == Long.parseLong(coinData[1])){
-                    list = getOrderBookByExchange(findedEx,coin,coinData);
+                    list = getOrderBookByExchange(findedEx,coinData);
 
                     JsonObject json     = gson.fromJson(list, JsonObject.class);
                     JsonArray bid       = json.getAsJsonArray("bid");
@@ -369,57 +339,58 @@ public class CoinService {
         }catch (Exception e){
             log.error("[ERROR][Get FirstTick] {}",e.getMessage());
         }
-
         return returnMap;
     }
 
-    /**
-     * 거래소별 order book 값을 맞춰 가져오게 변경
-     * @param exchange
-     * @param findedEx
-     * @param coin
-     * @param coinData
-     * @return
-     */
-    private String getOrderBookByExchange(Exchange findedEx, ExchangeCoin coin, String[] coinData){
+    /** 거래소별 order book 값을 맞춰 가져오게 변경 */
+    private String getOrderBookByExchange(Exchange findedEx, String[] coinData){
         String list = "";
         try{
-            /** Coin one **/
-            if(DataCommon.COINONE.equals(findedEx.getExchangeCode())){
-                list = coinOneFunction.getOrderBook(coin.getCoinCode());
+//            checkFunction(findedEx.getExchangeCode());
+            String exchange = findedEx.getExchangeCode();
+            String rowList = null;
+
+            if(exchange.equals(DataCommon.BITHUMB)){
+                if(bithumbFunction == null) {
+                    bithumbFunction = new BithumbFunction();
+                }
+                rowList = bithumbFunction.getOrderBook(findedEx, coinData);
+            }else if(exchange.equals(DataCommon.BITHUMB_GLOBAL)){
+                if(bithumbGlobalFunction == null) {
+                    bithumbGlobalFunction = new BithumbGlobalFunction();
+                }
+                rowList = bithumbGlobalFunction.getOrderBook(findedEx, coinData);
+            }else if(exchange.equals(DataCommon.COINONE)){
+                if(coinOneFunction == null) {
+                    coinOneFunction = new CoinOneFunction();
+                }
+                rowList = coinOneFunction.getOrderBook(findedEx, coinData);
+            }else if(exchange.equals(DataCommon.DCOIN)){
+                if(dcoinFunction == null) {
+                    dcoinFunction = new DcoinFunction();
+                }
+                rowList = dcoinFunction.getOrderBook(findedEx, coinData);
+            }else if(exchange.equals(DataCommon.FLATA)){
+                if(flataFunction == null) {
+                    flataFunction = new FlataFunction();
+                }
+                rowList = flataFunction.getOrderBook(findedEx, coinData);
+            }else if(exchange.equals(DataCommon.FOBLGATE)){
+                if(foblGateFunction == null) {
+                    foblGateFunction = new FoblGateFunction();
+                }
+                rowList = foblGateFunction.getOrderBook(findedEx, coinData);
+            }else if(exchange.equals(DataCommon.KUCOIN)){
+                if(kucoinFunction == null) {
+                    kucoinFunction = new KucoinFunction();
+                }
+                rowList = kucoinFunction.getOrderBook(findedEx, coinData);
             }
-            /** Dcoin one **/
-            else if(DataCommon.DCOIN.equals(findedEx.getExchangeCode())){
-                // Exchange가 없을 경우 setting
-                if(dCoinFunction.getExchange() == null) dCoinFunction.setExchange(findedEx);
-                String value = dCoinFunction.getOrderBook(findedEx, coinData[0], coinData[1]);
-                list         = orderBookParser.parseData(findedEx.getExchangeCode(), value);
-            }
-            /** Flata **/
-            else if(DataCommon.FLATA.equals(findedEx.getExchangeCode())){
-                // Exchange가 없을 경우 setting
-                if(flataFunction.getExchange() == null) flataFunction.setExchange(findedEx);
-                String value = flataFunction.getOrderBook(findedEx, coinData[0], coinData[1]);
-                list         = orderBookParser.parseData(findedEx.getExchangeCode(), value);
-            }
-            /** Folbgate **/
-            else if(DataCommon.FOBLGATE.equals(findedEx.getExchangeCode())){
-                // Exchange가 없을 경우 setting
-                if(foblGateFunction.getExchange() == null) foblGateFunction.setExchange(findedEx);
-                String value = foblGateFunction.getOrderBook(findedEx, coinData[0], coinData[1]);
-                list         = orderBookParser.parseData(findedEx.getExchangeCode(), value);
-            }
-            /** Bithub Global **/
-            else if(DataCommon.BITHUMB_GLOBAL.equals(findedEx.getExchangeCode())){
-                // Exchange가 없을 경우 setting
-                if(bithumbGlobalFunction.getExchange() == null) bithumbGlobalFunction.setExchange(findedEx);
-                String value = bithumbGlobalFunction.getOrderBook(findedEx, coinData[0], coinData[1]);
-                list         = orderBookParser.parseData(findedEx.getExchangeCode(), value);
-            }
+
+            list = orderBookParser.parseData(findedEx.getExchangeCode(), rowList);
         }catch(Exception e){
             log.error("[ERROR][Get getOrderBookByExchange] {}",e.getMessage());
         }
-
         return list;
     }
 }
