@@ -54,6 +54,26 @@ public class DcoinFunction extends ExchangeFunction{
         setCoinToken(ServiceCommon.setCoinData(fishing.getCoin()));
     }
 
+    private void setCommonValue(User user,  Exchange exchange){
+        super.user     = user;
+        super.exchange = exchange;
+    }
+
+    private void setCoinToken(String[] coinData){
+        // Set token key
+        try{
+            for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
+                if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1]) ){
+                    keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
+                    keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
+                }
+            }
+        }catch (Exception e){
+            log.error("[DCOIN][SET COIN TOKEN ERROR] error : {} ", e.getMessage());
+        }
+    }
+
+
     /**
      * Auto Trade Start
      * @param symbol - coin + currency
@@ -200,7 +220,6 @@ public class DcoinFunction extends ExchangeFunction{
                     orderMap.put("order_id" ,orderId);
                     orderList.add(orderMap);
                 }
-                Thread.sleep(300);
             }
 
             /* Sell Start */
@@ -246,11 +265,10 @@ public class DcoinFunction extends ExchangeFunction{
                         break;
                     }
                 }
-                if(cnt.compareTo(new BigDecimal("0")) > 0){
-                    // 혹여나 남은 개수가 있을 수 있어 취소 request
-                    Thread.sleep(2000);
-                    cancelOrder(symbol, orderList.get(i).get("order_id"));
-                }
+                // 무조건 취소
+                Thread.sleep(1000);
+                cancelOrder(symbol, orderList.get(i).get("order_id"));
+
             }
         }catch (Exception e){
             returnCode = DataCommon.CODE_ERROR;
@@ -319,26 +337,6 @@ public class DcoinFunction extends ExchangeFunction{
     public Exchange getExchange(){
         return super.exchange;
     }
-
-    private void setCommonValue(User user,  Exchange exchange){
-        super.user     = user;
-        super.exchange = exchange;
-    }
-
-    private void setCoinToken(String[] coinData){
-        // Set token key
-        try{
-            for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
-                if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1]) ){
-                    keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
-                    keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
-                }
-            }
-        }catch (Exception e){
-            log.error("[DCOIN][SET COIN TOKEN ERROR] error : {} ", e.getMessage());
-        }
-    }
-
 
     /**
      * 매수 매도 로직

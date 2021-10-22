@@ -53,6 +53,23 @@ public class CoinOneFunction extends ExchangeFunction{
         setCommonValue(user, exchange, ServiceCommon.setCoinData(liquidity.getCoin()));
     }
 
+    // init 시, keyList 값 세팅
+    private void setCommonValue(User user, Exchange exchange, String[] coinData){
+        super.user       = user;
+        super.exchange   = exchange;
+        try{
+            // Set token key
+            for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
+                if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1]) ){
+                    keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
+                    keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
+                }
+            }
+        }catch (Exception e){
+            log.error("[COINONE][SET COMMON VALUE] error : {}", e.getMessage());
+        }
+    }
+
     /** 매매 긁기를 이용하기 위한 초기값 설정 */
     @Override
     public void initClass(Fishing fishing, User user, Exchange exchange, CoinService coinService) {
@@ -204,7 +221,6 @@ public class CoinOneFunction extends ExchangeFunction{
                     orderMap.put("is_ask","1");
                     orderList.add(orderMap);
                 }
-                Thread.sleep(500);
             }
 
             /* Sell Start */
@@ -256,7 +272,7 @@ public class CoinOneFunction extends ExchangeFunction{
                         break;
                     }
                 }
-                // 혹여나 남은 개수가 있을 수 있어 취소 request
+                // 무조건 취소
                 Thread.sleep(500);
                 cancelTrade(orderList.get(i));
             }
@@ -304,23 +320,6 @@ public class CoinOneFunction extends ExchangeFunction{
         }
 
         return returnRes;
-    }
-
-    // init 시, keyList 값 세팅
-    private void setCommonValue(User user, Exchange exchange, String[] coinData){
-        super.user       = user;
-        super.exchange   = exchange;
-        try{
-            // Set token key
-            for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
-                if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1]) ){
-                    keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
-                    keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
-                }
-            }
-        }catch (Exception e){
-            log.error("[COINONE][SET COMMON VALUE] error : {}", e.getMessage());
-        }
     }
 
     /* Create Order */
