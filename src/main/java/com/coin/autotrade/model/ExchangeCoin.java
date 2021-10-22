@@ -55,6 +55,9 @@ public class ExchangeCoin {
     @Expose
     private String exchangeUserId;
 
+    @Column(name = "api_password", length= 128)
+    @Expose
+    private String apiPassword;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "exchange_id" , updatable = false, insertable = false)

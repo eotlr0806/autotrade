@@ -1,24 +1,22 @@
 package com.coin.autotrade.service.function;
 
-import com.coin.autotrade.common.BeanUtils;
 import com.coin.autotrade.common.DataCommon;
 import com.coin.autotrade.common.ServiceCommon;
 import com.coin.autotrade.model.*;
-import com.coin.autotrade.repository.ExchangeRepository;
 import com.coin.autotrade.service.CoinService;
-import com.google.gson.JsonObject;
+import com.kucoin.sdk.KucoinClientBuilder;
+import com.kucoin.sdk.KucoinRestClient;
+import com.kucoin.sdk.model.enums.ApiKeyVersionEnum;
+import com.kucoin.sdk.rest.request.OrderCreateApiRequest;
+import com.kucoin.sdk.rest.response.OrderCancelResponse;
+import com.kucoin.sdk.rest.response.OrderCreateResponse;
 import lombok.extern.slf4j.Slf4j;
 
-import javax.net.ssl.HttpsURLConnection;
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.math.BigDecimal;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLEncoder;
-import java.security.MessageDigest;
 import java.util.*;
 
 @Slf4j
@@ -26,31 +24,68 @@ public class KucoinFunction extends ExchangeFunction{
 
     final private String ACCESS_TOKEN         = "apiToken";
     final private String SECRET_KEY           = "secretKey";
-    final private String BUY                  = "BUY";
-    final private String SELL                 = "SELL";
+    final private String API_PASSWORD         = "apiPassword";
+    final private String BUY                  = "buy";
+    final private String SELL                 = "sell";
     private Map<String, String> keyList       = new HashMap<>();
 
+    /** Kucoin libirary **/
+    private static KucoinRestClient kucoinRestClient;
 
     @Override
     public void initClass(AutoTrade autoTrade, User user, Exchange exchange){
         super.autoTrade = autoTrade;
+
         setCommonValue(user, exchange);
         setCoinToken(ServiceCommon.setCoinData(autoTrade.getCoin()));
+        setKucoinRestClient();
     }
 
     @Override
     public void initClass(Liquidity liquidity, User user, Exchange exchange){
         super.liquidity = liquidity;
+
         setCommonValue(user, exchange);
         setCoinToken(ServiceCommon.setCoinData(liquidity.getCoin()));
+        setKucoinRestClient();
     }
 
     @Override
     public void initClass(Fishing fishing , User user,  Exchange exchange,CoinService coinService){
         super.fishing     = fishing;
         super.coinService = coinService;
+
         setCommonValue(user, exchange);
         setCoinToken(ServiceCommon.setCoinData(fishing.getCoin()));
+        setKucoinRestClient();
+    }
+
+    private void setCommonValue(User user,  Exchange exchange){
+        super.user     = user;
+        super.exchange = exchange;
+    }
+
+    private void setCoinToken(String[] coinData){
+        // Set token key
+        try{
+            for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
+                if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1]) ){
+                    keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
+                    keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
+                    keyList.put(API_PASSWORD, exCoin.getApiPassword());
+                }
+            }
+        }catch (Exception e){
+            log.error("[KUCOIN][SET COIN TOKEN ERROR] error : {} ", e.getMessage());
+        }
+    }
+
+    private void setKucoinRestClient() {
+        kucoinRestClient = new KucoinClientBuilder()
+                .withBaseUrl(DataCommon.KUCOIN_URL)
+                .withApiKey(keyList.get(ACCESS_TOKEN), keyList.get(SECRET_KEY), keyList.get(API_PASSWORD))
+                .withApiKeyVersion(ApiKeyVersionEnum.V2.getVersion())
+                .buildRestClient();
     }
 
     /**
@@ -60,12 +95,12 @@ public class KucoinFunction extends ExchangeFunction{
     @Override
     public int startAutoTrade(String price, String cnt){
 
-        log.info("[DCOIN][AUTOTRADE] Start");
+        log.info("[KUCOIN][AUTOTRADE] Start");
 
         int returnCode = DataCommon.CODE_SUCCESS;
         try{
             String[] coinData = ServiceCommon.setCoinData(autoTrade.getCoin());
-            String     symbol = coinData[0] + "" + getCurrency(getExchange(), coinData[0], coinData[1]);
+            String     symbol = coinData[0] + "-" + getCurrency(getExchange(), coinData[0], coinData[1]); // ex) ADA-USDT
 
             // mode 처리
             String mode = autoTrade.getMode();
@@ -75,25 +110,25 @@ public class KucoinFunction extends ExchangeFunction{
 
             if(DataCommon.MODE_BUY.equals(mode)){
                 String orderId = "";
-                if(!(orderId = createOrder("BUY",price, cnt, symbol)).equals("")){
-                    if(createOrder("SELL",price, cnt, symbol).equals("")){          // SELL 모드가 실패 시,
-                        cancelOrder(symbol, orderId);
+                if(!(orderId = createOrder(BUY,price, cnt, symbol)).equals("")){
+                    if(createOrder(SELL,price, cnt, symbol).equals("")){          // SELL 모드가 실패 시,
+                        cancelOrder(orderId);
                     }
                 }
             }else if(DataCommon.MODE_SELL.equals(mode)){
                 String orderId = "";
-                if(!(orderId = createOrder("SELL",price, cnt, symbol)).equals("")){
-                    if(createOrder("BUY",price, cnt, symbol).equals("")){           // BUY 모드가 실패 시,
-                        cancelOrder(symbol, orderId);
+                if(!(orderId = createOrder(SELL,price, cnt, symbol)).equals("")){
+                    if(createOrder(BUY,price, cnt, symbol).equals("")){           // BUY 모드가 실패 시,
+                        cancelOrder(orderId);
                     }
                 }
             }
         }catch (Exception e){
             returnCode = DataCommon.CODE_ERROR;
-            log.error("[DCOIN][ERROR][AUTOTRADE] {}", e.getMessage());
+            log.error("[KUCOIN][ERROR][AUTOTRADE] {}", e.getMessage());
         }
 
-        log.info("[DCOIN][AUTOTRADE] End");
+        log.info("[KUCOIN][AUTOTRADE] End");
 
         return returnCode;
     }
@@ -108,9 +143,9 @@ public class KucoinFunction extends ExchangeFunction{
         List<Map<String,String>> CancelList = new ArrayList();
 
         try{
-            log.info("[DCOIN][LIQUIDITY] Start");
+            log.info("[KUCOIN][LIQUIDITY] Start");
             String[] coinData = ServiceCommon.setCoinData(liquidity.getCoin());
-            String symbol     = coinData[0] + "" + getCurrency(getExchange(),coinData[0], coinData[1]);
+            String symbol     = coinData[0] + "-" + getCurrency(getExchange(),coinData[0], coinData[1]);
             int minCnt        = liquidity.getMinCnt();
             int maxCnt        = liquidity.getMaxCnt();
 
@@ -144,31 +179,31 @@ public class KucoinFunction extends ExchangeFunction{
                 if(!firstOrderId.equals("") || !secondsOrderId.equals("")){
                     Thread.sleep(1000);
                     if(!firstOrderId.equals("")){
-                        cancelOrder(symbol, firstOrderId);
+                        cancelOrder(firstOrderId);
                     }
                     if(!secondsOrderId.equals("")){
                         Thread.sleep(300);
-                        cancelOrder(symbol, secondsOrderId);
+                        cancelOrder(secondsOrderId);
                     }
                 }
             }
         }catch (Exception e){
             returnCode = DataCommon.CODE_ERROR;
-            log.error("[DCOIN][ERROR][LIQUIDITY] {}", e.getMessage());
+            log.error("[KUCOIN][ERROR][LIQUIDITY] {}", e.getMessage());
         }
-        log.info("[DCOIN][LIQUIDITY] End");
+        log.info("[KUCOIN][LIQUIDITY] End");
         return returnCode;
     }
 
     @Override
     public int startFishingTrade(Map<String,List> list, int intervalTime){
-        log.info("[DCOIN][FISHINGTRADE START]");
+        log.info("[KUCOIN][FISHINGTRADE START]");
 
         int returnCode    = DataCommon.CODE_SUCCESS;
 
         try{
             String[] coinData = ServiceCommon.setCoinData(fishing.getCoin());
-            String     symbol = coinData[0] + "" + getCurrency(getExchange(), coinData[0], coinData[1]);
+            String     symbol = coinData[0] + "-" + getCurrency(getExchange(), coinData[0], coinData[1]);
 
             // mode 처리
             String mode = fishing.getMode();
@@ -188,9 +223,9 @@ public class KucoinFunction extends ExchangeFunction{
                 String cnt = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double) fishing.getMinContractCnt(), (double) fishing.getMaxContractCnt()) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
                 String orderId = "";
                 if(DataCommon.MODE_BUY.equals(mode)) {
-                    orderId = createOrder("BUY", tickPriceList.get(i), cnt, symbol);
+                    orderId = createOrder(BUY, tickPriceList.get(i), cnt, symbol);
                 }else{
-                    orderId = createOrder("SELL", tickPriceList.get(i), cnt, symbol);
+                    orderId = createOrder(SELL, tickPriceList.get(i), cnt, symbol);
                 }
                 if(!orderId.equals("")){                                                // 매수/매도가 정상적으로 이뤄졌을 경우 데이터를 list에 담는다
                     Map<String, String> orderMap = new HashMap<>();
@@ -199,7 +234,6 @@ public class KucoinFunction extends ExchangeFunction{
                     orderMap.put("order_id" ,orderId);
                     orderList.add(orderMap);
                 }
-                Thread.sleep(300);
             }
 
             /* Sell Start */
@@ -228,15 +262,15 @@ public class KucoinFunction extends ExchangeFunction{
                     }
                     String orderPrice = copiedOrderMap.get("price");
                     if (!orderPrice.equals(nowFirstTick)) {
-                        log.info("[DCOIN][FISHINGTRADE] Not Match First Tick. All Trade will be canceled RequestTick : {}, realTick : {}", copiedOrderMap.get("price"), nowFirstTick);
+                        log.info("[KUCOIN][FISHINGTRADE] Not Match First Tick. All Trade will be canceled RequestTick : {}, realTick : {}", copiedOrderMap.get("price"), nowFirstTick);
                         noMatchFirstTick = false;
                         break;
                     }
 
                     if(DataCommon.MODE_BUY.equals(mode)) {
-                        orderId = createOrder("SELL", copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol);
+                        orderId = createOrder(SELL, copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol);
                     }else{
-                        orderId = createOrder("BUY", copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol);
+                        orderId = createOrder(BUY, copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol);
                     }
 
                     if(!orderId.equals("")){
@@ -245,18 +279,17 @@ public class KucoinFunction extends ExchangeFunction{
                         break;
                     }
                 }
-                if(cnt.compareTo(new BigDecimal("0")) > 0){
-                    // 혹여나 남은 개수가 있을 수 있어 취소 request
-                    Thread.sleep(2000);
-                    cancelOrder(symbol, orderList.get(i).get("order_id"));
-                }
+
+                Thread.sleep(500);
+                cancelOrder(orderList.get(i).get("order_id"));
+                Thread.sleep(2000);
             }
         }catch (Exception e){
             returnCode = DataCommon.CODE_ERROR;
-            log.error("[DCOIN][ERROR][FISHINGTRADE] {}", e.getMessage());
+            log.error("[KUCOIN][ERROR][FISHINGTRADE] {}", e.getMessage());
         }
 
-        log.info("[DCOIN][FISHINGTRADE END]");
+        log.info("[KUCOIN][FISHINGTRADE END]");
         return returnCode;
     }
 
@@ -311,30 +344,10 @@ public class KucoinFunction extends ExchangeFunction{
         return super.exchange;
     }
 
-    private void setCommonValue(User user,  Exchange exchange){
-        super.user     = user;
-        super.exchange = exchange;
-    }
-
-    private void setCoinToken(String[] coinData){
-        // Set token key
-        try{
-            for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
-                if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1]) ){
-                    keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
-                    keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
-                }
-            }
-        }catch (Exception e){
-            log.error("[DCOIN][SET COIN TOKEN ERROR] error : {} ", e.getMessage());
-        }
-    }
-
-
     /**
      * 매수 매도 로직
      * @param side   - SELL, BUY
-     * @param symbol - coin + currency
+     * @param symbol - coin - currency
      */
     public String createOrder(String side, String price, String cnt, String symbol) {
 
@@ -343,103 +356,37 @@ public class KucoinFunction extends ExchangeFunction{
         String errorMsg  = "";
 
         try {
-            // DCoin 의 경우, property 값들이 오름차순으로 입력되야 해서, 공통 함수로 빼기 어려움.
-            JsonObject header = new JsonObject();
-            header.addProperty("api_key", keyList.get(ACCESS_TOKEN));
-            header.addProperty("price", Double.parseDouble(price));
-            header.addProperty("side", side);
-            header.addProperty("symbol", symbol.toLowerCase());
-            header.addProperty("type", 1);
-            header.addProperty("volume", Double.parseDouble(cnt));
-            header.addProperty("sign",  createSign(gson.toJson(header)));
+            log.info("[KUCOIN][CREATE ORDER] mode:{},price:{},cnt:{},symbol:{}", side,price,cnt,symbol);
+            OrderCreateApiRequest request = OrderCreateApiRequest.builder()
+                    .price(new BigDecimal(price)).size(new BigDecimal(cnt)).side(side).tradeType("TRADE")
+                    .symbol(symbol).type("limit").clientOid(String.valueOf(System.currentTimeMillis())).build();
 
-            String params = makeEncodedParas(header);
-            JsonObject json = postHttpMethod(DataCommon.DCOIN_CREATE_ORDER, params);
-            String result = json.get("code").toString().replace("\"", "");
-            if ("0".equals(result)) {
-                String data        = json.get("data").toString().replace("\"", "");
-                JsonObject dataObj = gson.fromJson(data, JsonObject.class);
-                orderId = dataObj.get("order_id").toString().replace("\"", "");
-                log.info("[DCOIN][SUCCESS][CREATE ORDER - response] response :{}", gson.toJson(json));
-            } else {
-                log.error("[DCOIN][ERROR][CREATE ORDER - response] response {}", gson.toJson(json));
-            }
+            OrderCreateResponse order = kucoinRestClient.orderAPI().createOrder(request);
+            orderId = order.getOrderId();
+            log.info("[KUCOIN][SUCCESS][CREATE ORDER] orderId:{}", orderId);
+
         }catch(Exception e){
-            log.error("[DCOIN][ERROR][CREATE ORDER] {}", e.getMessage());
+            orderId = "";
+            log.error("[KUCOIN][ERROR][CREATE ORDER] {}", e.getMessage());
         }
         return orderId;
     }
 
-    /**
-     * 매도/매수 거래 취소 로직
-     * @param symbol   - coin + currency
-     */
-    public int cancelOrder(String symbol, String orderId) {
-
+    /** 매도/매수 거래 취소 로직 **/
+    public int cancelOrder(String orderId) {
         int returnValue = DataCommon.CODE_ERROR;
-        String errorCode = "";
-        String errorMsg = "";
-
         try {
-            JsonObject header = new JsonObject();
-            header.addProperty("api_key", keyList.get(ACCESS_TOKEN));
-            header.addProperty("order_id", orderId);
-            header.addProperty("symbol", symbol.toLowerCase());
-            header.addProperty("sign", createSign(gson.toJson(header)));
-
-            JsonObject json = postHttpMethod(DataCommon.DCOIN_CANCEL_ORDER, makeEncodedParas(header));
-            String result   = json.get("code").toString().replace("\"", "");
-            if ("0".equals(result)) {
-                returnValue = DataCommon.CODE_SUCCESS;
-                log.info("[DCOIN][SUCCESS][CANCEL ORDER - response] response:{}", gson.toJson(json));
-            } else {
-                log.error("[DCOIN][ERROR][CANCEL ORDER - response] response:{}", gson.toJson(json));
-            }
+            log.info("[KUCOIN][CANCEL ORDER] orderId:{}", orderId);
+            OrderCancelResponse orderCancelResponse = kucoinRestClient.orderAPI().cancelOrder(orderId);
+            if(orderCancelResponse.getCancelledOrderIds().size() > 0) returnValue = DataCommon.CODE_SUCCESS;
+            log.info("[KUCOIN][SUCCESS][CANCEL ORDER] orderId:{}", orderId);
         }catch(Exception e){
-            log.error("[DCOIN][ERROR][CANCEL ORDER] {}", e.getMessage());
+            log.error("[KUCOIN][ERROR][CANCEL ORDER] {}", e.getMessage());
         }
         return returnValue;
     }
 
-    /** 암호화된 값 생성 */
-    public String createSign(String params){
-        String returnVal = "";
-        String replaceParams = params.replace("\"","").replace("{","").replace("}","").replace(":","").replace(",","");
-        String message = replaceParams.concat(keyList.get(SECRET_KEY));
-        try {
-            MessageDigest md5 = MessageDigest.getInstance("md5");
-            byte[] code = md5.digest(message.getBytes());
-            StringBuffer sb = new StringBuffer();
-            for (byte b : code) {
-                sb.append(String.format("%02x", b));
-            }
-            returnVal = sb.toString();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            returnVal = null;
-            log.error("[DCOIN][ERROR][Create Sign] {}", e.getMessage());
-        }
-        return returnVal;
-    }
-
-    public String makeEncodedParas(JsonObject header){
-        String returnVal = "";
-        int i =0;
-        for(String key : header.keySet()){
-            String value = header.get(key).toString().replace("\"","");
-            if(i < header.size() -1){
-                returnVal += (key + "=" + value + "&");
-            }else{
-                returnVal += (key + "=" + value);
-            }
-            i++;
-        }
-
-        return returnVal;
-    }
-
-    /* DCOIN 의 경우 통화 기준으로 필요함.*/
+    /* KUCOIN 의 경우 통화 기준으로 필요함.*/
     public String getCurrency(Exchange exchange, String coin, String coinId){
         String returnVal = "";
         try {
@@ -452,45 +399,8 @@ public class KucoinFunction extends ExchangeFunction{
                 }
             }
         }catch(Exception e){
-            log.error("[DCOIN][ERROR][Get Currency] {}",e.getMessage());
+            log.error("[KUCOIN][ERROR][Get Currency] {}",e.getMessage());
         }
         return returnVal;
-    }
-
-    /* HTTP POST Method for coinone */
-    public JsonObject postHttpMethod(String targetUrl, String payload) {
-        URL url;
-        String inputLine;
-        JsonObject returnObj = null;
-        try{
-
-            log.info("[DCOIN][POST HTTP] request:{}", payload);
-
-            url = new URL(targetUrl);
-            HttpURLConnection connection = (HttpsURLConnection) url.openConnection();
-            connection.setDoOutput(true);
-            connection.setDoInput(true);
-            connection.setRequestMethod("POST");
-            connection.setConnectTimeout(DataCommon.TIMEOUT_VALUE);
-            connection.setReadTimeout(DataCommon.TIMEOUT_VALUE);
-            connection.setRequestProperty("Context-Type", "application/x-www-form-urlencoded");
-            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
-
-            // Writing the post data to the HTTP request body
-            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream()));
-            bw.write(payload);
-            bw.close();
-            connection.getResponseCode();
-            BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            StringBuffer response = new StringBuffer();
-            while ((inputLine = br.readLine()) != null) {
-                response.append(inputLine);
-            }
-            br.close();
-            returnObj = gson.fromJson(response.toString(), JsonObject.class);
-        }catch(Exception e){
-            log.error("[DCOIN][ERROR][POST HTTP] {}", e.getMessage());
-        }
-        return returnObj;
     }
 }
