@@ -29,8 +29,6 @@ public class BithumbGlobalFunction extends ExchangeFunction{
     final private String version       = "V1.0.0";
     Map<String, String> keyList        = new HashMap<>();
 
-
-
     @Override
     public void initClass(AutoTrade autoTrade, User user, Exchange exchange){
         super.autoTrade = autoTrade;
@@ -51,6 +49,26 @@ public class BithumbGlobalFunction extends ExchangeFunction{
         super.coinService = coinService;
         setCommonValue(user, exchange);
         setCoinToken(ServiceCommon.setCoinData(fishing.getCoin()));
+    }
+
+    private void setCommonValue(User user,  Exchange exchange){
+        super.user     = user;
+        super.exchange = exchange;
+    }
+
+    /** 코인 토큰 정보 셋팅 **/
+    private void setCoinToken(String[] coinData){
+        // Set token key
+        try{
+            for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
+                if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1])){
+                    keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
+                    keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
+                }
+            }
+        }catch (Exception e){
+            log.error("[ERROR][BITHUMBGLOBAL][SET COIN TOKEN] {}", e.getMessage());
+        }
     }
 
     /**
@@ -207,7 +225,6 @@ public class BithumbGlobalFunction extends ExchangeFunction{
                     orderMap.put("order_id" ,orderId);
                     orderList.add(orderMap);
                 }
-                Thread.sleep(300);
             }
 
             /* Sell Start */
@@ -257,11 +274,10 @@ public class BithumbGlobalFunction extends ExchangeFunction{
                         break;
                     }
                 }
-                if(cnt.compareTo(new BigDecimal("0")) > 0){
-                    // 혹여나 남은 개수가 있을 수 있어 취소 request
-                    Thread.sleep(2000);
-                    cancelOrder(orderList.get(i).get("order_id"), symbol);
-                }
+                // 무조건 일단 취소
+                Thread.sleep(1000);
+                cancelOrder(orderList.get(i).get("order_id"), symbol);
+
             }
         }catch (Exception e){
             returnCode = DataCommon.CODE_ERROR;
@@ -308,26 +324,6 @@ public class BithumbGlobalFunction extends ExchangeFunction{
         return returnRes;
     }
 
-
-    private void setCommonValue(User user,  Exchange exchange){
-        super.user     = user;
-        super.exchange = exchange;
-    }
-
-    /** 코인 토큰 정보 셋팅 **/
-    private void setCoinToken(String[] coinData){
-        // Set token key
-        try{
-            for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
-                if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1])){
-                    keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
-                    keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
-                }
-            }
-        }catch (Exception e){
-            log.error("[ERROR][BITHUMBGLOBAL][SET COIN TOKEN] {}", e.getMessage());
-        }
-    }
 
     /** Biyhumb global 매수/매도 로직 */
     public String createOrder(String type, String price, String cnt, String symbol){

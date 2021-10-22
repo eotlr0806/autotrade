@@ -54,6 +54,11 @@ public class FoblGateFunction extends ExchangeFunction{
         setCommonValue(user, exchange);
     }
 
+    private void setCommonValue(User user,  Exchange exchange){
+        super.user     = user;
+        super.exchange = exchange;
+    }
+
     /* 포블게이트 자전거래 로직 */
     @Override
     public int startAutoTrade(String price, String cnt){
@@ -218,7 +223,6 @@ public class FoblGateFunction extends ExchangeFunction{
                     orderMap.put("cnt"      ,cnt);
                     orderList.add(orderMap);
                 }
-                Thread.sleep(300);
             }
 
             /* Sell Start */
@@ -270,7 +274,7 @@ public class FoblGateFunction extends ExchangeFunction{
                         break;
                     }
                 }
-                // 혹여나 남은 개수가 있을 수 있어 취소 request
+                // 무조건 취소
                 Thread.sleep(500);
                 if(DataCommon.MODE_BUY.equals(mode)) {
                     cancelOrder(orderList.get(i).get("order_id"), BUY, orderList.get(i).get("price") ,symbol);
@@ -330,11 +334,6 @@ public class FoblGateFunction extends ExchangeFunction{
     /** 생성자로서, 생성될 때, injection**/
     public FoblGateFunction(){
         exchageRepository   = (ExchangeRepository) BeanUtils.getBean(ExchangeRepository.class);
-    }
-
-    private void setCommonValue(User user,  Exchange exchange){
-        super.user     = user;
-        super.exchange = exchange;
     }
 
     /** 해당 user 정보를 이용해 API 키를 셋팅한다 */

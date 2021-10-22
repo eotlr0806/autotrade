@@ -153,11 +153,19 @@
                         </div>
 
                         <div class="form-group">
-                            <label class="control-label text-bold col-sm-2">Secret_key</label>
+                            <label class="control-label text-bold col-sm-2">Secret key</label>
                             <div class="col-sm-8">
                                 <input type="text" class="form-control" id="modal_coin_secret_key" >
                             </div>
                         </div>
+
+                        <div class="form-group">
+                            <label class="control-label text-bold col-sm-2">Api password</label>
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control" id="modal_coin_api_password" >
+                            </div>
+                        </div>
+
 
                     </div>
 
@@ -219,6 +227,7 @@
         { title: "틱"             ,orderable: true  },
         { title: "Public Key"     ,orderable: true },
         { title: "Sercret Key"    ,orderable: true  },
+        { title: "api Password"   ,orderable: true  },
         { title: "수정"            ,orderable: false },
         { title: "삭제"            ,orderable: false }
     ];
@@ -271,38 +280,42 @@
         // 코인 저장 버튼
         postAddCoin : async () => {
 
-            let exchangeId      = $('#modal_coin_exchange').val();
-            let code            = "";
-            let name            = $('#modal_coin_name').val();
-            let currency        = "";
-            let tick            = $('#modal_coin_tick').val();
-            let publicKey       = $('#modal_coin_public_key').val();
-            let secretKey       = $('#modal_coin_secret_key').val();
-            let exchangeUserId  = $('#modal_coin_exchange_user_id').val();
-            
-            let exchangeCode;
-            exchangesList.forEach(item => {
-                if(item.id == exchangeId) exchangeCode = item.exchangeCode;
-            })
-
-            // Dcoin 의 경우 소문자로 통일
-            if(exchangeCode == EXCHANGE_LIST.DCOIN){
-                currency = $('#modal_coin_currency').val().toString().toLowerCase();
-                code     = $('#modal_coin_code').val().toString().toLowerCase();
-            }
-            // BITHUMB_GLOBAL, FOBLGATE , FLATA , COINONE 모두 대문자로 통일
-            else{
-                currency = $('#modal_coin_currency').val().toString().toUpperCase();
-                code     = $('#modal_coin_code').val().toString().toUpperCase();
-            }
-            
-
+            let exchangeId = $('#modal_coin_exchange').val();
             if(exchangeId == 'NONE' || exchangeId == ''){
                 return common.noti("코인 등록","거래소를 선택해주세요.","error");
             }
 
+            let exchangeCode    = (exchangesList.filter(item => item.id == exchangeId))[0].exchangeCode;
+            let code            = (exchangeCode == EXCHANGE_LIST.DCOIN) ? $('#modal_coin_code').val().toString().toLowerCase() : $('#modal_coin_code').val().toString().toUpperCase();
+            let currency        = (exchangeCode == EXCHANGE_LIST.DCOIN) ? $('#modal_coin_currency').val().toString().toLowerCase() : $('#modal_coin_currency').val().toString().toUpperCase();
+            let name            = $('#modal_coin_name').val();
+            let tick            = $('#modal_coin_tick').val();
+            let publicKey       = $('#modal_coin_public_key').val();
+            let secretKey       = $('#modal_coin_secret_key').val();
+            let exchangeUserId  = $('#modal_coin_exchange_user_id').val();
+            let apiPassword     = $('#modal_coin_api_password').val();
+
+
             if(code == '' || name == '' || currency == '' || tick == '' || publicKey == '' || secretKey == '' || exchangeUserId == ''){
                 return common.noti("코인 등록","빈값을 모두 등록해주세요.","error");
+            }
+
+
+
+            // exchangesList.forEach(item => {
+            //     if(item.id == exchangeId) exchangeCode = item.exchangeCode;
+            // })
+
+            // if(exchangeCode == EXCHANGE_LIST.DCOIN){ // Dcoin 의 경우 소문자로 통일
+            //     currency = $('#modal_coin_currency').val().toString().toLowerCase();
+            //     code     = $('#modal_coin_code').val().toString().toLowerCase();
+            // }else{                                   // 그 외 거래소는 대문자로 통일
+            //     currency = $('#modal_coin_currency').val().toString().toUpperCase();
+            //     code     = $('#modal_coin_code').val().toString().toUpperCase();
+            // }
+
+            if (exchangeCode === EXCHANGE_LIST.KUCOIN && apiPassword === '') {
+                return common.noti("API 패스워드", "쿠코인은 API 패스워드가 필수입니다.", "error");
             }
 
             let data = {
@@ -313,7 +326,8 @@
                 "exchangeId"        : exchangeId,
                 "publicKey"         : publicKey,
                 "privateKey"        : secretKey,
-                "exchangeUserId"    : exchangeUserId
+                "exchangeUserId"    : exchangeUserId,
+                "apiPassword"       : apiPassword
             }
 
             if(onClickCoinInfoType == UPDATE){
@@ -365,6 +379,7 @@
                         object.tick             = coin.coinPrice        || '';
                         object.publicKey        = coin.publicKey        || '';
                         object.privateKey       = coin.privateKey       || '';
+                        object.apiPassword      = coin.apiPassword      || '';
 
                         coinList.push(object);
                     })
@@ -394,6 +409,7 @@
             $('#modal_coin_tick').val('');
             $('#modal_coin_public_key').val('');
             $('#modal_coin_secret_key').val('');
+            $('#modal_coin_api_password').val('');
             $('#modal_coin_exchange_user_id').val('');
 
             let dynamicText = "<option value='NONE'>선택</option>";
@@ -421,6 +437,7 @@
             $('#modal_coin_tick').val(onClickUpdateCoin.tick);
             $('#modal_coin_public_key').val(onClickUpdateCoin.publicKey);
             $('#modal_coin_secret_key').val(onClickUpdateCoin.privateKey);
+            $('#modal_coin_api_password').val(onClickUpdateCoin.apiPassword);
             $('#modal_coin_exchange_user_id').val(onClickUpdateCoin.exchangeUserId);
         },
 
@@ -460,6 +477,7 @@
                 innerCoinData.push(item.tick);
                 innerCoinData.push(item.publicKey);
                 innerCoinData.push(item.privateKey);
+                innerCoinData.push(item.apiPassword);
                 innerCoinData.push(edit);
                 innerCoinData.push(del);
 

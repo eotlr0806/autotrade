@@ -50,6 +50,12 @@ public class FlataFunction extends ExchangeFunction{
         setCommonValue(user, exchange);
     }
 
+    private void setCommonValue(User user,  Exchange exchange){
+        super.user     = user;
+        super.exchange = exchange;
+    }
+
+
     /**
      * Start auto trade function
      * @param symbol - coin / currency
@@ -204,7 +210,6 @@ public class FlataFunction extends ExchangeFunction{
                     orderMap.put("cnt"      ,cnt);
                     orderList.add(orderMap);
                 }
-                Thread.sleep(300);
             }
 
             /* Sell Start */
@@ -252,7 +257,7 @@ public class FlataFunction extends ExchangeFunction{
                         break;
                     }
                 }
-                // 혹여나 남은 개수가 있을 수 있어 취소 request
+                // 무조건 취소
                 Thread.sleep(500);
                 cancelOrder(orderList.get(i).get("order_id"), sessionKey);
             }
@@ -308,10 +313,6 @@ public class FlataFunction extends ExchangeFunction{
         exchageRepository   = (ExchangeRepository) BeanUtils.getBean(ExchangeRepository.class);
     }
 
-    private void setCommonValue(User user,  Exchange exchange){
-        super.user     = user;
-        super.exchange = exchange;
-    }
 
     /**
      * Session key 생성
