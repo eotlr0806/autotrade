@@ -39,34 +39,11 @@ public class CoinService {
     private FlataFunction flataFunction;
     private FoblGateFunction foblGateFunction;
     private KucoinFunction kucoinFunction;
+    private OkexFunction okexFunction;
 
     private ExchangeFunction exchangeFunction;
     private String BUY_CODE  = "BUY";
     private String SELL_CODE = "SELL";
-
-    // Coinone function 은 single tone으로
-//    public void checkFunction(String exchange) throws Exception {
-//
-//        if(exchange.equals(DataCommon.BITHUMB)){
-//            if(bithumbFunction == null) bithumbFunction = new BithumbFunction();
-//        }else if(exchange.equals(DataCommon.BITHUMB_GLOBAL)){
-//            if(bithumbGlobalFunction == null) bithumbGlobalFunction = new BithumbGlobalFunction();
-//        }else if(exchange.equals(DataCommon.COINONE)){
-//            if(coinOneFunction == null) coinOneFunction = new CoinOneFunction();
-//        }else if(exchange.equals(DataCommon.DCOIN)){
-//            if(dcoinFunction == null) dcoinFunction = new DcoinFunction();
-//        }else if(exchange.equals(DataCommon.FLATA)){
-//            if(flataFunction == null) flataFunction = new FlataFunction();
-//        }else if(exchange.equals(DataCommon.FOBLGATE)){
-//            if(foblGateFunction == null) foblGateFunction = new FoblGateFunction();
-//        }else if(exchange.equals(DataCommon.KUCOIN)){
-//            if(kucoinFunction == null) kucoinFunction = new KucoinFunction();
-//        }
-//
-//        if(exchangeFunction == null){
-//            exchangeFunction = ServiceCommon.initExchange(exchange);
-//        }
-//    }
 
     /** best offer 구간 여부를 구하는 메서드
      * AutoTrade 를 이용하는데 사용됨. */
@@ -385,6 +362,10 @@ public class CoinService {
                     kucoinFunction = new KucoinFunction();
                 }
                 rowList = kucoinFunction.getOrderBook(findedEx, coinData);
+            }else if(exchange.equals(DataCommon.OKEX)){
+                if(okexFunction == null){
+                    okexFunction = new OkexFunction();
+                }
             }
 
             list = orderBookParser.parseData(findedEx.getExchangeCode(), rowList);

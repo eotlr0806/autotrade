@@ -352,7 +352,7 @@ public class FlataFunction extends ExchangeFunction{
             log.info("[SUCCESS][FLATA][SET SESSION KEY] First session key {}: mapperedPublicKey : {}", returnValue, userPublicKey );
 
         }catch (Exception e){
-            log.error("[ERROR][FLATA][MAKE SESSION KEY] {}" , e.getMessage());
+            log.error("[FLATA][ERROR][MAKE SESSION KEY] {}" , e.getMessage());
         }
 
         return DataCommon.FLATA_SESSION_KEY.get(userPublicKey);
@@ -374,7 +374,7 @@ public class FlataFunction extends ExchangeFunction{
                 sessionKey = setSessionKey(publicKey, coin, coinId);
             }
         }catch (Exception e){
-            log.error("[ERROR][FLATA][GET SESSION] {}", e.getMessage());
+            log.error("[FLATA][ERROR][GET SESSION] {}", e.getMessage());
         }
 
         log.info("[FLATA][GET SESSION] Session key : {}", sessionKey );
@@ -570,7 +570,7 @@ public class FlataFunction extends ExchangeFunction{
             returnObj = gson.fromJson(response.toString(), JsonObject.class);
 
         }catch(Exception e){
-            log.error("[ERROR][FLATA][FLATA POST HTTP] {}", e.getMessage());
+            log.error("[FLATA][ERROR][FLATA POST HTTP] {}", e.getMessage());
         }
 
         return returnObj;

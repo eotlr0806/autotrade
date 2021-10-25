@@ -362,6 +362,8 @@ public class ServiceCommon {
             exchangeFunction = new BithumbFunction();
         } else if(DataCommon.KUCOIN.equals(exchange)){
             exchangeFunction = new KucoinFunction();
+        } else if(DataCommon.OKEX.equals(exchange)){
+            exchangeFunction = new OkexFunction();
         }
 
         return exchangeFunction;

@@ -67,7 +67,7 @@ public class BithumbGlobalFunction extends ExchangeFunction{
                 }
             }
         }catch (Exception e){
-            log.error("[ERROR][BITHUMBGLOBAL][SET COIN TOKEN] {}", e.getMessage());
+            log.error("[BITHUMBGLOBAL][ERROR][SET COIN TOKEN] {}", e.getMessage());
         }
     }
 
@@ -112,7 +112,7 @@ public class BithumbGlobalFunction extends ExchangeFunction{
             }
         }catch (Exception e){
             returnCode = DataCommon.CODE_ERROR;
-            log.error("[ERROR][BITHUMBGLOBAL][AUTOTRADE] {}", e.getMessage());
+            log.error("[BITHUMBGLOBAL][ERROR][AUTOTRADE] {}", e.getMessage());
         }
 
         log.info("[BITHUMBGLOBAL][AUTOTRADE End]");
@@ -318,7 +318,7 @@ public class BithumbGlobalFunction extends ExchangeFunction{
             log.info("[BITHUMBGLOBAL][ORDER BOOK END]");
 
         }catch (Exception e){
-            log.error("[ERROR][BITHUMBGLOBAL][ORDER BOOK] {}",e.getMessage());
+            log.error("[BITHUMBGLOBAL][ERROR][ORDER BOOK] {}",e.getMessage());
         }
 
         return returnRes;
@@ -350,11 +350,11 @@ public class BithumbGlobalFunction extends ExchangeFunction{
                 orderId         = gson.fromJson(obj.get("orderId"), String.class);
                 log.info("[SUCCESS][BITHUMBGLOBAL][CREATE ORDER - response] response : {}", gson.toJson(returnVal));
             }else{
-                log.error("[ERROR][BITHUMBGLOBAL][CREATE ORDER - response] response :{}", gson.toJson(returnVal));
+                log.error("[BITHUMBGLOBAL][ERROR][CREATE ORDER - response] response :{}", gson.toJson(returnVal));
             }
 
         }catch (Exception e){
-            log.error("[ERROR][BITHUMBGLOBAL][CREATE ORDER] {}",e.getMessage());
+            log.error("[BITHUMBGLOBAL][ERROR][CREATE ORDER] {}",e.getMessage());
         }
         return orderId;
     }
@@ -381,10 +381,10 @@ public class BithumbGlobalFunction extends ExchangeFunction{
                 returnValue = DataCommon.CODE_SUCCESS;
                 log.info("[SUCCESS][BITHUMBGLOBAL][CANCEL ORDER - response] response:{}", gson.toJson(json));
             } else {
-                log.error("[ERROR][BITHUMBGLOBAL][CANCEL ORDER - response] response:{}", gson.toJson(json));
+                log.error("[BITHUMBGLOBAL][ERROR][CANCEL ORDER - response] response:{}", gson.toJson(json));
             }
         }catch(Exception e){
-            log.error("[ERROR][BITHUMBGLOBAL][CANCEL ORDER] {}", e.getMessage());
+            log.error("[BITHUMBGLOBAL][ERROR][CANCEL ORDER] {}", e.getMessage());
         }
         return returnValue;
     }
@@ -403,7 +403,7 @@ public class BithumbGlobalFunction extends ExchangeFunction{
                 }
             }
         }catch(Exception e){
-            log.error("[ERROR][BITHUMBGLOBAL][GET CURRENCY] {}",e.getMessage());
+            log.error("[BITHUMBGLOBAL][ERROR][GET CURRENCY] {}",e.getMessage());
         }
         return returnVal;
     }
@@ -446,7 +446,7 @@ public class BithumbGlobalFunction extends ExchangeFunction{
             returnObj = gson.fromJson(response.toString(), JsonObject.class);
 
         }catch(Exception e){
-            log.error("[ERROR][BITTHUMBGLOBAL][POST HTTP] {}", e.getMessage());
+            log.error("[BITTHUMBGLOBAL][ERROR][POST HTTP] {}", e.getMessage());
         }
 
         return returnObj;
@@ -465,7 +465,7 @@ public class BithumbGlobalFunction extends ExchangeFunction{
             byte[] bytes = sha256_HMAC.doFinal(message.getBytes());
             returnVal =  byteArrayToHexString(bytes);
         } catch (Exception e){
-            log.error("[ERROR][BITHUMBGLOBAL][GET JMACSHA256] {}",e.getMessage());
+            log.error("[BITHUMBGLOBAL][ERROR][GET JMACSHA256] {}",e.getMessage());
         }
         return returnVal.toLowerCase();
     }

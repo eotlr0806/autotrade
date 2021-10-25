@@ -9,6 +9,7 @@ import com.coin.autotrade.service.function.*;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -187,8 +188,15 @@ public class OrderBookParser {
                 returnValue = gson.toJson(returnObj);
             }
             // KUCOIN
-            else if(exchange.equals(DataCommon.KUCOIN)){
-                JsonObject dataObj = object.getAsJsonObject("data");
+            else if(exchange.equals(DataCommon.KUCOIN) || exchange.equals(DataCommon.OKEX)){
+
+                JsonObject dataObj = null;
+                if(exchange.equals(DataCommon.KUCOIN)){
+                    dataObj = object.getAsJsonObject("data");
+                }else if(exchange.equals(DataCommon.OKEX)){
+                    dataObj = object.getAsJsonArray("data").get(0).getAsJsonObject();
+                }
+
                 String[][] ask = gson.fromJson(dataObj.get("asks"),String[][].class);
                 String[][] bid = gson.fromJson(dataObj.get("bids"),String[][].class);
 
