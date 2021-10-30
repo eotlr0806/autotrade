@@ -7,6 +7,7 @@ const EXCHANGE_LIST = {
     FLATA    : "FLATA",
     BITHUMBGLOBAL: "BITHUMBGLOBAL",
     KUCOIN: "KUCOIN",
+    OKEX: "OKEX"
 }
 
 const TRADE_LIST = {

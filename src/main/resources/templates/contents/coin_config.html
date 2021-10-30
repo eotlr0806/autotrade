@@ -296,26 +296,14 @@
             let apiPassword     = $('#modal_coin_api_password').val();
 
 
-            if(code == '' || name == '' || currency == '' || tick == '' || publicKey == '' || secretKey == '' || exchangeUserId == ''){
+            if(code == '' || name == '' || currency == '' || tick == '' ||
+                            publicKey == '' || secretKey == '' || exchangeUserId == ''){
                 return common.noti("코인 등록","빈값을 모두 등록해주세요.","error");
             }
 
-
-
-            // exchangesList.forEach(item => {
-            //     if(item.id == exchangeId) exchangeCode = item.exchangeCode;
-            // })
-
-            // if(exchangeCode == EXCHANGE_LIST.DCOIN){ // Dcoin 의 경우 소문자로 통일
-            //     currency = $('#modal_coin_currency').val().toString().toLowerCase();
-            //     code     = $('#modal_coin_code').val().toString().toLowerCase();
-            // }else{                                   // 그 외 거래소는 대문자로 통일
-            //     currency = $('#modal_coin_currency').val().toString().toUpperCase();
-            //     code     = $('#modal_coin_code').val().toString().toUpperCase();
-            // }
-
-            if (exchangeCode === EXCHANGE_LIST.KUCOIN && apiPassword === '') {
-                return common.noti("API 패스워드", "쿠코인은 API 패스워드가 필수입니다.", "error");
+            if ( (exchangeCode === EXCHANGE_LIST.KUCOIN || exchangeCode === EXCHANGE_LIST.OKEX)
+                                                                    && apiPassword === '') {
+                return common.noti("API 패스워드", "해당 거래소는 API 패스워드가 필수입니다.", "error");
             }
 
             let data = {
