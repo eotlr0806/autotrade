@@ -76,7 +76,7 @@ public class KucoinFunction extends ExchangeFunction{
                 }
             }
         }catch (Exception e){
-            log.error("[KUCOIN][SET COIN TOKEN ERROR] error : {} ", e.getMessage());
+            log.error("[KUCOIN][ERROR][SET COIN TOKEN] error : {} ", e.getMessage());
         }
     }
 

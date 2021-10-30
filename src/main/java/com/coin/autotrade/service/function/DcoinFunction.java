@@ -69,7 +69,7 @@ public class DcoinFunction extends ExchangeFunction{
                 }
             }
         }catch (Exception e){
-            log.error("[DCOIN][SET COIN TOKEN ERROR] error : {} ", e.getMessage());
+            log.error("[DCOIN][ERROR][SET COIN TOKEN] error : {} ", e.getMessage());
         }
     }
 
