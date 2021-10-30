@@ -55,12 +55,14 @@ public class DataCommon {
     public static String FOBLGATE_CANCEL_ORDER       = "https://api2.foblgate.com/api/trade/orderCancel";
     public static String BITHUMB_GLOBAL_CREATE_ORDER = "https://global-openapi.bithumb.pro/openapi/v1/spot/placeOrder";
     public static String BITHUMB_GLOBAL_CANCEL_ORDER = "https://global-openapi.bithumb.pro/openapi/v1/spot/cancelOrder";
-    public static String KUCOIN_CREATE_ORDER         = "https://api.kucoin.com/api/v1/orders";
 
     public static String KUCOIN_URL                     = "https://api.kucoin.com";
     public static String BITHUMB_URL                    = "https://api.bithumb.com";
+    public static String OKEX_URL                       = "https://www.okex.com";
     public static String BITHUMB_ENDPOINT_CREATE_ORDER  = "/trade/place";
     public static String BITHUMB_ENDPOINT_CANCEL_ORDER  = "/trade/cancel";
+    public static String OKEX_ENDPOINT_CREATE_ORDER     = "/api/v5/trade/order";
+    public static String OKEX_ENDPOINT_CANCEL_ORDER     = "/api/v5/trade/cancel-order";
 
     /** Define Variable */
     public static int TICK_DECIMAL  = 1000;

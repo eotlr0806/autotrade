@@ -362,7 +362,7 @@ public class BithumbFunction extends ExchangeFunction{
             String status        = gson.fromJson(returnVal.get("status"), String.class);
             if(status.equals("0000")){
                 orderId         = gson.fromJson(returnVal.get("order_id"), String.class);
-                log.info("[SUCCESS][BITHUMB][CREATE ORDER - response] response : {}", gson.toJson(returnVal));
+                log.info("[BITHUMB][SUCCESS][CREATE ORDER - response] response : {}", gson.toJson(returnVal));
             }else{
                 log.error("[BITHUMB][ERROR][CREATE ORDER - response] response :{}", gson.toJson(returnVal));
             }
@@ -395,9 +395,9 @@ public class BithumbFunction extends ExchangeFunction{
             String status        = gson.fromJson(returnVal.get("status"), String.class);
             if(status.equals("0000") || status.equals(ALREADY_TRADED)){
                 orderId         = gson.fromJson(returnVal.get("order_id"), String.class);
-                log.info("[SUCCESS][BITHUMB][CREATE ORDER - response] response : {}", gson.toJson(returnVal));
+                log.info("[BITHUMB][SUCCESS][CANCEL ORDER - response] response : {}", gson.toJson(returnVal));
             }else{
-                log.error("[BITHUMB][ERROR][CREATE ORDER - response] response :{}", gson.toJson(returnVal));
+                log.error("[BITHUMB][ERROR][CANCEL ORDER - response] response :{}", gson.toJson(returnVal));
             }
 
         }catch(Exception e){

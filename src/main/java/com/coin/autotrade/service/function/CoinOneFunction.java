@@ -365,15 +365,15 @@ public class CoinOneFunction extends ExchangeFunction{
 
                 if("success".equals(result) || errorCode.equals(ALREADY_TRADED)){
                     returnValue = DataCommon.CODE_SUCCESS;
-                    log.info("[COINONE][SUCCESS][CANCELTRADE - response] try count :{}, response : {} ",i, gson.toJson(json) );
+                    log.info("[COINONE][SUCCESS][CANCEL ORDER - response] try count :{}, response : {} ",i, gson.toJson(json) );
                     break;
                 }else{
-                    log.error("[COINONE][ERROR][CANCELTRADE - response] try count :{}, response :{}" ,i, gson.toJson(json));
+                    log.error("[COINONE][ERROR][CANCEL ORDER - response] try count :{}, response :{}" ,i, gson.toJson(json));
                     Thread.sleep(1500); // 1초 후 재시도.
                 }
             }
         }catch (Exception e){
-            log.error("[COINONE][ERROR][CANCELTRADE] {}", e.getMessage());
+            log.error("[COINONE][ERROR][CANCEL ORDER] {}", e.getMessage());
         }
 
         return returnValue;

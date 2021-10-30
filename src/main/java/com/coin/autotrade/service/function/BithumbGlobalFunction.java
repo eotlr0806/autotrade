@@ -304,7 +304,7 @@ public class BithumbGlobalFunction extends ExchangeFunction{
             connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
             connection.setRequestMethod("GET");
 
-            log.info("[BITHUMBGLOBAL][ORDER BOOK - REQUEST] symbol:{}", "BITHUMBGLOBAL",  coin);
+            log.info("[BITHUMBGLOBAL][ORDER BOOK - REQUEST] symbol:{}",   coin);
 
             int returnCode = connection.getResponseCode();
             BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
@@ -348,7 +348,7 @@ public class BithumbGlobalFunction extends ExchangeFunction{
             if(status.equals("0")){
                 JsonObject obj  = gson.fromJson(returnVal.get("data"), JsonObject.class);
                 orderId         = gson.fromJson(obj.get("orderId"), String.class);
-                log.info("[SUCCESS][BITHUMBGLOBAL][CREATE ORDER - response] response : {}", gson.toJson(returnVal));
+                log.info("[BITHUMBGLOBAL][SUCCESS][CREATE ORDER - response] response : {}", gson.toJson(returnVal));
             }else{
                 log.error("[BITHUMBGLOBAL][ERROR][CREATE ORDER - response] response :{}", gson.toJson(returnVal));
             }
@@ -379,7 +379,7 @@ public class BithumbGlobalFunction extends ExchangeFunction{
             String status   = gson.fromJson(json.get("code"), String.class);
             if (status.equals("0")) {
                 returnValue = DataCommon.CODE_SUCCESS;
-                log.info("[SUCCESS][BITHUMBGLOBAL][CANCEL ORDER - response] response:{}", gson.toJson(json));
+                log.info("[BITHUMBGLOBAL][SUCCESS][CANCEL ORDER - response] response:{}", gson.toJson(json));
             } else {
                 log.error("[BITHUMBGLOBAL][ERROR][CANCEL ORDER - response] response:{}", gson.toJson(json));
             }

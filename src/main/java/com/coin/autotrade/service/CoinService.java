@@ -366,6 +366,7 @@ public class CoinService {
                 if(okexFunction == null){
                     okexFunction = new OkexFunction();
                 }
+                rowList = okexFunction.getOrderBook(findedEx, coinData);
             }
 
             list = orderBookParser.parseData(findedEx.getExchangeCode(), rowList);
