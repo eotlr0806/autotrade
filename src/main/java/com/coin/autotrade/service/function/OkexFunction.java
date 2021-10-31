@@ -97,21 +97,31 @@ public class OkexFunction extends ExchangeFunction{
             }
 
             // 1 : 매수 , 2 : 매도
+            String firstOrderId  = "";
+            String secondOrderId = "";
             if(DataCommon.MODE_BUY.equals(mode)){
-                String buyOrderId  = "";
-                if( !(buyOrderId = createOrder(BUY, price, cnt, symbol)).equals("")){   // 매수
-                    Thread.sleep(300);
-                    if(createOrder(SELL,price, cnt, symbol).equals("")){               // 매도
-                        cancelOrder(buyOrderId, symbol);                      // 매도 실패 시, 매수 취소
+                if( !(firstOrderId = createOrder(BUY, price, cnt, symbol)).equals("")){   // 매수
+                    if((secondOrderId = createOrder(SELL,price, cnt, symbol)).equals("")){               // 매도
+                        Thread.sleep(3000);
+                        cancelOrder(firstOrderId, symbol);                      // 매도 실패 시, 매수 취소
                     }
                 }
             }else if(DataCommon.MODE_SELL.equals(mode)){
-                String sellOrderId  = "";
-                if( !(sellOrderId = createOrder(SELL,price, cnt, symbol)).equals("")){
-                    Thread.sleep(300);
-                    if(createOrder(BUY,price, cnt, symbol).equals("")){
-                        cancelOrder(sellOrderId, symbol);
+                if( !(firstOrderId = createOrder(SELL,price, cnt, symbol)).equals("")){
+                    if((secondOrderId = createOrder(BUY,price, cnt, symbol)).equals("")){
+                        Thread.sleep(3000);
+                        cancelOrder(firstOrderId, symbol);
                     }
+                }
+            }
+            // 최초던진 값이 거래가 될 수 있기에 2번째 값은 무조건 취소진행
+            if(!firstOrderId.equals("") || !secondOrderId.equals("")){
+                Thread.sleep(3000);
+                if(!firstOrderId.equals("")){
+                    cancelOrder(firstOrderId, symbol);
+                }
+                if(!secondOrderId.equals("")){
+                    cancelOrder(secondOrderId, symbol);
                 }
             }
         }catch (Exception e){
