@@ -6,6 +6,7 @@ import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
 import com.kucoin.sdk.KucoinClientBuilder;
 import com.kucoin.sdk.KucoinRestClient;
+import com.kucoin.sdk.exception.KucoinApiException;
 import com.kucoin.sdk.model.enums.ApiKeyVersionEnum;
 import com.kucoin.sdk.rest.request.OrderCreateApiRequest;
 import com.kucoin.sdk.rest.response.OrderCancelResponse;
@@ -27,6 +28,7 @@ public class KucoinFunction extends ExchangeFunction{
     final private String API_PASSWORD         = "apiPassword";
     final private String BUY                  = "buy";
     final private String SELL                 = "sell";
+    final private String ALREADY_TRADE        = "400100";
     private Map<String, String> keyList       = new HashMap<>();
 
     /** Kucoin libirary **/
@@ -108,19 +110,31 @@ public class KucoinFunction extends ExchangeFunction{
                 mode = (ServiceCommon.getRandomInt(0,1) == 0) ? DataCommon.MODE_BUY : DataCommon.MODE_SELL;
             }
 
+            String firstOrderId  = "";
+            String secondOrderId = "";
             if(DataCommon.MODE_BUY.equals(mode)){
-                String orderId = "";
-                if(!(orderId = createOrder(BUY,price, cnt, symbol)).equals("")){
-                    if(createOrder(SELL,price, cnt, symbol).equals("")){          // SELL 모드가 실패 시,
-                        cancelOrder(orderId);
+                if(!(firstOrderId = createOrder(BUY,price, cnt, symbol)).equals("")){
+                    if((secondOrderId = createOrder(SELL,price, cnt, symbol)).equals("")){          // SELL 모드가 실패 시,
+                        Thread.sleep(3000);
+                        cancelOrder(firstOrderId);
                     }
                 }
             }else if(DataCommon.MODE_SELL.equals(mode)){
-                String orderId = "";
-                if(!(orderId = createOrder(SELL,price, cnt, symbol)).equals("")){
-                    if(createOrder(BUY,price, cnt, symbol).equals("")){           // BUY 모드가 실패 시,
-                        cancelOrder(orderId);
+                if(!(firstOrderId = createOrder(SELL,price, cnt, symbol)).equals("")){
+                    if((secondOrderId = createOrder(BUY,price, cnt, symbol)).equals("")){           // BUY 모드가 실패 시,
+                        Thread.sleep(3000);
+                        cancelOrder(firstOrderId);
                     }
+                }
+            }
+            // 최초 거래 시, 다른 값을 샀을 수 있기에, 2번째 값은 무조건 취소를 날린다.
+            if(!firstOrderId.equals("") || !secondOrderId.equals("")){
+                Thread.sleep(3000);
+                if(!firstOrderId.equals("")){
+                    cancelOrder(firstOrderId);
+                }
+                if(!secondOrderId.equals("")){
+                    cancelOrder(secondOrderId);
                 }
             }
         }catch (Exception e){
@@ -352,9 +366,6 @@ public class KucoinFunction extends ExchangeFunction{
     public String createOrder(String side, String price, String cnt, String symbol) {
 
         String orderId   = "";
-        String errorCode = "";
-        String errorMsg  = "";
-
         try {
             log.info("[KUCOIN][CREATE ORDER] mode:{},price:{},cnt:{},symbol:{}", side,price,cnt,symbol);
             OrderCreateApiRequest request = OrderCreateApiRequest.builder()
@@ -380,7 +391,13 @@ public class KucoinFunction extends ExchangeFunction{
             OrderCancelResponse orderCancelResponse = kucoinRestClient.orderAPI().cancelOrder(orderId);
             if(orderCancelResponse.getCancelledOrderIds().size() > 0) returnValue = DataCommon.CODE_SUCCESS;
             log.info("[KUCOIN][SUCCESS][CANCEL ORDER] orderId:{}", orderId);
-        }catch(Exception e){
+        }catch(KucoinApiException e){
+            if(ALREADY_TRADE.equals(e.getCode())){
+                log.info("[KUCOIN][SUCCESS][CANCEL ORDER] Already trade orderId:{}", orderId);
+            }else{
+                log.error("[KUCOIN][ERROR][CANCEL ORDER] {}", e.getMessage());
+            }
+        }catch (Exception e){
             log.error("[KUCOIN][ERROR][CANCEL ORDER] {}", e.getMessage());
         }
         return returnValue;
