@@ -40,6 +40,7 @@ public class CoinService {
     private FoblGateFunction foblGateFunction;
     private KucoinFunction kucoinFunction;
     private OkexFunction okexFunction;
+    private GateIoFunction gateIoFunction;
 
     private ExchangeFunction exchangeFunction;
     private String BUY_CODE  = "BUY";
@@ -367,6 +368,11 @@ public class CoinService {
                     okexFunction = new OkexFunction();
                 }
                 rowList = okexFunction.getOrderBook(findedEx, coinData);
+            }else if(exchange.equals(DataCommon.GATEIO)){
+                if(gateIoFunction == null){
+                    gateIoFunction = new GateIoFunction();
+                }
+                rowList = gateIoFunction.getOrderBook(findedEx, coinData);
             }
 
             list = orderBookParser.parseData(findedEx.getExchangeCode(), rowList);
