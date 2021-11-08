@@ -21,6 +21,7 @@ public class DataCommon {
     public static String BITHUMB        = "BITHUMB";
     public static String KUCOIN         = "KUCOIN";
     public static String OKEX           = "OKEX";
+    public static String GATEIO         = "GATEIO";
 
     public static String MODE_RANDOM    = "RANDOM";
     public static String MODE_SELL      = "SELL";
@@ -41,6 +42,7 @@ public class DataCommon {
     public static String BITHUMB_ORDERBOOK        = "https://api.bithumb.com/public/orderbook";
     public static String KUCOIN_ORDERBOOK         = "https://api.kucoin.com/api/v1/market/orderbook/level2_100";
     public static String OKEX_ORDERBOOK           = "https://www.okex.com/api/v5/market/books";
+    public static String GATEIO_ORDERBOOK         = "https://api.gateio.ws/api/v4/spot/order_book";
 
     /** Define Private Api URL */
     public static String COINONE_LIMIT_BUY           = "https://api.coinone.co.kr/v2/order/limit_buy/";
@@ -59,6 +61,8 @@ public class DataCommon {
     public static String KUCOIN_URL                     = "https://api.kucoin.com";
     public static String BITHUMB_URL                    = "https://api.bithumb.com";
     public static String OKEX_URL                       = "https://www.okex.com";
+    public static String GATEIO_URL                     = "https://api.gateio.ws/api/v4";
+
     public static String BITHUMB_ENDPOINT_CREATE_ORDER  = "/trade/place";
     public static String BITHUMB_ENDPOINT_CANCEL_ORDER  = "/trade/cancel";
     public static String OKEX_ENDPOINT_CREATE_ORDER     = "/api/v5/trade/order";

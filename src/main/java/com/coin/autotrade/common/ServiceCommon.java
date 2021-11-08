@@ -364,6 +364,8 @@ public class ServiceCommon {
             exchangeFunction = new KucoinFunction();
         } else if(DataCommon.OKEX.equals(exchange)){
             exchangeFunction = new OkexFunction();
+        } else if(DataCommon.GATEIO.equals(exchange)){
+            exchangeFunction = new GateIoFunction();
         }
 
         return exchangeFunction;
