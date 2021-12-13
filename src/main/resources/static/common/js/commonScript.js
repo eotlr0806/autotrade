@@ -1,5 +1,10 @@
 
 /** 공통 선언 **/
+const CODE = {
+    SUCCESS : 2000,
+    FAIL    : 4000,
+}
+
 const EXCHANGE_LIST = {
     COINONE  : "COINONE",
     FOBLGATE : "FOBLGATE",

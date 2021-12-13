@@ -192,11 +192,11 @@
                             <input type="hidden" id="RSAModulus"  th:value="${RSAModulus}" />
                             <input type="hidden" id="RSAExponent" th:value="${RSAExponent}"/>
 
-                            <input type="text"      id="user_id_text"  Placeholder="UserID" required>
-                            <input type="password"  id="user_pw_text" Placeholder="Password" required>
+                            <input type="text"      id="userIdText"  Placeholder="UserID" required>
+                            <input type="password"  id="userPwText" Placeholder="Password" required>
                             <!-- RSA 를 적용하여 controller 에 보낼 input tag-->
-                            <input type="hidden" id="user_id" name="user_id">
-                            <input type="hidden" id="user_pw" name="user_pw">
+                            <input type="hidden" id="userId" name="userId">
+                            <input type="hidden" id="userPw" name="userPw">
 
                             <div>
                                 <span style="width:50%; text-align:center;  display: inline-block;">
@@ -226,16 +226,18 @@
 <script type="text/javascript" src="rsa/rng.js"></script>
 
 <script>
+    const LOGIN_FAIL = 4000;
+
     $(document).ready(() => {
         let loginStatus = $('#login_action').val();
-        if(loginStatus == 401){
-            alert('패스워드가 일치하지 않습니다.');
+        if(loginStatus == LOGIN_FAIL){
+            alert('로그인에 실패하였습니다. 회원정보를 확인하세요.');
         }
     })
 
     let login = () => {
-        let id = $("#user_id_text");
-        let pw = $("#user_pw_text");
+        let id = $("#userIdText");
+        let pw = $("#userPwText");
 
         if(id.val() == ""){
             alert("아이디를 입력 해주세요.");
@@ -253,8 +255,8 @@
         let rsa = new RSAKey();
         rsa.setPublic($('#RSAModulus').val(),$('#RSAExponent').val());
 
-        $("#user_id").val(rsa.encrypt(id.val()));
-        $("#user_pw").val(rsa.encrypt(pw.val()));
+        $("#userId").val(rsa.encrypt(id.val()));
+        $("#userPw").val(rsa.encrypt(pw.val()));
 
         id.val("");
         pw.val("");
