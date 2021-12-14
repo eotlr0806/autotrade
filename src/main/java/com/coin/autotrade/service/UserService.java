@@ -1,13 +1,13 @@
 package com.coin.autotrade.service;
 
-import com.coin.autotrade.common.DataCommon;
 import com.coin.autotrade.model.User;
 import com.coin.autotrade.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import javax.servlet.http.HttpSession;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 
 @Service
 @Slf4j
@@ -22,36 +22,21 @@ public class UserService {
      * @param userPw
      * @return
      */
-    public User validateUser(String userId, String userPw) {
-        User user = null;
+    public boolean isCorrectIdAndPw(String userId, String userPw) {
+        boolean validation = false;
         try{
-            user = repository.findByUserId(userId);
-            // TODO : 나중에 암복호화 필요.
-            if(user == null || !(user.getUserId().equals(userId) && user.getUserPw().equals(userPw)) ){
-                return null;
+            Optional<User> optionalUser = repository.findById(userId);
+            User user                   = optionalUser.get();
+            if(user.getUserPw().equals(userPw)){
+                validation = true;
             }
+        }catch (NoSuchElementException e){
+            log.error("[USER_SERVICE] NOT FOUND USER ID: {}", userId);
+            e.printStackTrace();
         }catch(Exception e){
-            log.error("[ERROR][Validate User] {}", e.getMessage());
+            log.error("[USER_SERVICE] OCCUR ERROR USER ID: {}", userId);
+            e.printStackTrace();
         }
-        return user;
+        return validation;
     }
-
-    /**
-     * User 정보를 가져오기 위한 로직
-     * @param id
-     * @return
-     */
-    public User getUser(String userId) {
-        User user = null;
-        try{
-            user = repository.findByUserId(userId);
-        }catch(Exception e){
-            log.error("[ERROR][Get User] {}", e.getMessage());
-        }
-
-        return user;
-    }
-
-
-
 }
