@@ -1,10 +1,12 @@
 package com.coin.autotrade.service;
 
 import com.coin.autotrade.common.DataCommon;
+import com.coin.autotrade.common.code.ReturnCode;
 import com.coin.autotrade.model.Exchange;
 import com.coin.autotrade.model.ExchangeCoin;
 import com.coin.autotrade.repository.ExchangeCoinRepository;
 import com.coin.autotrade.repository.ExchangeRepository;
+import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -18,48 +20,47 @@ public class ExchangeCoinService {
     @Autowired
     ExchangeCoinRepository exchangeCoinRepository;
 
+    Gson gson = new Gson();
+
     /**
-     * Add / Update Coin
-     * @param coin
-     * @return
+     * @param coin coin id 가 없을 경우 insert, 존재할 경우 update
+     * @return ReturnCode.FAIL, ReturnCode.SUCCESS
      */
-    public int insertCoin(ExchangeCoin coin){
+    public String insertUpdateCoin(ExchangeCoin coin){
+        String returnVal = ReturnCode.FAIL.getValue();
 
         try{
             // coin id 가 넘어오면 Update로 변경
             if(coin.getId() == null){
-                Long id = exchangeCoinRepository.selectMaxId();
-                coin.setId(id+1);
+                Long nextId = exchangeCoinRepository.selectMaxId() + 1;
+                coin.setId(nextId);
                 exchangeCoinRepository.save(coin);
-                log.info("[Exchange Coin - API] Add coin. exchange:{} , coin:{}, coinName:{}",
-                        coin.getExchange(), coin.getCoinCode(), coin.getCoinName());
+                log.info("[INSERT COIN] Add coin. coin:{}", gson.toJson(coin));
             }else{
                 exchangeCoinRepository.save(coin);
-                log.info("[Exchange Coin - API] Update coin. exchange:{} , coin:{}, coinName:{}",
-                        coin.getExchange(), coin.getCoinCode(), coin.getCoinName());
+                log.info("[UPDATE COIN] Update coin. coin:{} ", gson.toJson(coin));
             }
+            returnVal = ReturnCode.SUCCESS.getValue();
         }catch(Exception e){
-            log.error("[ERROR][Exchange Coin - API] {}", e.getMessage());
-            return DataCommon.CODE_ERROR;
+            log.error("[INSERT UPDATE COIN] Occur error :{}", e.getMessage());
+            e.printStackTrace();
         }
 
-        return DataCommon.CODE_SUCCESS;
+        return returnVal;
     }
 
 
-    /**
-     * Delete Coin method
-     * @param id
-     * @return
-     */
-    public int deleteCoin(Long id){
+    /* Delete Coin method */
+    public String deleteCoin(Long id){
+        String returnVal = ReturnCode.FAIL.getValue();
         try{
             exchangeCoinRepository.deleteById(id);
-            log.info("[Exchange Coin - API] Delete coin. Coin ID {}", String.valueOf(id));
+            returnVal = ReturnCode.SUCCESS.getValue();
+            log.info("[DELETE COIN] Delete coin. Coin ID {}", String.valueOf(id));
         }catch(Exception e){
-            log.error("[ERROR][Exchange Coin - API] {}", e.getMessage());
-            return DataCommon.CODE_ERROR;
+            log.error("[DELETE COIN] Occur error: {}", e.getMessage());
+            e.printStackTrace();
         }
-        return DataCommon.CODE_SUCCESS;
+        return returnVal;
     }
 }

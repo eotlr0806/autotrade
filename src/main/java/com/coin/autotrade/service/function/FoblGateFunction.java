@@ -66,7 +66,7 @@ public class FoblGateFunction extends ExchangeFunction{
         int returnCode    = DataCommon.CODE_SUCCESS;
 
         try{
-            String[] coinData = ServiceCommon.setCoinData(autoTrade.getCoin());
+            String[] coinData = ServiceCommon.splitCoinWithId(autoTrade.getCoin());
             String coin       = coinData[0];
             String coinId     = coinData[1];
             String symbol     = coinData[0] + "/" + getCurrency(exchange, coinData[0], coinData[1]);
@@ -118,7 +118,7 @@ public class FoblGateFunction extends ExchangeFunction{
 
         try{
             log.info("[FOBLGATE][LIQUIDITY] Start");
-            String[] coinData = ServiceCommon.setCoinData(liquidity.getCoin());
+            String[] coinData = ServiceCommon.splitCoinWithId(liquidity.getCoin());
             String coin       = coinData[0];
             String coinId     = coinData[1];
             setApiKey(coin, coinId);    // Key 값 셋팅
@@ -190,7 +190,7 @@ public class FoblGateFunction extends ExchangeFunction{
 
         try{
             String mode       = "";
-            String[] coinData = ServiceCommon.setCoinData(fishing.getCoin());
+            String[] coinData = ServiceCommon.splitCoinWithId(fishing.getCoin());
             String coin       = coinData[0];
             String coinId     = coinData[1];
             setApiKey(coin, coinId);    // Key 값 셋팅

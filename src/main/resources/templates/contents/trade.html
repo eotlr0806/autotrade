@@ -193,7 +193,6 @@
     /** table row click 시 발생하는 이벤트 **/
     $('#trade_table').on('click', 'tr', function () {
         clickedRow = $('#trade_table').DataTable().row(this).data();
-        console.log('^^^^^^^^^^^^^^^', clickedRow);
     })
 
     // init page
@@ -260,27 +259,23 @@
                 status: runType
             }
             let returnVal = await common.post(api, params);
-            if(returnVal.data != null){
-                if(returnVal.data.code == SUCCESS){
-                    if (runType === TRADE_STATUS.DELETE){
-                        common.noti(title,"해당 거래가 삭제 됩니다.","success");
-                    }else if (runType === TRADE_STATUS.STOP){
-                        common.noti(title,"해당 거래가 정지 됩니다.","success");
-                    }else if (runType === TRADE_STATUS.RUN){
-                        common.noti(title,"해당 거래가 시작 됩니다.","success");
-                    }
-                    fncObj.getTrade();
-                }else{
-                    if (runType === TRADE_STATUS.DELETE){
-                        common.noti(title,"해당 거래가 정상적으로 삭제되지 않았습니다.\n로그아웃 후 다시 시도해주세요.","error");
-                    }else if (runType === TRADE_STATUS.STOP){
-                        common.noti(title,"해당 거래가 정상적으로 정지되지 않았습니다.\n로그아웃 후 다시 시도해주세요.","error");
-                    }else if (runType === TRADE_STATUS.RUN){
-                        common.noti(title,"해당 거래가 정상적으로 시작되지 않았습니다.\n로그아웃 후 다시 시도해주세요.","error");
-                    }
+            if (returnVal !== null) {
+                if (runType === TRADE_STATUS.DELETE) {
+                    common.noti(title, "해당 거래가 삭제 됩니다.", "success");
+                } else if (runType === TRADE_STATUS.STOP) {
+                    common.noti(title, "해당 거래가 정지 됩니다.", "success");
+                } else if (runType === TRADE_STATUS.RUN) {
+                    common.noti(title, "해당 거래가 시작 됩니다.", "success");
                 }
+                fncObj.getTrade();
             }else{
-                common.noti(title,"해당 거래가 동작하지 않았습니다.\n로그아웃 후 다시 시도해주세요.","error");
+                if (runType === TRADE_STATUS.DELETE){
+                    common.noti(title,"해당 거래가 정상적으로 삭제되지 않았습니다.\n로그아웃 후 다시 시도해주세요.","error");
+                }else if (runType === TRADE_STATUS.STOP){
+                    common.noti(title,"해당 거래가 정상적으로 정지되지 않았습니다.\n로그아웃 후 다시 시도해주세요.","error");
+                }else if (runType === TRADE_STATUS.RUN){
+                    common.noti(title,"해당 거래가 정상적으로 시작되지 않았습니다.\n로그아웃 후 다시 시도해주세요.","error");
+                }
             }
         }
     };

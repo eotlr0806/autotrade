@@ -644,16 +644,17 @@
 
         // 페이지 로드 시 초기값 셋팅을 위한 함수
         initPage : async () => {
-            let response = await common.get(API.EXCHANGE);   // Get excahgne, coin list
-            if(response.data != null){
-                if(response.status == SUCCESS){
-                    exchangesList = response.data;
-                }
+            loginUserId = $('#server_user_id').val();                   // Set user id
+
+            let response = await common.get(API.EXCHANGE);              // Get excahgne, coin list
+            if(response === null){
+                common.noti("거래소 조회","거래소 조회에 실패했습니다.","error");
+                return;
             }
 
-            dataObj.setExchangeCoin();                                  // Set exchange
-            loginUserId = $('#server_user_id').val();                   // Set user id
-            
+            exchangesList = response.data;
+            dataObj.setExchangeCoin();                              // Set exchange
+
             // checker class로 인해 span 태그가 생성 이후 해당 태그에 이벤트 부여.
             setTimeout(() => {
                 // class checker에 대한 click event
@@ -669,9 +670,9 @@
                     // 값이 없다면
                     else{
                         liquiditySelfTick.push(id);
-                    }                
+                    }
                 });
-            },1000)
+            },1000);
         },
 
         // 호가 조회 함수
@@ -693,12 +694,15 @@
             let coin             = $('#filter_coin').val();
             let url              = API.ORDER_BOOK + `?exchange=${filterExchangeNm}&currency=${coin}&userId=${loginUserId}`;
             let response         = await common.get(url);
-            let data             = response.data;
 
+            if (response === null){
+                common.noti("호가 조회","호가 조회에 실패했습니다.","error");
+                return;
+            }
+
+            let data = response.data;
             let dynamicText = dataObj.setRealPriceTable(filterExchangeNm, data);
-            
             $('#modal_coin_price_body').append(dynamicText);
-
         },
 
         postTrade : async (mode) => {
@@ -718,14 +722,10 @@
 
             if(params != CODE_ERROR){
                 let returnVal = await common.post(API.SAVE_TRADE, params);
-                if(returnVal.data != undefined){
-                    if(returnVal.data == SUCCESS){
-                        common.noti(title,"해당 내역으로 거래가 저장됩니다.","success");
-                    }else{
-                        common.noti(title,"해당 거래가 정상적으로 저장되지 않았습니다.\n로그아웃 후 다시 시도해주세요.","error");
-                    }
+                if (returnVal != null){
+                    common.noti(title,"해당 내역으로 거래가 저장됩니다.","success");
                 }else{
-                    common.noti("자전거래","해당 거래가 정상적으로 저장되지 않았습니다.\n로그아웃 후 다시 시도해주세요.","error");
+                    common.noti(title,"해당 거래가 정상적으로 저장되지 않았습니다.\n로그아웃 후 다시 시도해주세요.","error");
                 }
             }
         },
