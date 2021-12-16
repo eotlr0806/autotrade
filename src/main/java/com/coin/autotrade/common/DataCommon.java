@@ -26,7 +26,6 @@ public class DataCommon {
     public static String MODE_RANDOM    = "RANDOM";
     public static String MODE_SELL      = "SELL";
     public static String MODE_BUY       = "BUY";
-    public static String MODE_RANDOM_L  = "RANDOM_L";
     public static String MODE_SELF_L    = "SELF_L";
     public static String STATUS_RUN     = "RUN";
     public static String STATUS_STOP    = "STOP";
@@ -72,10 +71,6 @@ public class DataCommon {
     public static int TICK_DECIMAL  = 1000;
     public static int TIMEOUT_VALUE = 10000;
 
-    /** RSA Key */
-    public static String RSA_WEB_KEY = "_RSA_WEB_KEY_"; // 개인키 session key
-    public static String RSA_INSTANCE = "RSA";          // RSA transformation
-
     /** Thread List */
     public static Map<Long, AutoTradeThread> autoTradeThreadMap        = new HashMap<Long,AutoTradeThread>();
     public static Map<Long, LiquidityTradeThread> liquidityThreadMap   = new HashMap<Long,LiquidityTradeThread>();
@@ -83,7 +78,6 @@ public class DataCommon {
 
     /** ERROR CODE */
     public static Integer CODE_ERROR       = 400;
-    public static Integer CODE_ERROR_LOGIN = 401;
     public static Integer CODE_SUCCESS     = 200;
 
     /** Thread pool size */

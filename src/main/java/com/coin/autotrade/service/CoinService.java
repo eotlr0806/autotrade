@@ -55,7 +55,7 @@ public class CoinService {
         Gson gson         = new Gson();
 
         try{
-            String[] coinData = ServiceCommon.setCoinData(autoTrade.getCoin());
+            String[] coinData = ServiceCommon.splitCoinWithId(autoTrade.getCoin());
             Exchange findedEx = exchangeRepository.findByexchangeCode(autoTrade.getExchange());
 
             for(ExchangeCoin coin : findedEx.getExchangeCoin()){
@@ -143,7 +143,7 @@ public class CoinService {
         returnMap.put("buy", buyList);
 
         try{
-            String[] coinData = ServiceCommon.setCoinData(liquidity.getCoin());
+            String[] coinData = ServiceCommon.splitCoinWithId(liquidity.getCoin());
 
             // Code 값으로 거래소 데이터 조회
             Exchange findedEx = exchangeRepository.findByexchangeCode(liquidity.getExchange());
@@ -219,7 +219,7 @@ public class CoinService {
         List returnList                 = new ArrayList();
 
         try{
-            String[] coinData = ServiceCommon.setCoinData(fishing.getCoin());
+            String[] coinData = ServiceCommon.splitCoinWithId(fishing.getCoin());
 
             Exchange findedEx = exchangeRepository.findByexchangeCode(fishing.getExchange());
             for(ExchangeCoin coin : findedEx.getExchangeCoin()){
@@ -293,7 +293,7 @@ public class CoinService {
 
         try{
             Thread.sleep(1200); // 매도/매수 후 바로 조회 시, 반영이 안됨. 1.2초 정도 대기해보자..
-            String[] coinData = ServiceCommon.setCoinData(coinBeforeSplit);
+            String[] coinData = ServiceCommon.splitCoinWithId(coinBeforeSplit);
 
             Exchange findedEx = exchangeRepository.findByexchangeCode(exchange);
             for(ExchangeCoin coin : findedEx.getExchangeCoin()){
@@ -375,7 +375,7 @@ public class CoinService {
                 rowList = gateIoFunction.getOrderBook(findedEx, coinData);
             }
 
-            list = orderBookParser.parseData(findedEx.getExchangeCode(), rowList);
+            list = orderBookParser.parseOrderBook(findedEx.getExchangeCode(), rowList);
         }catch(Exception e){
             log.error("[ERROR][Get getOrderBookByExchange] {}",e.getMessage());
         }

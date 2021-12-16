@@ -39,7 +39,7 @@ public class KucoinFunction extends ExchangeFunction{
         super.autoTrade = autoTrade;
 
         setCommonValue(user, exchange);
-        setCoinToken(ServiceCommon.setCoinData(autoTrade.getCoin()));
+        setCoinToken(ServiceCommon.splitCoinWithId(autoTrade.getCoin()));
         setKucoinRestClient();
     }
 
@@ -48,7 +48,7 @@ public class KucoinFunction extends ExchangeFunction{
         super.liquidity = liquidity;
 
         setCommonValue(user, exchange);
-        setCoinToken(ServiceCommon.setCoinData(liquidity.getCoin()));
+        setCoinToken(ServiceCommon.splitCoinWithId(liquidity.getCoin()));
         setKucoinRestClient();
     }
 
@@ -58,7 +58,7 @@ public class KucoinFunction extends ExchangeFunction{
         super.coinService = coinService;
 
         setCommonValue(user, exchange);
-        setCoinToken(ServiceCommon.setCoinData(fishing.getCoin()));
+        setCoinToken(ServiceCommon.splitCoinWithId(fishing.getCoin()));
         setKucoinRestClient();
     }
 
@@ -101,7 +101,7 @@ public class KucoinFunction extends ExchangeFunction{
 
         int returnCode = DataCommon.CODE_SUCCESS;
         try{
-            String[] coinData = ServiceCommon.setCoinData(autoTrade.getCoin());
+            String[] coinData = ServiceCommon.splitCoinWithId(autoTrade.getCoin());
             String     symbol = coinData[0] + "-" + getCurrency(getExchange(), coinData[0], coinData[1]); // ex) ADA-USDT
 
             // mode 처리
@@ -158,7 +158,7 @@ public class KucoinFunction extends ExchangeFunction{
 
         try{
             log.info("[KUCOIN][LIQUIDITY] Start");
-            String[] coinData = ServiceCommon.setCoinData(liquidity.getCoin());
+            String[] coinData = ServiceCommon.splitCoinWithId(liquidity.getCoin());
             String symbol     = coinData[0] + "-" + getCurrency(getExchange(),coinData[0], coinData[1]);
             int minCnt        = liquidity.getMinCnt();
             int maxCnt        = liquidity.getMaxCnt();
@@ -216,7 +216,7 @@ public class KucoinFunction extends ExchangeFunction{
         int returnCode    = DataCommon.CODE_SUCCESS;
 
         try{
-            String[] coinData = ServiceCommon.setCoinData(fishing.getCoin());
+            String[] coinData = ServiceCommon.splitCoinWithId(fishing.getCoin());
             String     symbol = coinData[0] + "-" + getCurrency(getExchange(), coinData[0], coinData[1]);
 
             // mode 처리

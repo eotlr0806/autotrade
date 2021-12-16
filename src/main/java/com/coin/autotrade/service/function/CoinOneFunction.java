@@ -43,14 +43,14 @@ public class CoinOneFunction extends ExchangeFunction{
     @Override
     public void initClass(AutoTrade autoTrade, User user, Exchange exchange) {
         super.autoTrade = autoTrade;
-        setCommonValue(user, exchange, ServiceCommon.setCoinData(autoTrade.getCoin()));
+        setCommonValue(user, exchange, ServiceCommon.splitCoinWithId(autoTrade.getCoin()));
     }
 
     /** 호가 유동성을 이용하기 위한 초기값 설정 */
     @Override
     public void initClass(Liquidity liquidity, User user, Exchange exchange) {
         super.liquidity  = liquidity;
-        setCommonValue(user, exchange, ServiceCommon.setCoinData(liquidity.getCoin()));
+        setCommonValue(user, exchange, ServiceCommon.splitCoinWithId(liquidity.getCoin()));
     }
 
     // init 시, keyList 값 세팅
@@ -75,7 +75,7 @@ public class CoinOneFunction extends ExchangeFunction{
     public void initClass(Fishing fishing, User user, Exchange exchange, CoinService coinService) {
         super.fishing     = fishing;
         super.coinService = coinService;
-        setCommonValue(user, exchange, ServiceCommon.setCoinData(fishing.getCoin()));
+        setCommonValue(user, exchange, ServiceCommon.splitCoinWithId(fishing.getCoin()));
     }
 
     @Override

@@ -66,7 +66,7 @@ public class FlataFunction extends ExchangeFunction{
 
         int returnCode    = DataCommon.CODE_SUCCESS;
         try{
-            String[] coinData = ServiceCommon.setCoinData(autoTrade.getCoin());
+            String[] coinData = ServiceCommon.splitCoinWithId(autoTrade.getCoin());
             String coin       = coinData[0];
             String coinId     = coinData[1];
             String sessionKey = getSessionKey(coin, coinId);
@@ -114,7 +114,7 @@ public class FlataFunction extends ExchangeFunction{
 
         try{
             log.info("[FLATA][LIQUIDITY] Start");
-            String[] coinData = ServiceCommon.setCoinData(liquidity.getCoin());
+            String[] coinData = ServiceCommon.splitCoinWithId(liquidity.getCoin());
             String coin       = coinData[0];
             String coinId     = coinData[1];
             String sessionKey = getSessionKey(coin, coinId);
@@ -174,7 +174,7 @@ public class FlataFunction extends ExchangeFunction{
         int returnCode    = DataCommon.CODE_SUCCESS;
 
         try{
-            String[] coinData = ServiceCommon.setCoinData(fishing.getCoin());
+            String[] coinData = ServiceCommon.splitCoinWithId(fishing.getCoin());
             String coin       = coinData[0];
             String coinId     = coinData[1];
             String sessionKey = getSessionKey(coin, coinId);
