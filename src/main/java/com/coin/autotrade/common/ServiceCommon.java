@@ -88,7 +88,8 @@ public class ServiceCommon {
                 return true;
             }
         }catch (Exception e){
-            System.out.println(e.getMessage());
+            log.error("[SET AUTOTRADE THREAD] Fail saving thread Thread id: {}", id);
+            e.printStackTrace();
         }
         return false;
     }
@@ -98,10 +99,21 @@ public class ServiceCommon {
      * @param key
      * @return
      */
-    public static AutoTradeThread getAutoTradeThread (long id){
+    public static AutoTradeThread popAutoTradeThread (long id){
         AutoTradeThread thread = DataCommon.autoTradeThreadMap.get(id);
         DataCommon.autoTradeThreadMap.remove(id);
         return thread;
+    }
+
+    /**
+     * @return id 가 있을 경우 true, 없을 경우 false
+     * */
+    public static boolean isAutoTradeThread(long id){
+        if(DataCommon.autoTradeThreadMap.containsKey(id)){
+            return true;
+        }else{
+            return false;
+        }
     }
 
 
@@ -127,10 +139,21 @@ public class ServiceCommon {
      * @param key
      * @return
      */
-    public static LiquidityTradeThread getLiquidityThread (long id){
+    public static LiquidityTradeThread popLiquidityThread (long id){
         LiquidityTradeThread thread = DataCommon.liquidityThreadMap.get(id);
         DataCommon.liquidityThreadMap.remove(id);
         return thread;
+    }
+
+    /**
+     * @return id 가 있을 경우 true, 없을 경우 false
+     * */
+    public static boolean isLiquidityTradeThread(long id){
+        if(DataCommon.liquidityThreadMap.containsKey(id)){
+            return true;
+        }else{
+            return false;
+        }
     }
 
     /**
@@ -145,7 +168,8 @@ public class ServiceCommon {
                 return true;
             }
         }catch (Exception e){
-            System.out.println(e.getMessage());
+            log.error("[SET FISHING THREAD] Fail saving thread Thread id: {}", id);
+            e.printStackTrace();
         }
         return false;
     }
@@ -155,12 +179,22 @@ public class ServiceCommon {
      * @param key
      * @return
      */
-    public static FishingTradeThread getFishingThread (long id){
+    public static FishingTradeThread popFishingThread (long id){
         FishingTradeThread thread = DataCommon.fishingTradeThreadMap.get(id);
         DataCommon.fishingTradeThreadMap.remove(id);
         return thread;
     }
 
+    /**
+     * @return id 가 있을 경우 true, 없을 경우 false
+     * */
+    public static boolean isFishingTradeThread(long id){
+        if(DataCommon.fishingTradeThreadMap.containsKey(id)){
+            return true;
+        }else{
+            return false;
+        }
+    }
 
     /**
      * return value를 만들어주는 공통함수
@@ -209,14 +243,18 @@ public class ServiceCommon {
         return strDate;
     }
 
-    public static String[] setCoinData(String coin){
+    /**
+     * coin;id 로 온 값을 배열로 반환
+     * @param coin coin;id
+     */
+    public static String[] splitCoinWithId(String coin){
         String[] coinData = null;
         try{
             coinData = coin.split(";");
         }catch (Exception e){
-            log.error("[ERROR][SET COIN DATA] {}", e.getMessage());
+            log.error("[SET COIN DATA] {}", e.getMessage());
+            e.printStackTrace();
         }
-
         return coinData;
     }
 

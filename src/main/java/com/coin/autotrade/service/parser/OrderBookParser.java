@@ -2,14 +2,13 @@ package com.coin.autotrade.service.parser;
 
 import com.coin.autotrade.common.DataCommon;
 import com.coin.autotrade.common.ServiceCommon;
+import com.coin.autotrade.common.code.ReturnCode;
 import com.coin.autotrade.model.Exchange;
 import com.coin.autotrade.repository.ExchangeRepository;
-import com.coin.autotrade.service.CoinService;
-import com.coin.autotrade.service.function.*;
+import com.coin.autotrade.service.function.ExchangeFunction;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -24,24 +23,25 @@ public class OrderBookParser {
     /** Order book 의 Parser Layer **/
     public String getOrderBook(String exchange, String coinData, String userId){
 
-        String returnVal ="";
+        String returnVal = ReturnCode.NO_DATA.getValue();
 
         try{
             // 거래소 정보
             Exchange exchangeObj = exchangeRepository.findByexchangeCode(exchange);
-            String[] coinWithId  = ServiceCommon.setCoinData(coinData);
+            String[] coinWithId  = ServiceCommon.splitCoinWithId(coinData);
 
             ExchangeFunction exchangeFunction = ServiceCommon.initExchange(exchange);
-            returnVal = parseData(exchange, exchangeFunction.getOrderBook(exchangeObj, coinWithId));
+            returnVal = parseOrderBook(exchange, exchangeFunction.getOrderBook(exchangeObj, coinWithId));
 
         }catch(Exception e){
-            log.error("[ERROR][API Get Order book] {}",e.getMessage());
+            log.error("[GET ORDER BOOK] Occur error : {}",e.getMessage());
+            e.printStackTrace();
         }
         return returnVal;
     }
 
     /** 거래소에서 받은 데이터를 기준에 맞춰 파싱해서 보내준다. **/
-    public String parseData(String exchange, String data){
+    public String parseOrderBook(String exchange, String data){
         String returnValue     = "";
         JsonArray parseAsk   = new JsonArray();
         JsonArray parseBid   = new JsonArray();
@@ -102,7 +102,8 @@ public class OrderBookParser {
             }
 
         }catch (Exception e){
-            log.error("[ERROR][Parse Order book] {}",e.getMessage());
+            log.error("[PARSE ORDER BOOK] Occur error : {}",e.getMessage());
+            e.printStackTrace();
         }
 
         return returnValue;

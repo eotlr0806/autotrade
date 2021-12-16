@@ -8,7 +8,6 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.RequestBody;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -17,7 +16,6 @@ import java.io.*;
 import java.math.BigDecimal;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.security.InvalidKeyException;
 import java.time.Instant;
 import java.util.*;
 
@@ -37,14 +35,14 @@ public class OkexFunction extends ExchangeFunction{
     public void initClass(AutoTrade autoTrade, User user, Exchange exchange){
         super.autoTrade = autoTrade;
         setCommonValue(user, exchange);
-        setCoinToken(ServiceCommon.setCoinData(autoTrade.getCoin()));
+        setCoinToken(ServiceCommon.splitCoinWithId(autoTrade.getCoin()));
     }
 
     @Override
     public void initClass(Liquidity liquidity, User user, Exchange exchange){
         super.liquidity = liquidity;
         setCommonValue(user, exchange);
-        setCoinToken(ServiceCommon.setCoinData(liquidity.getCoin()));
+        setCoinToken(ServiceCommon.splitCoinWithId(liquidity.getCoin()));
     }
 
     @Override
@@ -52,7 +50,7 @@ public class OkexFunction extends ExchangeFunction{
         super.fishing     = fishing;
         super.coinService = coinService;
         setCommonValue(user, exchange);
-        setCoinToken(ServiceCommon.setCoinData(fishing.getCoin()));
+        setCoinToken(ServiceCommon.splitCoinWithId(fishing.getCoin()));
     }
 
     private void setCommonValue(User user,  Exchange exchange){
@@ -87,7 +85,7 @@ public class OkexFunction extends ExchangeFunction{
 
         try{
 
-            String[] coinData = ServiceCommon.setCoinData(autoTrade.getCoin());
+            String[] coinData = ServiceCommon.splitCoinWithId(autoTrade.getCoin());
             String symbol     = coinData[0] + "-" + getCurrency(getExchange(), coinData[0], coinData[1]);
 
             // mode 처리
@@ -144,7 +142,7 @@ public class OkexFunction extends ExchangeFunction{
 
         try{
             log.info("[OKEX][LIQUIDITY] Start");
-            String[] coinData = ServiceCommon.setCoinData(liquidity.getCoin());
+            String[] coinData = ServiceCommon.splitCoinWithId(liquidity.getCoin());
             String symbol     = coinData[0] + "-" + getCurrency(getExchange(), coinData[0], coinData[1]);
             int minCnt        = liquidity.getMinCnt();
             int maxCnt        = liquidity.getMaxCnt();
@@ -201,7 +199,7 @@ public class OkexFunction extends ExchangeFunction{
         int returnCode    = DataCommon.CODE_SUCCESS;
 
         try{
-            String[] coinData = ServiceCommon.setCoinData(fishing.getCoin());
+            String[] coinData = ServiceCommon.splitCoinWithId(fishing.getCoin());
             String symbol     = coinData[0] + "-" + getCurrency(getExchange(), coinData[0], coinData[1]);
 
             // mode 처리

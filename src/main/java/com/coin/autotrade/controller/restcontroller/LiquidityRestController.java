@@ -1,5 +1,8 @@
 package com.coin.autotrade.controller.restcontroller;
 
+import com.coin.autotrade.common.Response;
+import com.coin.autotrade.common.code.ReturnCode;
+import com.coin.autotrade.common.code.SessionKey;
 import com.coin.autotrade.model.Liquidity;
 import com.coin.autotrade.service.LiquidityService;
 import com.google.gson.Gson;
@@ -19,41 +22,43 @@ public class LiquidityRestController {
     @Autowired
     LiquidityService service;
 
-    /**
-     * Liquidity Get
-     * @return
-     */
+    /* Liquidity Get */
     @GetMapping(value = "/v1/trade/liquidity")
     public String getLiquidityTrade() {
-        String returnVal = "";
+        Response response = new Response();
         try{
-            returnVal = service.getLiquidity();
+            String liquidity = service.getLiquidity();
+            if(liquidity.equals(ReturnCode.NO_DATA.getValue())){
+                response.setResponseWhenFail(ReturnCode.NO_DATA.getCode(), ReturnCode.NO_DATA.getMsg());
+            }else if(liquidity.equals(ReturnCode.FAIL.getValue())){
+                response.setResponseWhenFail(ReturnCode.FAIL.getCode(), ReturnCode.FAIL.getMsg());
+            }else{
+                response.setResponseWhenSuccess(ReturnCode.SUCCESS.getCode(), liquidity);
+            }
+            log.info("[GET LIQUIDITY] Get liquidity list : {}", liquidity);
         }catch(Exception e){
-            log.error("[API - Get Liquidity] {} ", e.getMessage());
+            log.error("[GET LIQUIDITY] Occur error : {} ", e.getMessage());
+            response.setResponseWhenFail(ReturnCode.FAIL.getCode(), ReturnCode.FAIL.getMsg());
+            e.printStackTrace();
         }
-
-        return returnVal;
+        return response.toString();
     }
 
 
-    /**
-     * schedule의 action type에 따라 분기
-     * @param body
-     * @param user
-     * @return
-     */
+    /* schedule의 action type에 따라 분기 */
     @PostMapping(value = "/v1/trade/liquidity")
     public String postLiquidityTrade(HttpServletRequest request, @RequestBody String body) {
 
-        String returnVal = "";
-        Gson gson = new Gson();
+        String returnVal  = ReturnCode.FAIL.getValue();
+        Gson gson         = new Gson();
+        Response response = new Response();
 
         try{
             Liquidity liquidity = gson.fromJson(body, Liquidity.class);
 
             switch(liquidity.getStatus()) {
                 case "RUN":
-                    returnVal = service.postLiquidity(liquidity, request.getSession().getAttribute("userId").toString());
+                    returnVal = service.postLiquidity(liquidity, request.getSession().getAttribute(SessionKey.USER_ID.toString()).toString());
                     break;
                 case "STOP" :
                     returnVal = service.stopLiquidity(liquidity);
@@ -64,11 +69,23 @@ public class LiquidityRestController {
                 default:
                     break;
             }
+
+            if(returnVal.equals(ReturnCode.SUCCESS.getValue())){
+                response.setResponseWhenSuccess(ReturnCode.SUCCESS.getCode(), null);
+            }else if(returnVal.equals(ReturnCode.NO_DATA.getValue())){
+                response.setResponseWhenFail(ReturnCode.NO_DATA.getCode(), ReturnCode.NO_DATA.getMsg());
+            }else if(returnVal.equals(ReturnCode.DUPLICATION_DATA.getValue())){
+                response.setResponseWhenFail(ReturnCode.DUPLICATION_DATA.getCode(), ReturnCode.DUPLICATION_DATA.getMsg());
+            }else{
+                response.setResponseWhenFail(ReturnCode.FAIL.getCode(), ReturnCode.FAIL.getMsg());
+            }
         }catch(Exception e){
-            log.error("[API - Post Liquidity] {} ", e.getMessage());
+            response.setResponseWhenFail(ReturnCode.FAIL.getCode(), e.getMessage());
+            log.error("[POST LIQUIDITY] Occur error : {}", e.getMessage());
+            e.printStackTrace();
         }
 
-        return returnVal;
+        return response.toString();
     }
 
 

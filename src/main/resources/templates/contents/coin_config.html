@@ -257,10 +257,8 @@
         // coin 정보를 서버에서 가져온다.
         getExchangeList : async () => {
             let response = await common.get(API.EXCHANGE);   // Get excahgne, coin list
-            if(response.data != null){
-                if(response.status == SUCCESS){
-                    exchangesList = response.data;
-                }
+            if (response !== null){
+                exchangesList = response.data;
             }
         },
 
@@ -323,29 +321,31 @@
             }
 
             let response = await common.post(API.COIN,data);
-            if(response.status == SUCCESS){
+            if (response !== null){
                 common.noti("코인 등록", "코인 등록을 완료하였습니다.","success");
-                
+
                 await fncObj.getExchangeList();
                 fncObj.makeCoinList();
                 dataObj.makeCoinTableReload();
 
                 $('#modal_coin_info').modal('hide');
+            }else{
+                common.noti("코인 등록", "코인 등록에 실패하였습니다.","error");
             }
         },
 
         // 코인 정보 삭제
         deleteCoin : async (id) => {
             let response = await common.delete(API.COIN, { "id": id });
-
-            if(response.status == SUCCESS){
+            if (response !== null){
                 common.noti("코인 삭제", "코인 삭제를 완료하였습니다.","success");
-                
+
                 await fncObj.getExchangeList();
                 fncObj.makeCoinList();
                 dataObj.makeCoinTableReload();
+            }else{
+                common.noti("코인 삭제", "코인 삭제에 실패하였습니다.","error");
             }
-
         },
 
         // 거래소 정보로 코인 리스트를 만든다.

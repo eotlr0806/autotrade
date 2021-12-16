@@ -5,25 +5,18 @@ import com.coin.autotrade.common.ServiceCommon;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
 import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import io.gate.gateapi.ApiClient;
 import io.gate.gateapi.ApiException;
 import io.gate.gateapi.api.SpotApi;
 import io.gate.gateapi.models.Order;
-import io.gate.gateapi.models.Trade;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.annotation.CreatedDate;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import javax.net.ssl.HttpsURLConnection;
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 import java.util.*;
 
 @Slf4j
@@ -45,14 +38,14 @@ public class GateIoFunction extends ExchangeFunction{
     public void initClass(AutoTrade autoTrade, User user, Exchange exchange){
         super.autoTrade = autoTrade;
         setCommonValue(user, exchange);
-        setCoinToken(ServiceCommon.setCoinData(autoTrade.getCoin()));
+        setCoinToken(ServiceCommon.splitCoinWithId(autoTrade.getCoin()));
     }
 
     @Override
     public void initClass(Liquidity liquidity, User user, Exchange exchange){
         super.liquidity = liquidity;
         setCommonValue(user, exchange);
-        setCoinToken(ServiceCommon.setCoinData(liquidity.getCoin()));
+        setCoinToken(ServiceCommon.splitCoinWithId(liquidity.getCoin()));
     }
 
     @Override
@@ -60,7 +53,7 @@ public class GateIoFunction extends ExchangeFunction{
         super.fishing     = fishing;
         super.coinService = coinService;
         setCommonValue(user, exchange);
-        setCoinToken(ServiceCommon.setCoinData(fishing.getCoin()));
+        setCoinToken(ServiceCommon.splitCoinWithId(fishing.getCoin()));
     }
 
     private void setCommonValue(User user,  Exchange exchange){
@@ -100,7 +93,7 @@ public class GateIoFunction extends ExchangeFunction{
 
         try{
 
-            String[] coinData = ServiceCommon.setCoinData(autoTrade.getCoin());
+            String[] coinData = ServiceCommon.splitCoinWithId(autoTrade.getCoin());
             String symbol     = coinData[0] + "_" + getCurrency(getExchange(), coinData[0], coinData[1]);
 
             // mode 처리
@@ -157,7 +150,7 @@ public class GateIoFunction extends ExchangeFunction{
 
         try{
             log.info("[GATEIO][LIQUIDITY] Start");
-            String[] coinData = ServiceCommon.setCoinData(liquidity.getCoin());
+            String[] coinData = ServiceCommon.splitCoinWithId(liquidity.getCoin());
             String symbol     = coinData[0] + "_" + getCurrency(getExchange(), coinData[0], coinData[1]);
             int minCnt        = liquidity.getMinCnt();
             int maxCnt        = liquidity.getMaxCnt();
@@ -214,7 +207,7 @@ public class GateIoFunction extends ExchangeFunction{
         int returnCode    = DataCommon.CODE_SUCCESS;
 
         try{
-            String[] coinData = ServiceCommon.setCoinData(fishing.getCoin());
+            String[] coinData = ServiceCommon.splitCoinWithId(fishing.getCoin());
             String symbol     = coinData[0] + "_" + getCurrency(getExchange(), coinData[0], coinData[1]);
 
             // mode 처리

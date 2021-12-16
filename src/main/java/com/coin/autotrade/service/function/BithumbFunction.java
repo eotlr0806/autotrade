@@ -1,27 +1,27 @@
 package com.coin.autotrade.service.function;
 
 import com.coin.autotrade.common.DataCommon;
+import com.coin.autotrade.common.HttpRequest;
 import com.coin.autotrade.common.ServiceCommon;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
-
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import javax.net.ssl.HttpsURLConnection;
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
-import com.coin.autotrade.common.HttpRequest;
 
 
 @Slf4j
@@ -43,14 +43,14 @@ public class BithumbFunction extends ExchangeFunction{
     public void initClass(AutoTrade autoTrade, User user, Exchange exchange){
         super.autoTrade = autoTrade;
         setCommonValue(user, exchange);
-        setCoinToken(ServiceCommon.setCoinData(autoTrade.getCoin()));
+        setCoinToken(ServiceCommon.splitCoinWithId(autoTrade.getCoin()));
     }
 
     @Override
     public void initClass(Liquidity liquidity, User user, Exchange exchange){
         super.liquidity = liquidity;
         setCommonValue(user, exchange);
-        setCoinToken(ServiceCommon.setCoinData(liquidity.getCoin()));
+        setCoinToken(ServiceCommon.splitCoinWithId(liquidity.getCoin()));
     }
 
     @Override
@@ -58,7 +58,7 @@ public class BithumbFunction extends ExchangeFunction{
         super.fishing     = fishing;
         super.coinService = coinService;
         setCommonValue(user, exchange);
-        setCoinToken(ServiceCommon.setCoinData(fishing.getCoin()));
+        setCoinToken(ServiceCommon.splitCoinWithId(fishing.getCoin()));
     }
 
     private void setCommonValue(User user,  Exchange exchange){
@@ -92,7 +92,7 @@ public class BithumbFunction extends ExchangeFunction{
 
         try{
 
-            String[] coinData = ServiceCommon.setCoinData(autoTrade.getCoin());
+            String[] coinData = ServiceCommon.splitCoinWithId(autoTrade.getCoin());
             String currency   = getCurrency(getExchange(), coinData[0], coinData[1]);
 
             // mode 처리
@@ -137,7 +137,7 @@ public class BithumbFunction extends ExchangeFunction{
 
         try{
             log.info("[BITHUMB][LIQUIDITY] Start");
-            String[] coinData = ServiceCommon.setCoinData(liquidity.getCoin());
+            String[] coinData = ServiceCommon.splitCoinWithId(liquidity.getCoin());
             String currency   = getCurrency(getExchange(), coinData[0], coinData[1]);
             int minCnt        = liquidity.getMinCnt();
             int maxCnt        = liquidity.getMaxCnt();
@@ -203,7 +203,7 @@ public class BithumbFunction extends ExchangeFunction{
         int returnCode    = DataCommon.CODE_SUCCESS;
 
         try{
-            String[] coinData = ServiceCommon.setCoinData(fishing.getCoin());
+            String[] coinData = ServiceCommon.splitCoinWithId(fishing.getCoin());
             String currency   = getCurrency(getExchange(), coinData[0], coinData[1]);
 
             // mode 처리

@@ -1,5 +1,9 @@
 package com.coin.autotrade.controller.restcontroller;
 
+import ch.qos.logback.core.joran.conditional.ElseAction;
+import com.coin.autotrade.common.Response;
+import com.coin.autotrade.common.code.ReturnCode;
+import com.coin.autotrade.common.code.SessionKey;
 import com.coin.autotrade.model.AutoTrade;
 import com.coin.autotrade.service.AutoTradeService;
 import com.google.gson.Gson;
@@ -26,13 +30,23 @@ public class AutoTradeRestController {
      */
     @GetMapping(value = "/v1/trade/auto")
     public String getAutoTrade() {
-        String returnVal = "";
+        Response response = new Response();
         try{
-            returnVal = service.getAutoTrade();
+            String autoList = service.getAutoTrade();
+            if(autoList.equals(ReturnCode.NO_DATA.getValue())){
+                response.setResponseWhenFail(ReturnCode.NO_DATA.getCode(), ReturnCode.NO_DATA.getMsg());
+            }else if(autoList.equals(ReturnCode.FAIL.getValue())){
+                response.setResponseWhenFail(ReturnCode.FAIL.getCode(), ReturnCode.FAIL.getMsg());
+            }else{
+                response.setResponseWhenSuccess(ReturnCode.SUCCESS.getCode(), autoList);
+            }
+            log.info("[GET AUTOTRADE] Get autotrade list : {}", autoList);
         }catch(Exception e){
-            log.error("[ERROR][API - GET Autotrade] {}", e.getMessage());
+            log.error("[GET AUTOTRADE] {}", e.getMessage());
+            response.setResponseWhenFail(ReturnCode.FAIL.getCode(), ReturnCode.FAIL.getMsg());
+            e.printStackTrace();
         }
-        return returnVal;
+        return response.toString();
     }
 
 
@@ -45,15 +59,16 @@ public class AutoTradeRestController {
     @PostMapping(value = "/v1/trade/auto")
     public String postAutoTrade(HttpServletRequest request, @RequestBody String body) {
 
-        String returnVal = "";
-        Gson gson = new Gson();
+        String returnVal  = ReturnCode.FAIL.getValue();
+        Gson gson         = new Gson();
+        Response response = new Response();
 
         try{
             AutoTrade autoTrade = gson.fromJson(body, AutoTrade.class);
 
             switch(autoTrade.getStatus()) {
                 case "RUN":
-                    returnVal = service.postAutoTrade(autoTrade, request.getSession().getAttribute("userId").toString());
+                    returnVal = service.postAutoTrade(autoTrade, request.getSession().getAttribute(SessionKey.USER_ID.toString()).toString());
                     break;
                 case "STOP" :
                     returnVal = service.stopAutoTrade(autoTrade);
@@ -64,11 +79,24 @@ public class AutoTradeRestController {
                 default:
                     break;
             }
+
+            if(returnVal.equals(ReturnCode.SUCCESS.getValue())){
+                response.setResponseWhenSuccess(ReturnCode.SUCCESS.getCode(), null);
+            }else if(returnVal.equals(ReturnCode.NO_DATA.getValue())){
+                response.setResponseWhenFail(ReturnCode.NO_DATA.getCode(), ReturnCode.NO_DATA.getMsg());
+            }else if(returnVal.equals(ReturnCode.DUPLICATION_DATA.getValue())){
+                response.setResponseWhenFail(ReturnCode.DUPLICATION_DATA.getCode(), ReturnCode.DUPLICATION_DATA.getMsg());
+            }else{
+                response.setResponseWhenFail(ReturnCode.FAIL.getCode(), ReturnCode.FAIL.getMsg());
+            }
+
         }catch(Exception e){
-            log.error("[ERROR][API - POST Autotrdae] {}", e.getMessage());
+            response.setResponseWhenFail(ReturnCode.FAIL.getCode(), e.getMessage());
+            log.error("[POST AUTOTRADE] error : {}", e.getMessage());
+            e.printStackTrace();
         }
 
-        return returnVal;
+        return response.toString();
     }
 
 
