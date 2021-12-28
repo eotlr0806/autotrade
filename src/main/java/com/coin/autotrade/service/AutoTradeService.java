@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,36 +35,24 @@ public class AutoTradeService {
 
     Gson gson = new Gson();
     /* autoTrade List 를 반환하는 메서드 */
-    public String getAutoTrade(){
-        String returnVal = ReturnCode.NO_DATA.getValue();
-        try{
-            List<AutoTrade> autoTradeList = autotradeRepository.findAll();
-            if(!autoTradeList.isEmpty()){
-                returnVal = gson.toJson(autoTradeList);
-            }
-        }catch(Exception e){
-            returnVal = ReturnCode.FAIL.getValue();
-            log.error("[GET AUTOTRADE] error: {}",e.getMessage());
-            e.printStackTrace();
-        }
-        return returnVal;
+    public List<AutoTrade> getAutoTrade() throws Exception{
+        List<AutoTrade> autoTradeList = autotradeRepository.findAll();
+        return autoTradeList;
     }
-
 
     /**
      * @return ReturnCode.FAIL , ReturnCode.DUPLICATION_DATA , ReturnCode.SUCCESS
      */
     @Transactional
-    public String postAutoTrade(AutoTrade autoTrade, String userId){
-
-        String returnValue = ReturnCode.FAIL.getValue();
-        Thread thread      = null;
+    public ReturnCode postAutoTrade(AutoTrade autoTrade, String userId) throws Exception{
+        ReturnCode returnCode = ReturnCode.FAIL;
+        Thread thread         = null;
 
         try{
             // 중복 체크
             if(ServiceCommon.isAutoTradeThread(autoTrade.getId())){
                 log.error("[POST AUTOTRADE] Thread is already existed id: {}", autoTrade.getId());
-                returnValue = ReturnCode.DUPLICATION_DATA.getValue();
+                returnCode = ReturnCode.DUPLICATION_DATA;
             }else{
                 // 기존의 Autotrade 값을 가져온다.
                 AutoTrade savedAutotrade = autotradeRepository.getById(autoTrade.getId());
@@ -81,7 +70,7 @@ public class AutoTradeService {
                     thread = new Thread(autoTradeThread);
                     ServiceCommon.startThread(thread);      // Thread Start
                     log.info("[POST AUTOTRADE] Start autotrade thread id : {} ", autoTrade.getId());
-                    returnValue = ReturnCode.SUCCESS.getValue();
+                    returnCode = ReturnCode.SUCCESS;
                 }else{
                     log.error("[POST AUTOTRADE] Save autotrade is failed thread id : {} ", autoTrade.getId());
                 }
@@ -95,15 +84,15 @@ public class AutoTradeService {
             log.error("[POST AUTOTRADE] Occur error : {}",e.getMessage());
             e.printStackTrace();
         }
-        return returnValue;
+        return returnCode;
     }
 
     /**
      * @return ReturnCode.FAIL , ReturnCode.DUPLICATION_DATA , ReturnCode.SUCCESS
      */
     @Transactional
-    public String deleteAutoTrade(AutoTrade autoTrade){
-        String returnValue = ReturnCode.FAIL.getValue();
+    public ReturnCode deleteAutoTrade(AutoTrade autoTrade){
+        ReturnCode returnCode = ReturnCode.FAIL;
 
         try{
             // Thread pool 에서 thread를 가져와 멈춘다.
@@ -117,20 +106,20 @@ public class AutoTradeService {
                 autotradeRepository.deleteById(autoTrade.getId());
             }
             log.info("[DELETE AUTOTRADE] Delete thread Id : {} ", autoTrade.getId());
-            returnValue = ReturnCode.SUCCESS.getValue();
+            returnCode = ReturnCode.SUCCESS;
         }catch(Exception e){
             log.error("[DELETE AUTOTRADE] Occur error : {}", e.getMessage());
             e.printStackTrace();
         }
-        return returnValue;
+        return returnCode;
     }
 
     /**
      * @return ReturnCode.FAIL , ReturnCode.DUPLICATION_DATA , ReturnCode.SUCCESS
      */
     @Transactional
-    public String stopAutoTrade(AutoTrade autoTrade){
-        String returnValue = ReturnCode.FAIL.getValue();
+    public ReturnCode stopAutoTrade(AutoTrade autoTrade){
+        ReturnCode returnCode = ReturnCode.FAIL;
 
         try{
             // Thread pool 에서 thread를 가져와 멈춘다.
@@ -147,13 +136,13 @@ public class AutoTradeService {
             }else{
                 log.info("[STOP AUTOTRADE] There is no thread in DB thread id : {} ", autoTrade.getId());
             }
-            returnValue = ReturnCode.SUCCESS.getValue();
+            returnCode = ReturnCode.SUCCESS;
             log.info("[STOP AUTOTRADE] Stop thread id : {} ", autoTrade.getId());
         }catch(Exception e){
             log.error("[STOP AUTOTRADE] error:  {}",e.getMessage());
             e.printStackTrace();
         }
 
-        return returnValue;
+        return returnCode;
     }
 }

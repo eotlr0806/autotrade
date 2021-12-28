@@ -26,8 +26,8 @@ public class ExchangeCoinService {
      * @param coin coin id 가 없을 경우 insert, 존재할 경우 update
      * @return ReturnCode.FAIL, ReturnCode.SUCCESS
      */
-    public String insertUpdateCoin(ExchangeCoin coin){
-        String returnVal = ReturnCode.FAIL.getValue();
+    public ReturnCode insertUpdateCoin(ExchangeCoin coin){
+        ReturnCode returnCode = ReturnCode.FAIL;
 
         try{
             // coin id 가 넘어오면 Update로 변경
@@ -40,27 +40,27 @@ public class ExchangeCoinService {
                 exchangeCoinRepository.save(coin);
                 log.info("[UPDATE COIN] Update coin. coin:{} ", gson.toJson(coin));
             }
-            returnVal = ReturnCode.SUCCESS.getValue();
+            returnCode = ReturnCode.SUCCESS;
         }catch(Exception e){
             log.error("[INSERT UPDATE COIN] Occur error :{}", e.getMessage());
             e.printStackTrace();
         }
 
-        return returnVal;
+        return returnCode;
     }
 
 
     /* Delete Coin method */
-    public String deleteCoin(Long id){
-        String returnVal = ReturnCode.FAIL.getValue();
+    public ReturnCode deleteCoin(Long id){
+        ReturnCode returnCode = ReturnCode.FAIL;
         try{
             exchangeCoinRepository.deleteById(id);
-            returnVal = ReturnCode.SUCCESS.getValue();
+            returnCode = ReturnCode.SUCCESS;
             log.info("[DELETE COIN] Delete coin. Coin ID {}", String.valueOf(id));
         }catch(Exception e){
             log.error("[DELETE COIN] Occur error: {}", e.getMessage());
             e.printStackTrace();
         }
-        return returnVal;
+        return returnCode;
     }
 }

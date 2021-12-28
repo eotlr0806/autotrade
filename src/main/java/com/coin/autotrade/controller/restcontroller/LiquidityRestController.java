@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 @RestController
 @Slf4j
@@ -25,20 +26,18 @@ public class LiquidityRestController {
     /* Liquidity Get */
     @GetMapping(value = "/v1/trade/liquidity")
     public String getLiquidityTrade() {
-        Response response = new Response();
+        Response response = new Response(ReturnCode.FAIL);
         try{
-            String liquidity = service.getLiquidity();
-            if(liquidity.equals(ReturnCode.NO_DATA.getValue())){
-                response.setResponseWhenFail(ReturnCode.NO_DATA.getCode(), ReturnCode.NO_DATA.getMsg());
-            }else if(liquidity.equals(ReturnCode.FAIL.getValue())){
-                response.setResponseWhenFail(ReturnCode.FAIL.getCode(), ReturnCode.FAIL.getMsg());
+            List<Liquidity> liquidity = service.getLiquidity();
+            if(liquidity.isEmpty()){
+                response.setResponse(ReturnCode.NO_DATA);
             }else{
-                response.setResponseWhenSuccess(ReturnCode.SUCCESS.getCode(), liquidity);
+                response.setResponseWithObject(ReturnCode.SUCCESS, liquidity);
             }
             log.info("[GET LIQUIDITY] Get liquidity list : {}", liquidity);
         }catch(Exception e){
             log.error("[GET LIQUIDITY] Occur error : {} ", e.getMessage());
-            response.setResponseWhenFail(ReturnCode.FAIL.getCode(), ReturnCode.FAIL.getMsg());
+            response.setResponse(ReturnCode.FAIL);
             e.printStackTrace();
         }
         return response.toString();
@@ -49,9 +48,9 @@ public class LiquidityRestController {
     @PostMapping(value = "/v1/trade/liquidity")
     public String postLiquidityTrade(HttpServletRequest request, @RequestBody String body) {
 
-        String returnVal  = ReturnCode.FAIL.getValue();
-        Gson gson         = new Gson();
-        Response response = new Response();
+        ReturnCode returnVal  = ReturnCode.FAIL;
+        Gson gson             = new Gson();
+        Response response     = new Response(ReturnCode.FAIL);
 
         try{
             Liquidity liquidity = gson.fromJson(body, Liquidity.class);
@@ -70,17 +69,9 @@ public class LiquidityRestController {
                     break;
             }
 
-            if(returnVal.equals(ReturnCode.SUCCESS.getValue())){
-                response.setResponseWhenSuccess(ReturnCode.SUCCESS.getCode(), null);
-            }else if(returnVal.equals(ReturnCode.NO_DATA.getValue())){
-                response.setResponseWhenFail(ReturnCode.NO_DATA.getCode(), ReturnCode.NO_DATA.getMsg());
-            }else if(returnVal.equals(ReturnCode.DUPLICATION_DATA.getValue())){
-                response.setResponseWhenFail(ReturnCode.DUPLICATION_DATA.getCode(), ReturnCode.DUPLICATION_DATA.getMsg());
-            }else{
-                response.setResponseWhenFail(ReturnCode.FAIL.getCode(), ReturnCode.FAIL.getMsg());
-            }
+            response.setResponse(returnVal);
         }catch(Exception e){
-            response.setResponseWhenFail(ReturnCode.FAIL.getCode(), e.getMessage());
+            response.setResponse(ReturnCode.FAIL);
             log.error("[POST LIQUIDITY] Occur error : {}", e.getMessage());
             e.printStackTrace();
         }

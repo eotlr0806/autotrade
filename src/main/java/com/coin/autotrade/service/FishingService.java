@@ -35,19 +35,9 @@ public class FishingService {
     Gson gson = new Gson();
 
     /* fishing List 를 반환하는 메서드 */
-    public String getFishing(){
-        String returnVal = ReturnCode.NO_DATA.getValue();
-        try{
-            List<Fishing> fishingList = fishingRepository.findAll();
-            if(!fishingList.isEmpty()){
-                returnVal = gson.toJson(fishingList);
-            }
-        }catch(Exception e){
-            returnVal = ReturnCode.FAIL.getValue();
-            log.error("[GET FISHING] Occur error : {}",e.getMessage());
-            e.printStackTrace();
-        }
-        return returnVal;
+    public List<Fishing> getFishing() throws Exception{
+        List<Fishing> fishingList = fishingRepository.findAll();
+        return fishingList;
     }
 
 
@@ -55,16 +45,16 @@ public class FishingService {
      * @return ReturnCode.Fail , ReturnCode.SUCCESS
      */
     @Transactional
-    public String postFishing(Fishing fishing, String userId){
+    public ReturnCode postFishing(Fishing fishing, String userId){
 
-        String returnValue = ReturnCode.FAIL.getValue();
+        ReturnCode returnCode = ReturnCode.FAIL;
         Thread thread      = null;
 
         try{
 
             if(ServiceCommon.isFishingTradeThread(fishing.getId())){
                 log.error("[POST FISHING] Thread is already existed id: {}", fishing.getId());
-                returnValue = ReturnCode.DUPLICATION_DATA.getValue();
+                returnCode = ReturnCode.DUPLICATION_DATA;
             }else{
                 Fishing savedFishing = fishingRepository.getById(fishing.getId());
                 savedFishing.setStatus(DataCommon.STATUS_RUN);
@@ -78,7 +68,7 @@ public class FishingService {
                     fishingRepository.save(savedFishing);
                     thread = new Thread(fishingTrade);
                     ServiceCommon.startThread(thread);  // thread start by async mode
-                    returnValue = ReturnCode.SUCCESS.getValue();
+                    returnCode = ReturnCode.SUCCESS;
                     log.info("[POST FISHING] Start fishing trade thread id : {} ", fishing.getId());
                 }else{
                     log.error("[POST FISHING] Save fishing trade is failed thread id : {} ", fishing.getId());
@@ -93,16 +83,16 @@ public class FishingService {
             log.error("[POST FISHING] Occur error: {}",e.getMessage());
             e.printStackTrace();
         }
-        return returnValue;
+        return returnCode;
     }
 
     /**
      * @return ReturnCode.FAIL, ReturnCode.SUCCESS
      */
     @Transactional
-    public String deleteFishing(Fishing fishing){
+    public ReturnCode deleteFishing(Fishing fishing){
 
-        String returnValue = ReturnCode.FAIL.getValue();
+        ReturnCode returnValue = ReturnCode.FAIL;
 
         try{
             // Thread pool 에서 thread를 가져와 멈춘다.
@@ -116,7 +106,7 @@ public class FishingService {
                 fishingRepository.deleteById(fishing.getId());
             }
             log.info("[DELETE FISHING] Delete thread thread id : {} ", fishing.getId());
-            returnValue = ReturnCode.SUCCESS.getValue();
+            returnValue = ReturnCode.SUCCESS;
         }catch(Exception e){
             log.error("[DELETE FISHING] Occur error : {}",e.getMessage());
             e.printStackTrace();
@@ -130,8 +120,8 @@ public class FishingService {
      * @return ReturnCode.FAIL, ReturnCode.SUCCESS
      */
     @Transactional
-    public String stopFishing(Fishing fishing){
-        String returnValue = ReturnCode.FAIL.getValue();
+    public ReturnCode stopFishing(Fishing fishing){
+        ReturnCode returnCode = ReturnCode.FAIL;
 
         try{
 
@@ -150,13 +140,13 @@ public class FishingService {
             }else{
                 log.info("[STOP FISHING] There is no thread in DB thread id : {}", fishing.getId());
             }
-            returnValue = ReturnCode.SUCCESS.getValue();
+            returnCode = ReturnCode.SUCCESS;
             log.info("[STOP FISHING] Stop thread id : {} ", fishing.getId());
 
         }catch(Exception e){
             log.error("[STOP FISHING] Occur error : {}",e.getMessage());
             e.printStackTrace();
         }
-        return returnValue;
+        return returnCode;
     }
 }

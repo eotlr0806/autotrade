@@ -35,33 +35,23 @@ public class LiquidityService {
     Gson gson = new Gson();
 
     /* liquidity List 를 반환하는 메서드 */
-    public String getLiquidity(){
-        String returnVal = ReturnCode.NO_DATA.getValue();
-        try{
-            List<Liquidity> liquidityList = liquidityRepository.findAll();
-            if(!liquidityList.isEmpty()){
-                returnVal = gson.toJson(liquidityList);
-            }
-        }catch(Exception e){
-            returnVal = ReturnCode.FAIL.getValue();
-            log.error("[GET LIQUIDITY] Occur error : {}",e.getMessage());
-            e.printStackTrace();
-        }
-        return returnVal;
+    public List<Liquidity> getLiquidity() throws Exception{
+        List<Liquidity> liquidityList = liquidityRepository.findAll();
+        return liquidityList;
     }
 
 
     // Start schedule
     @Transactional
-    public String postLiquidity(Liquidity liquidity, String userId){
+    public ReturnCode postLiquidity(Liquidity liquidity, String userId){
 
-        String returnValue = ReturnCode.FAIL.getValue();
-        Thread thread      = null;
+        ReturnCode returnCode = ReturnCode.FAIL;
+        Thread thread         = null;
 
         try{
             if(ServiceCommon.isLiquidityTradeThread(liquidity.getId())){
                 log.error("[POST LIQUIDITY] Thread is already existed id: {}", liquidity.getId());
-                returnValue = ReturnCode.DUPLICATION_DATA.getValue();
+                returnCode = ReturnCode.DUPLICATION_DATA;
             }else{
                 Liquidity savedLiquidity = liquidityRepository.getById(liquidity.getId());
                 savedLiquidity.setStatus(DataCommon.STATUS_RUN);
@@ -75,7 +65,7 @@ public class LiquidityService {
                     liquidityRepository.save(savedLiquidity);                             // DB에 해당 liquidity 저장
                     thread = new Thread(liquidityTrade);
                     ServiceCommon.startThread(thread);                                   // thread start by async mode
-                    returnValue = ReturnCode.SUCCESS.getValue();
+                    returnCode = ReturnCode.SUCCESS;
                     log.info("[POST LIQUIDITY] Start liquidity thread id : {} ", liquidity.getId());
                 }else{
                     log.error("[POST LIQUIDITY] Save liquidity is failed thread id : {} ", liquidity.getId());
@@ -90,14 +80,14 @@ public class LiquidityService {
             log.error("[POST LIQUIDITY] Occur error : {}",e.getMessage());
             e.printStackTrace();
         }
-        return returnValue;
+        return returnCode;
     }
 
     // Delete schedule
     @Transactional
-    public String deleteLiquidity(Liquidity liquidity){
+    public ReturnCode deleteLiquidity(Liquidity liquidity){
 
-        String returnValue = ReturnCode.FAIL.getValue();
+        ReturnCode returnCode = ReturnCode.FAIL;
         try{
             // Thread pool 에서 thread를 가져와 멈춘다.
             LiquidityTradeThread thread = ServiceCommon.popLiquidityThread(liquidity.getId());
@@ -108,21 +98,21 @@ public class LiquidityService {
             if(liquidityRepository.existsById(liquidity.getId())){
                 liquidityRepository.deleteById(liquidity.getId());
             }
-            returnValue = ReturnCode.SUCCESS.getValue();
+            returnCode = ReturnCode.SUCCESS;
             log.info("[DELETE LIQUIDITY] Delete liquidity thread id : {} ", liquidity.getId());
         }catch(Exception e){
             log.error("[DELETE LIQUIDITY] Occur error : {}",e.getMessage());
             e.printStackTrace();
         }
 
-        return returnValue;
+        return returnCode;
     }
 
 
     // Delete schedule
     @Transactional
-    public String stopLiquidity(Liquidity liquidity){
-        String returnValue = ReturnCode.FAIL.getValue();
+    public ReturnCode stopLiquidity(Liquidity liquidity){
+        ReturnCode returnCode = ReturnCode.FAIL;
 
         try{
 
@@ -140,13 +130,13 @@ public class LiquidityService {
             }else{
                 log.info("[STOP LIQUIDITY] There is no thread in DB thread id : {}", liquidity.getId());
             }
-            returnValue = ReturnCode.SUCCESS.getValue();
+            returnCode = ReturnCode.SUCCESS;
             log.info("[STOP LIQUIDITY] Stop thread id : {}", liquidity.getId());
 
         }catch(Exception e){
             log.error("[STOP LIQUIDITY] Occur error : {}",e.getMessage());
             e.printStackTrace();
         }
-        return returnValue;
+        return returnCode;
     }
 }

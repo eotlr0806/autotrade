@@ -17,14 +17,8 @@ public class ExchangeService {
     ExchangeRepository exchangeRepository;
 
     /* Coin List를 가져오는 서비스 */
-    public List<Exchange> getExchanges(){
-
-        List<Exchange> returnEx = new ArrayList<>();
-        try{
-            returnEx = exchangeRepository.findAll();
-        }catch (Exception e){
-            log.error("[GET EXCHANGE] Occur error when finding exchange list {}", e.getMessage());
-        }
+    public List<Exchange> getExchanges() throws Exception{
+        List<Exchange> returnEx = exchangeRepository.findAll();
         return returnEx;
     }
 

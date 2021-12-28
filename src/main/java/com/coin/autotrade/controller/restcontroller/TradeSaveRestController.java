@@ -20,14 +20,14 @@ public class TradeSaveRestController {
     @PostMapping(value = "/v1/trade/save")
     public String saveTrade(@RequestBody String body) {
 
-        Response response = new Response();
+        Response response = new Response(ReturnCode.FAIL);
         try{
-            String returnVal = tradeService.saveTrade(body);
-            if(returnVal.equals(ReturnCode.SUCCESS.getValue())){
-                response.setResponseWhenSuccess(ReturnCode.SUCCESS.getCode(), null);
+            ReturnCode returnVal = tradeService.saveTrade(body);
+            response.setResponse(returnVal);
+            if(returnVal == ReturnCode.SUCCESS){
                 log.info("[SAVE TRADE] Success saving trade : {}", body);
             }else{
-                response.setResponseWhenFail(ReturnCode.FAIL.getCode(), ReturnCode.FAIL.getMsg());
+                log.error("[SAVE TRADE] Fail saving trade : {}", body);
             }
         }catch(Exception e){
             log.error("[SAVE TRADE] Occur error : {}", e.getMessage());

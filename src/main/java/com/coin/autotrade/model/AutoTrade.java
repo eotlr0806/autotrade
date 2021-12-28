@@ -1,6 +1,7 @@
 package com.coin.autotrade.model;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import org.hibernate.annotations.DynamicUpdate;
 
 import javax.persistence.Column;
@@ -8,7 +9,8 @@ import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
 
-@Data
+@Getter
+@Setter
 @Entity
 @Table(name = "autotrade")
 @DynamicUpdate

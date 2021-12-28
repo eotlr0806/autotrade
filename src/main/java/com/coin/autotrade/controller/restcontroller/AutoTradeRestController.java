@@ -1,13 +1,11 @@
 package com.coin.autotrade.controller.restcontroller;
 
-import ch.qos.logback.core.joran.conditional.ElseAction;
 import com.coin.autotrade.common.Response;
 import com.coin.autotrade.common.code.ReturnCode;
 import com.coin.autotrade.common.code.SessionKey;
 import com.coin.autotrade.model.AutoTrade;
 import com.coin.autotrade.service.AutoTradeService;
 import com.google.gson.Gson;
-import com.sun.xml.bind.v2.TODO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 @RestController
 @Slf4j
@@ -30,20 +29,17 @@ public class AutoTradeRestController {
      */
     @GetMapping(value = "/v1/trade/auto")
     public String getAutoTrade() {
-        Response response = new Response();
+        Response response = new Response(ReturnCode.FAIL);
         try{
-            String autoList = service.getAutoTrade();
-            if(autoList.equals(ReturnCode.NO_DATA.getValue())){
-                response.setResponseWhenFail(ReturnCode.NO_DATA.getCode(), ReturnCode.NO_DATA.getMsg());
-            }else if(autoList.equals(ReturnCode.FAIL.getValue())){
-                response.setResponseWhenFail(ReturnCode.FAIL.getCode(), ReturnCode.FAIL.getMsg());
+            List<AutoTrade> autoList = service.getAutoTrade();
+            if(autoList.isEmpty()){
+                response.setResponse(ReturnCode.NO_DATA);
             }else{
-                response.setResponseWhenSuccess(ReturnCode.SUCCESS.getCode(), autoList);
+                response.setResponseWithObject(ReturnCode.SUCCESS, autoList);
             }
-            log.info("[GET AUTOTRADE] Get autotrade list : {}", autoList);
+            log.info("[GET AUTOTRADE] Get autotrade success :{}", autoList);
         }catch(Exception e){
             log.error("[GET AUTOTRADE] {}", e.getMessage());
-            response.setResponseWhenFail(ReturnCode.FAIL.getCode(), ReturnCode.FAIL.getMsg());
             e.printStackTrace();
         }
         return response.toString();
@@ -59,9 +55,9 @@ public class AutoTradeRestController {
     @PostMapping(value = "/v1/trade/auto")
     public String postAutoTrade(HttpServletRequest request, @RequestBody String body) {
 
-        String returnVal  = ReturnCode.FAIL.getValue();
-        Gson gson         = new Gson();
-        Response response = new Response();
+        ReturnCode returnVal  = ReturnCode.FAIL;
+        Response response     = new Response(ReturnCode.FAIL);
+        Gson gson             = new Gson();
 
         try{
             AutoTrade autoTrade = gson.fromJson(body, AutoTrade.class);
@@ -79,19 +75,10 @@ public class AutoTradeRestController {
                 default:
                     break;
             }
-
-            if(returnVal.equals(ReturnCode.SUCCESS.getValue())){
-                response.setResponseWhenSuccess(ReturnCode.SUCCESS.getCode(), null);
-            }else if(returnVal.equals(ReturnCode.NO_DATA.getValue())){
-                response.setResponseWhenFail(ReturnCode.NO_DATA.getCode(), ReturnCode.NO_DATA.getMsg());
-            }else if(returnVal.equals(ReturnCode.DUPLICATION_DATA.getValue())){
-                response.setResponseWhenFail(ReturnCode.DUPLICATION_DATA.getCode(), ReturnCode.DUPLICATION_DATA.getMsg());
-            }else{
-                response.setResponseWhenFail(ReturnCode.FAIL.getCode(), ReturnCode.FAIL.getMsg());
-            }
+            response.setResponse(returnVal);
 
         }catch(Exception e){
-            response.setResponseWhenFail(ReturnCode.FAIL.getCode(), e.getMessage());
+            response.setResponse(ReturnCode.FAIL);
             log.error("[POST AUTOTRADE] error : {}", e.getMessage());
             e.printStackTrace();
         }

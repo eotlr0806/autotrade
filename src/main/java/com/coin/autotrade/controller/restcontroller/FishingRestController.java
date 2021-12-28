@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 @RestController
 @Slf4j
@@ -26,19 +27,17 @@ public class FishingRestController {
     /* Liquidity Get */
     @GetMapping(value = "/v1/trade/fishing")
     public String getFishingTrade() {
-        Response response = new Response();
+        Response response = new Response(ReturnCode.FAIL);
         try{
-            String fishingList = service.getFishing();
-            if(fishingList.equals(ReturnCode.NO_DATA.getValue())){
-                response.setResponseWhenFail(ReturnCode.NO_DATA.getCode(), ReturnCode.NO_DATA.getMsg());
-            }else if(fishingList.equals(ReturnCode.FAIL.getValue())){
-                response.setResponseWhenFail(ReturnCode.FAIL.getCode(), ReturnCode.FAIL.getMsg());
+            List<Fishing> fishingList = service.getFishing();
+            if(fishingList.isEmpty()){
+                response.setResponse(ReturnCode.NO_DATA);
             }else{
-                response.setResponseWhenSuccess(ReturnCode.SUCCESS.getCode(), fishingList);
+                response.setResponseWithObject(ReturnCode.SUCCESS, fishingList);
             }
             log.info("[GET FISHING TRADE] Get fishingtrade list : {}", fishingList);
         }catch(Exception e){
-            response.setResponseWhenFail(ReturnCode.FAIL.getCode(), ReturnCode.FAIL.getMsg());
+            response.setResponse(ReturnCode.FAIL);
             log.error("[GET FISHING TRADE] Occur error : {} ", e.getMessage());
             e.printStackTrace();
         }
@@ -51,9 +50,9 @@ public class FishingRestController {
     @PostMapping(value = "/v1/trade/fishing")
     public String postFishingTrade(HttpServletRequest request, @RequestBody String body) {
 
-        String returnVal  = ReturnCode.FAIL.getValue();
-        Response response = new Response();
-        Gson gson         = new Gson();
+        ReturnCode returnVal  = ReturnCode.FAIL;
+        Response response     = new Response(ReturnCode.FAIL);
+        Gson gson             = new Gson();
 
         try{
             Fishing fishing = gson.fromJson(body, Fishing.class);
@@ -72,15 +71,7 @@ public class FishingRestController {
                     break;
             }
 
-            if(returnVal.equals(ReturnCode.SUCCESS.getValue())){
-                response.setResponseWhenSuccess(ReturnCode.SUCCESS.getCode(), null);
-            }else if(returnVal.equals(ReturnCode.NO_DATA.getValue())){
-                response.setResponseWhenFail(ReturnCode.NO_DATA.getCode(), ReturnCode.NO_DATA.getMsg());
-            }else if(returnVal.equals(ReturnCode.DUPLICATION_DATA.getValue())){
-                response.setResponseWhenFail(ReturnCode.DUPLICATION_DATA.getCode(), ReturnCode.DUPLICATION_DATA.getMsg());
-            }else{
-                response.setResponseWhenFail(ReturnCode.FAIL.getCode(), ReturnCode.FAIL.getMsg());
-            }
+            response.setResponse(returnVal);
 
         }catch(Exception e){
             log.error("[POST FISHING TRADE] {} ", e.getMessage());

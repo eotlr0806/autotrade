@@ -32,9 +32,9 @@ public class TradeService {
     private final String FISHING   = "FISHING";
 
     // Start autoTrade
-    public String saveTrade(String trade){
+    public ReturnCode saveTrade(String trade){
 
-        String returnValue = ReturnCode.SUCCESS.getValue();
+        ReturnCode returnValue = ReturnCode.SUCCESS;
 
         try{
             Gson gson = new Gson();
@@ -58,7 +58,7 @@ public class TradeService {
                 fishingRepository.save(fishing);                    // DB에 해당 liquiditiy 저장
             }else{
                 log.error("[SAVE TRADE] Saving type is not correct : {}", trade);
-                returnValue = ReturnCode.FAIL.getValue();
+                returnValue = ReturnCode.FAIL;
             }
         }catch(Exception e){
             log.error("[SAVE TRADE] Occur error : {}",e.getMessage());

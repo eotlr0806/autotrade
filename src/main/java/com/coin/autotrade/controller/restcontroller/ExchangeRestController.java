@@ -22,25 +22,22 @@ public class ExchangeRestController {
     @Autowired
     ExchangeService service;
 
-
-
     @GetMapping(value = "/v1/exchanges")
     public String getExchanges(){
-        Gson gson                   = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();
-        Response response           = new Response();
+
+        Response response           = new Response(ReturnCode.FAIL);
         try{
             // stack over flow 를 방지하기 위해, expose 어노테이션을 준 필드는 가져오지 않게 설정.
             List<Exchange> exchangeList = service.getExchanges();
-
             if(!exchangeList.isEmpty()){
-                response.setResponseWhenSuccess(ReturnCode.SUCCESS.getCode(), gson.toJson(exchangeList));
+                response.setResponseWithObject(ReturnCode.SUCCESS, exchangeList);
             }else{
                 log.info("[GET EXCHANGE] There is no exchages");
-                response.setResponseWhenFail(ReturnCode.NO_DATA.getCode(), ReturnCode.NO_DATA.getMsg());
+                response.setResponse(ReturnCode.NO_DATA);
             }
         }catch (Exception e){
             log.error("[GET EXCHANGE] {}",e.getMessage());
-            response.setResponseWhenFail(ReturnCode.FAIL.getCode(), e.getMessage());
+            response.setResponse(ReturnCode.FAIL);
         }
         return response.toString();
     }
