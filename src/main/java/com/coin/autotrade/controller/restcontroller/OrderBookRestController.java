@@ -2,11 +2,7 @@ package com.coin.autotrade.controller.restcontroller;
 
 import com.coin.autotrade.common.Response;
 import com.coin.autotrade.common.code.ReturnCode;
-import com.coin.autotrade.service.parser.OrderBookParser;
-import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
+import com.coin.autotrade.service.OrderBookService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,20 +18,21 @@ import java.util.List;
 public class OrderBookRestController {
 
     @Autowired
-    OrderBookParser orderBook;
+    OrderBookService orderBook;
 
     @GetMapping(value = "/v1/orderbook")
     public String getOrderbook(@RequestParam HashMap<String, String> params) {
         Response response = new Response(ReturnCode.FAIL);
-        Gson gson         = new Gson();
         try{
 
             if(isData(params)){
-                String orders = orderBook.getOrderBook(params.get("exchange"), params.get("currency"), params.get("userId"));
+                String orders = orderBook.getOrderBook(Long.parseLong(params.get("exchange")), params.get("currency"), params.get("userId"));
                 List<String> orderList = new ArrayList<>();
                 orderList.add(orders);
 
-                if(orders.equals(ReturnCode.NO_DATA.getValue())){
+                if(orders.equals(ReturnCode.FAIL.getValue())){
+                    response.setResponse(ReturnCode.FAIL);
+                }else if(orders.equals(ReturnCode.NO_DATA.getValue())){
                     response.setResponse(ReturnCode.NO_DATA);
                 }else{
                     response.setResponseWithObject(ReturnCode.SUCCESS, orderList);

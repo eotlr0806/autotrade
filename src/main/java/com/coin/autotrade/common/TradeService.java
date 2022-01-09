@@ -1,10 +1,12 @@
 package com.coin.autotrade.common;
 
-import com.coin.autotrade.service.function.*;
+import com.coin.autotrade.service.exchangeimp.*;
 import com.coin.autotrade.service.thread.AutoTradeThread;
 import com.coin.autotrade.service.thread.FishingTradeThread;
 import com.coin.autotrade.service.thread.LiquidityTradeThread;
-import com.google.gson.JsonObject;
+import com.coin.autotrade.service.thread.RealtimeSyncThread;
+import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 
@@ -15,11 +17,33 @@ import java.util.*;
 
 /*** 공통으로 쓰이는 서비스 로직을 담은 클래스 */
 @Slf4j
-public class ServiceCommon {
+public class TradeService {
 
-    public static Random random          = null;
-    public static Object synchronizedObj = new Object();
+    private static Random random     = null;
+    private static Gson gson         = null;
+    private static JsonMapper mapper = null;
 
+    /**
+     * 공통으로 사용하는 Gson 객체 반환
+     * @return
+     */
+    public static Gson getGson() {
+        if(gson == null){
+            gson = new Gson();
+        }
+        return gson;
+    }
+
+    /**
+     * 공통으로 사용하는 Gson 객체 반환
+     * @return
+     */
+    public static JsonMapper getMapper() {
+        if(mapper == null){
+            mapper = new JsonMapper();
+        }
+        return mapper;
+    }
 
     /**
      * min 과 max 사이의 값 반환
@@ -73,20 +97,18 @@ public class ServiceCommon {
     @Async
     public static int startThread (Thread thread) throws Exception {
         thread.start();
-        return DataCommon.CODE_SUCCESS;
+        return TradeData.CODE_SUCCESS;
     }
 
     /**
-     * schedule thread를 공통 map 에 담아 보관한다.
+     * schedule thread를 공통 Concurrent Hashmap 에 담아 보관한다.
      * @param thread - Schedule thread object
      * @return - true : 성공 / false / 실패
      */
     public static boolean setAutoTradeThread (Long id, AutoTradeThread thread){
         try{
-            synchronized (synchronizedObj){
-                DataCommon.autoTradeThreadMap.put(id, thread);
-                return true;
-            }
+            TradeData.autoTradeThreadMap.put(id, thread);
+            return true;
         }catch (Exception e){
             log.error("[SET AUTOTRADE THREAD] Fail saving thread Thread id: {}", id);
             e.printStackTrace();
@@ -100,8 +122,8 @@ public class ServiceCommon {
      * @return
      */
     public static AutoTradeThread popAutoTradeThread (long id){
-        AutoTradeThread thread = DataCommon.autoTradeThreadMap.get(id);
-        DataCommon.autoTradeThreadMap.remove(id);
+        AutoTradeThread thread = TradeData.autoTradeThreadMap.get(id);
+        TradeData.autoTradeThreadMap.remove(id);
         return thread;
     }
 
@@ -109,7 +131,7 @@ public class ServiceCommon {
      * @return id 가 있을 경우 true, 없을 경우 false
      * */
     public static boolean isAutoTradeThread(long id){
-        if(DataCommon.autoTradeThreadMap.containsKey(id)){
+        if(TradeData.autoTradeThreadMap.containsKey(id)){
             return true;
         }else{
             return false;
@@ -118,17 +140,16 @@ public class ServiceCommon {
 
 
     /**
-     * liquidity thread를 공통 map 에 담아 보관한다.
+     * liquidity thread를 공통 Concurrent Hashmap 에 담아 보관한다.
      * @param thread - Liquidity thread object
      * @return - true : 성공 / false / 실패
      */
     public static boolean setLiquidityThread (Long id, LiquidityTradeThread thread){
         try{
-            synchronized (synchronizedObj){
-                DataCommon.liquidityThreadMap.put(id, thread);
-                return true;
-            }
+            TradeData.liquidityThreadMap.put(id, thread);
+            return true;
         }catch (Exception e){
+            log.error("[SET LIQUIDITY THREAD] Fail saving thread Thread id: {}", id);
             System.out.println(e.getMessage());
         }
         return false;
@@ -140,8 +161,8 @@ public class ServiceCommon {
      * @return
      */
     public static LiquidityTradeThread popLiquidityThread (long id){
-        LiquidityTradeThread thread = DataCommon.liquidityThreadMap.get(id);
-        DataCommon.liquidityThreadMap.remove(id);
+        LiquidityTradeThread thread = TradeData.liquidityThreadMap.get(id);
+        TradeData.liquidityThreadMap.remove(id);
         return thread;
     }
 
@@ -149,7 +170,7 @@ public class ServiceCommon {
      * @return id 가 있을 경우 true, 없을 경우 false
      * */
     public static boolean isLiquidityTradeThread(long id){
-        if(DataCommon.liquidityThreadMap.containsKey(id)){
+        if(TradeData.liquidityThreadMap.containsKey(id)){
             return true;
         }else{
             return false;
@@ -157,16 +178,14 @@ public class ServiceCommon {
     }
 
     /**
-     * fishing thread를 공통 map 에 담아 보관한다.
+     * fishing thread를 공통 Concurrent Hashmap 에 담아 보관한다.
      * @param thread - Fishing thread object
      * @return - true : 성공 / false / 실패
      */
     public static boolean setFishingThread (Long id, FishingTradeThread thread){
         try{
-            synchronized (synchronizedObj){
-                DataCommon.fishingTradeThreadMap.put(id, thread);
-                return true;
-            }
+            TradeData.fishingTradeThreadMap.put(id, thread);
+            return true;
         }catch (Exception e){
             log.error("[SET FISHING THREAD] Fail saving thread Thread id: {}", id);
             e.printStackTrace();
@@ -180,8 +199,8 @@ public class ServiceCommon {
      * @return
      */
     public static FishingTradeThread popFishingThread (long id){
-        FishingTradeThread thread = DataCommon.fishingTradeThreadMap.get(id);
-        DataCommon.fishingTradeThreadMap.remove(id);
+        FishingTradeThread thread = TradeData.fishingTradeThreadMap.get(id);
+        TradeData.fishingTradeThreadMap.remove(id);
         return thread;
     }
 
@@ -189,47 +208,51 @@ public class ServiceCommon {
      * @return id 가 있을 경우 true, 없을 경우 false
      * */
     public static boolean isFishingTradeThread(long id){
-        if(DataCommon.fishingTradeThreadMap.containsKey(id)){
+        if(TradeData.fishingTradeThreadMap.containsKey(id)){
             return true;
         }else{
             return false;
         }
     }
 
+
     /**
-     * return value를 만들어주는 공통함수
-     * @param code - code 값
-     * @param message - 메세지.
-     * @return
+     * schedule thread를 공통 Concurrent Hashmap 에 담아 보관한다.
+     * @param thread - Schedule thread object
+     * @return - true : 성공 / false / 실패
      */
-    public static String makeReturnValue (Integer code, String data){
-        JsonObject object = new JsonObject();
-        object.addProperty("code",code);
-        String[] dataList = data.split(",");
-        if(dataList.length > 0){
-            for(String token: dataList){
-                String[] dataObject = token.split(":");
-                if(dataObject.length > 1){
-                    object.addProperty(dataObject[0].trim(),dataObject[1].trim());
-                }
-            }
+    public static boolean setRealtimeSyncThread (Long id, RealtimeSyncThread thread){
+        try{
+            TradeData.realtimeSyncThreadMap.put(id, thread);
+            return true;
+        }catch (Exception e){
+            log.error("[SET REALTIMESYNC THREAD] Fail saving thread Thread id: {}", id);
+            e.printStackTrace();
         }
-        return object.toString();
+        return false;
     }
 
     /**
-     * make JSON DATA
-     * @param data
+     * schedule thread에서 map 에 값을 remove 후 get해서 반환
+     * @param key
      * @return
      */
-    public static String MakeJsonData(HashMap<String,String> data){
-        JsonObject object = new JsonObject();
-        for(String key : data.keySet()){
-            object.addProperty(key, data.get(key));
-        }
-        return object.toString();
+    public static RealtimeSyncThread popRealtimeSyncThread (long id){
+        RealtimeSyncThread thread = TradeData.realtimeSyncThreadMap.get(id);
+        TradeData.realtimeSyncThreadMap.remove(id);
+        return thread;
     }
 
+    /**
+     * @return id 가 있을 경우 true, 없을 경우 false
+     * */
+    public static boolean isRealtimeSyncThread(long id){
+        if(TradeData.realtimeSyncThreadMap.containsKey(id)){
+            return true;
+        }else{
+            return false;
+        }
+    }
 
     /**
      * 현재 시간 반환
@@ -246,6 +269,7 @@ public class ServiceCommon {
     /**
      * coin;id 로 온 값을 배열로 반환
      * @param coin coin;id
+     * @return String[]에 index 0 에는 coin, 1에는 id를 넘겨준다. ex) [coin, id]
      */
     public static String[] splitCoinWithId(String coin){
         String[] coinData = null;
@@ -258,14 +282,6 @@ public class ServiceCommon {
         return coinData;
     }
 
-    public static String setFormatNum(String num) throws Exception{
-        if(num.indexOf("E") != -1){
-
-            BigDecimal decimalVal = new BigDecimal(Double.parseDouble(num));
-        }
-        return num;
-    }
-
     public static Map deepCopy( Map<String,String> paramMap) throws Exception{
         Map<String, String> copy = new HashMap<String, String>();
         for (String key : paramMap.keySet()){
@@ -275,41 +291,36 @@ public class ServiceCommon {
         return copy;
     }
 
-    public static String replaceLast(String string, String toReplace, String replacement) {
-        int pos = string.lastIndexOf(toReplace);
-        if (pos > -1) {
-            return string.substring(0, pos)+ replacement + string.substring(pos +   toReplace.length(), string.length());
-        } else {
-            return string;
-        }
-    }
 
-    /* 거래소 반환 */
-    public static ExchangeFunction initExchange(String exchange) throws Exception{
+    /**
+     * 해당 거래소에 맞게 인스턴스 반환
+     * @param exchange
+     */
+    public static AbstractExchange getInstance(String exchange) throws Exception{
 
-        ExchangeFunction exchangeFunction = null;
+        AbstractExchange abstractExchange = null;
 
-        if(DataCommon.COINONE.equals(exchange)){
-            exchangeFunction = new CoinOneFunction();
-        } else if(DataCommon.FOBLGATE.equals(exchange)){
-            exchangeFunction = new FoblGateFunction();
-        } else if(DataCommon.FLATA.equals(exchange)){
-            exchangeFunction = new FlataFunction();
-        } else if(DataCommon.DCOIN.equals(exchange)){
-            exchangeFunction = new DcoinFunction();
-        } else if(DataCommon.BITHUMB_GLOBAL.equals(exchange)){
-            exchangeFunction = new BithumbGlobalFunction();
-        } else if(DataCommon.BITHUMB.equals(exchange)){
-            exchangeFunction = new BithumbFunction();
-        } else if(DataCommon.KUCOIN.equals(exchange)){
-            exchangeFunction = new KucoinFunction();
-        } else if(DataCommon.OKEX.equals(exchange)){
-            exchangeFunction = new OkexFunction();
-        } else if(DataCommon.GATEIO.equals(exchange)){
-            exchangeFunction = new GateIoFunction();
+        if(TradeData.COINONE.equals(exchange)){
+            abstractExchange = new CoinOneImp();
+        } else if(TradeData.FOBLGATE.equals(exchange)){
+            abstractExchange = new FoblGateImp();
+        } else if(TradeData.FLATA.equals(exchange)){
+            abstractExchange = new FlataImp();
+        } else if(TradeData.DCOIN.equals(exchange)){
+            abstractExchange = new DcoinImp();
+        } else if(TradeData.BITHUMB_GLOBAL.equals(exchange)){
+            abstractExchange = new BithumbGlobalImp();
+        } else if(TradeData.BITHUMB.equals(exchange)){
+            abstractExchange = new BithumbImp();
+        } else if(TradeData.KUCOIN.equals(exchange)){
+            abstractExchange = new KucoinImp();
+        } else if(TradeData.OKEX.equals(exchange)){
+            abstractExchange = new OkexImp();
+        } else if(TradeData.GATEIO.equals(exchange)){
+            abstractExchange = new GateIoImp();
         }
 
-        return exchangeFunction;
+        return abstractExchange;
     }
 
 }

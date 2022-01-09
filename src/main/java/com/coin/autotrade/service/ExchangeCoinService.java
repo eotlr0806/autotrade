@@ -1,17 +1,13 @@
 package com.coin.autotrade.service;
 
-import com.coin.autotrade.common.DataCommon;
+import com.coin.autotrade.common.TradeService;
 import com.coin.autotrade.common.code.ReturnCode;
-import com.coin.autotrade.model.Exchange;
 import com.coin.autotrade.model.ExchangeCoin;
 import com.coin.autotrade.repository.ExchangeCoinRepository;
-import com.coin.autotrade.repository.ExchangeRepository;
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Service
 @Slf4j
@@ -20,15 +16,13 @@ public class ExchangeCoinService {
     @Autowired
     ExchangeCoinRepository exchangeCoinRepository;
 
-    Gson gson = new Gson();
-
     /**
      * @param coin coin id 가 없을 경우 insert, 존재할 경우 update
      * @return ReturnCode.FAIL, ReturnCode.SUCCESS
      */
     public ReturnCode insertUpdateCoin(ExchangeCoin coin){
         ReturnCode returnCode = ReturnCode.FAIL;
-
+        Gson gson             = TradeService.getGson();
         try{
             // coin id 가 넘어오면 Update로 변경
             if(coin.getId() == null){

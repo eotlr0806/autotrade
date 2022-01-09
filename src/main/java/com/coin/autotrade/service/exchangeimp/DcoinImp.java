@@ -1,8 +1,8 @@
-package com.coin.autotrade.service.function;
+package com.coin.autotrade.service.exchangeimp;
 
 import com.coin.autotrade.common.BeanUtils;
-import com.coin.autotrade.common.DataCommon;
-import com.coin.autotrade.common.ServiceCommon;
+import com.coin.autotrade.common.TradeData;
+import com.coin.autotrade.common.TradeService;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.repository.ExchangeRepository;
 import com.coin.autotrade.service.CoinService;
@@ -22,44 +22,41 @@ import java.security.MessageDigest;
 import java.util.*;
 
 @Slf4j
-public class DcoinFunction extends ExchangeFunction{
+public class DcoinImp extends AbstractExchange {
 
     final private String ACCESS_TOKEN         = "apiToken";
     final private String SECRET_KEY           = "secretKey";
     final private String BUY                  = "BUY";
     final private String SELL                 = "SELL";
     private Map<String, String> keyList       = new HashMap<>();
-    private ExchangeRepository exchageRepository;
 
 
     @Override
-    public void initClass(AutoTrade autoTrade, User user, Exchange exchange){
+    public void initClass(AutoTrade autoTrade){
         super.autoTrade = autoTrade;
-        setCommonValue(user, exchange);
-        setCoinToken(ServiceCommon.splitCoinWithId(autoTrade.getCoin()));
+        setCoinToken(TradeService.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
     }
 
     @Override
-    public void initClass(Liquidity liquidity, User user, Exchange exchange){
+    public void initClass(Liquidity liquidity){
         super.liquidity = liquidity;
-        setCommonValue(user, exchange);
-        setCoinToken(ServiceCommon.splitCoinWithId(liquidity.getCoin()));
+        setCoinToken(TradeService.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
     }
 
     @Override
-    public void initClass(Fishing fishing , User user,  Exchange exchange,CoinService coinService){
+    public void initClass(RealtimeSync realtimeSync){
+        super.realtimeSync = realtimeSync;
+        setCoinToken(TradeService.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
+    }
+
+    @Override
+    public void initClass(Fishing fishing ,CoinService coinService){
         super.fishing     = fishing;
         super.coinService = coinService;
-        setCommonValue(user, exchange);
-        setCoinToken(ServiceCommon.splitCoinWithId(fishing.getCoin()));
+        setCoinToken(TradeService.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
     }
 
-    private void setCommonValue(User user,  Exchange exchange){
-        super.user     = user;
-        super.exchange = exchange;
-    }
-
-    private void setCoinToken(String[] coinData){
+    private void setCoinToken(String[] coinData, Exchange exchange){
         // Set token key
         try{
             for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
@@ -83,25 +80,25 @@ public class DcoinFunction extends ExchangeFunction{
 
         log.info("[DCOIN][AUTOTRADE] Start");
 
-        int returnCode = DataCommon.CODE_SUCCESS;
+        int returnCode = TradeData.CODE_SUCCESS;
         try{
-            String[] coinData = ServiceCommon.splitCoinWithId(autoTrade.getCoin());
-            String     symbol = coinData[0] + "" + getCurrency(getExchange(), coinData[0], coinData[1]);
+            String[] coinData = TradeService.splitCoinWithId(autoTrade.getCoin());
+            String     symbol = coinData[0] + "" + getCurrency(autoTrade.getExchange(), coinData[0], coinData[1]);
 
             // mode 처리
             String mode = autoTrade.getMode();
-            if(DataCommon.MODE_RANDOM.equals(mode)){
-                mode = (ServiceCommon.getRandomInt(0,1) == 0) ? DataCommon.MODE_BUY : DataCommon.MODE_SELL;
+            if(TradeData.MODE_RANDOM.equals(mode)){
+                mode = (TradeService.getRandomInt(0,1) == 0) ? TradeData.MODE_BUY : TradeData.MODE_SELL;
             }
 
-            if(DataCommon.MODE_BUY.equals(mode)){
+            if(TradeData.MODE_BUY.equals(mode)){
                 String orderId = "";
                 if(!(orderId = createOrder("BUY",price, cnt, symbol)).equals("")){
                     if(createOrder("SELL",price, cnt, symbol).equals("")){          // SELL 모드가 실패 시,
                         cancelOrder(symbol, orderId);
                     }
                 }
-            }else if(DataCommon.MODE_SELL.equals(mode)){
+            }else if(TradeData.MODE_SELL.equals(mode)){
                 String orderId = "";
                 if(!(orderId = createOrder("SELL",price, cnt, symbol)).equals("")){
                     if(createOrder("BUY",price, cnt, symbol).equals("")){           // BUY 모드가 실패 시,
@@ -110,7 +107,7 @@ public class DcoinFunction extends ExchangeFunction{
                 }
             }
         }catch (Exception e){
-            returnCode = DataCommon.CODE_ERROR;
+            returnCode = TradeData.CODE_ERROR;
             log.error("[DCOIN][ERROR][AUTOTRADE] {}", e.getMessage());
         }
 
@@ -122,7 +119,7 @@ public class DcoinFunction extends ExchangeFunction{
     /* 호가유동성 메서드 */
     @Override
     public int startLiquidity(Map list){
-        int returnCode = DataCommon.CODE_SUCCESS;
+        int returnCode = TradeData.CODE_SUCCESS;
 
         Queue<String> sellQueue = (LinkedList) list.get("sell");
         Queue<String> buyQueue  = (LinkedList) list.get("buy");
@@ -130,21 +127,21 @@ public class DcoinFunction extends ExchangeFunction{
 
         try{
             log.info("[DCOIN][LIQUIDITY] Start");
-            String[] coinData = ServiceCommon.splitCoinWithId(liquidity.getCoin());
-            String symbol     = coinData[0] + "" + getCurrency(getExchange(),coinData[0], coinData[1]);
+            String[] coinData = TradeService.splitCoinWithId(liquidity.getCoin());
+            String symbol     = coinData[0] + "" + getCurrency(liquidity.getExchange(),coinData[0], coinData[1]);
             int minCnt        = liquidity.getMinCnt();
             int maxCnt        = liquidity.getMaxCnt();
 
 
 
             while(sellQueue.size() > 0 || buyQueue.size() > 0){
-                String randomMode = (ServiceCommon.getRandomInt(1,2) == 1) ? BUY : SELL;
+                String randomMode = (TradeService.getRandomInt(1,2) == 1) ? BUY : SELL;
                 String firstOrderId    = "";
                 String secondsOrderId  = "";
                 String firstPrice      = "";
                 String secondsPrice    = "";
-                String firstCnt        = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double)minCnt, (double)maxCnt) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
-                String secondsCnt      = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double)minCnt, (double)maxCnt) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
+                String firstCnt        = String.valueOf(Math.floor(TradeService.getRandomDouble((double)minCnt, (double)maxCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
+                String secondsCnt      = String.valueOf(Math.floor(TradeService.getRandomDouble((double)minCnt, (double)maxCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
 
                 if(sellQueue.size() > 0 && buyQueue.size() > 0 && randomMode.equals(BUY)){
                     firstPrice   = buyQueue.poll();
@@ -174,7 +171,7 @@ public class DcoinFunction extends ExchangeFunction{
                 }
             }
         }catch (Exception e){
-            returnCode = DataCommon.CODE_ERROR;
+            returnCode = TradeData.CODE_ERROR;
             log.error("[DCOIN][ERROR][LIQUIDITY] {}", e.getMessage());
         }
         log.info("[DCOIN][LIQUIDITY] End");
@@ -185,16 +182,16 @@ public class DcoinFunction extends ExchangeFunction{
     public int startFishingTrade(Map<String,List> list, int intervalTime){
         log.info("[DCOIN][FISHINGTRADE START]");
 
-        int returnCode    = DataCommon.CODE_SUCCESS;
+        int returnCode    = TradeData.CODE_SUCCESS;
 
         try{
-            String[] coinData = ServiceCommon.splitCoinWithId(fishing.getCoin());
-            String     symbol = coinData[0] + "" + getCurrency(getExchange(), coinData[0], coinData[1]);
+            String[] coinData = TradeService.splitCoinWithId(fishing.getCoin());
+            String     symbol = coinData[0] + "" + getCurrency(fishing.getExchange(), coinData[0], coinData[1]);
 
             // mode 처리
             String mode = fishing.getMode();
-            if(DataCommon.MODE_RANDOM.equals(mode)){
-                mode = (ServiceCommon.getRandomInt(0,1) == 0) ? DataCommon.MODE_BUY : DataCommon.MODE_SELL;
+            if(TradeData.MODE_RANDOM.equals(mode)){
+                mode = (TradeService.getRandomInt(0,1) == 0) ? TradeData.MODE_BUY : TradeData.MODE_SELL;
             }
 
             boolean noIntervalFlag   = true;    // 해당 플래그를 이용해 마지막 매도/매수 후 바로 intervalTime 없이 바로 다음 매수/매도 진행
@@ -206,9 +203,9 @@ public class DcoinFunction extends ExchangeFunction{
 
             /* Start */
             for (int i = 0; i < tickPriceList.size(); i++) {
-                String cnt = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double) fishing.getMinContractCnt(), (double) fishing.getMaxContractCnt()) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
+                String cnt = String.valueOf(Math.floor(TradeService.getRandomDouble((double) fishing.getMinContractCnt(), (double) fishing.getMaxContractCnt()) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
                 String orderId = "";
-                if(DataCommon.MODE_BUY.equals(mode)) {
+                if(TradeData.MODE_BUY.equals(mode)) {
                     orderId = createOrder("BUY", tickPriceList.get(i), cnt, symbol);
                 }else{
                     orderId = createOrder("SELL", tickPriceList.get(i), cnt, symbol);
@@ -224,14 +221,14 @@ public class DcoinFunction extends ExchangeFunction{
 
             /* Sell Start */
             for (int i = orderList.size() - 1; i >= 0; i--) {
-                Map<String, String> copiedOrderMap = ServiceCommon.deepCopy(orderList.get(i));
+                Map<String, String> copiedOrderMap = TradeService.deepCopy(orderList.get(i));
                 BigDecimal cnt                     = new BigDecimal(copiedOrderMap.get("cnt"));
 
                 while (cnt.compareTo(new BigDecimal("0")) > 0) {
                     if (!noMatchFirstTick) break;                   // 최신 매도/매수 건 값이 다를경우 돌 필요 없음.
                     if (noIntervalFlag) Thread.sleep(intervalTime); // intervalTime 만큼 휴식 후 매수 시작
                     String orderId            = "";
-                    BigDecimal cntForExcution = new BigDecimal(String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double) fishing.getMinExecuteCnt(), (double) fishing.getMaxExecuteCnt()) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL));
+                    BigDecimal cntForExcution = new BigDecimal(String.valueOf(Math.floor(TradeService.getRandomDouble((double) fishing.getMinExecuteCnt(), (double) fishing.getMaxExecuteCnt()) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL));
                     // 남은 코인 수와 매도/매수할 코인수를 비교했을 때, 남은 코인 수가 더 적다면.
                     if (cnt.compareTo(cntForExcution) < 0) {
                         cntForExcution = cnt;
@@ -241,10 +238,10 @@ public class DcoinFunction extends ExchangeFunction{
                     }
                     // 매도/매수 날리기전에 최신 매도/매수값이 내가 건 값이 맞는지 확인
                     String nowFirstTick = "";
-                    if(DataCommon.MODE_BUY.equals(mode)) {
-                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(DataCommon.MODE_BUY);
+                    if(TradeData.MODE_BUY.equals(mode)) {
+                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(TradeData.MODE_BUY);
                     }else{
-                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(DataCommon.MODE_SELL);
+                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(TradeData.MODE_SELL);
                     }
                     String orderPrice = copiedOrderMap.get("price");
                     if (!orderPrice.equals(nowFirstTick)) {
@@ -253,7 +250,7 @@ public class DcoinFunction extends ExchangeFunction{
                         break;
                     }
 
-                    if(DataCommon.MODE_BUY.equals(mode)) {
+                    if(TradeData.MODE_BUY.equals(mode)) {
                         orderId = createOrder("SELL", copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol);
                     }else{
                         orderId = createOrder("BUY", copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol);
@@ -271,7 +268,7 @@ public class DcoinFunction extends ExchangeFunction{
 
             }
         }catch (Exception e){
-            returnCode = DataCommon.CODE_ERROR;
+            returnCode = TradeData.CODE_ERROR;
             log.error("[DCOIN][ERROR][FISHINGTRADE] {}", e.getMessage());
         }
 
@@ -295,13 +292,13 @@ public class DcoinFunction extends ExchangeFunction{
 
             String encodedData = "symbol=" + URLEncoder.encode(symbol) + "&type=" + URLEncoder.encode("step0");
 
-            String request = DataCommon.DCOIN_ORDERBOOK + "?" + encodedData;
+            String request = TradeData.DCOIN_ORDERBOOK + "?" + encodedData;
             URL url = new URL(request);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestProperty("Context-Type", "application/x-www-form-urlencoded");
             connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
-            connection.setConnectTimeout(DataCommon.TIMEOUT_VALUE);
-            connection.setReadTimeout(DataCommon.TIMEOUT_VALUE);
+            connection.setConnectTimeout(TradeData.TIMEOUT_VALUE);
+            connection.setReadTimeout(TradeData.TIMEOUT_VALUE);
 
             log.info("[DCOIN][ORDER BOOK - Request]  symbol:{}, type:{}", symbol, "step0");
 
@@ -320,22 +317,6 @@ public class DcoinFunction extends ExchangeFunction{
         }
 
         return returnRes;
-    }
-
-
-    /** 생성자로서, 생성될 때, injection**/
-    public DcoinFunction(){
-        exchageRepository   = (ExchangeRepository) BeanUtils.getBean(ExchangeRepository.class);
-    }
-
-    /* 호가 조회 시, 사용하기위해 Set */
-    public void setExchange(Exchange exchange){
-        super.exchange = exchange;
-    }
-
-    /* 호가 조회 시, 사용하기위해 get */
-    public Exchange getExchange(){
-        return super.exchange;
     }
 
     /**
@@ -361,7 +342,7 @@ public class DcoinFunction extends ExchangeFunction{
             header.addProperty("sign",  createSign(gson.toJson(header)));
 
             String params = makeEncodedParas(header);
-            JsonObject json = postHttpMethod(DataCommon.DCOIN_CREATE_ORDER, params);
+            JsonObject json = postHttpMethod(TradeData.DCOIN_CREATE_ORDER, params);
             String result = json.get("code").toString().replace("\"", "");
             if ("0".equals(result)) {
                 String data        = json.get("data").toString().replace("\"", "");
@@ -383,7 +364,7 @@ public class DcoinFunction extends ExchangeFunction{
      */
     public int cancelOrder(String symbol, String orderId) {
 
-        int returnValue = DataCommon.CODE_ERROR;
+        int returnValue = TradeData.CODE_ERROR;
         String errorCode = "";
         String errorMsg = "";
 
@@ -394,10 +375,10 @@ public class DcoinFunction extends ExchangeFunction{
             header.addProperty("symbol", symbol.toLowerCase());
             header.addProperty("sign", createSign(gson.toJson(header)));
 
-            JsonObject json = postHttpMethod(DataCommon.DCOIN_CANCEL_ORDER, makeEncodedParas(header));
+            JsonObject json = postHttpMethod(TradeData.DCOIN_CANCEL_ORDER, makeEncodedParas(header));
             String result   = json.get("code").toString().replace("\"", "");
             if ("0".equals(result)) {
-                returnValue = DataCommon.CODE_SUCCESS;
+                returnValue = TradeData.CODE_SUCCESS;
                 log.info("[DCOIN][SUCCESS][CANCEL ORDER - response] response:{}", gson.toJson(json));
             } else {
                 log.error("[DCOIN][ERROR][CANCEL ORDER - response] response:{}", gson.toJson(json));
@@ -478,8 +459,8 @@ public class DcoinFunction extends ExchangeFunction{
             connection.setDoOutput(true);
             connection.setDoInput(true);
             connection.setRequestMethod("POST");
-            connection.setConnectTimeout(DataCommon.TIMEOUT_VALUE);
-            connection.setReadTimeout(DataCommon.TIMEOUT_VALUE);
+            connection.setConnectTimeout(TradeData.TIMEOUT_VALUE);
+            connection.setReadTimeout(TradeData.TIMEOUT_VALUE);
             connection.setRequestProperty("Context-Type", "application/x-www-form-urlencoded");
             connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
 

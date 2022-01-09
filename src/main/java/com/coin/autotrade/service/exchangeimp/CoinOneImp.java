@@ -1,8 +1,8 @@
-package com.coin.autotrade.service.function;
+package com.coin.autotrade.service.exchangeimp;
 
 
-import com.coin.autotrade.common.DataCommon;
-import com.coin.autotrade.common.ServiceCommon;
+import com.coin.autotrade.common.TradeData;
+import com.coin.autotrade.common.TradeService;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
 import com.google.gson.Gson;
@@ -27,7 +27,7 @@ import java.util.*;
  * Coin one 에서 사용할 class
  */
 @Slf4j
-public class CoinOneFunction extends ExchangeFunction{
+public class CoinOneImp extends AbstractExchange {
 
     final private String ACCESS_TOKEN     = "access_token";
     final private String SECRET_KEY       = "secret_key";
@@ -41,22 +41,35 @@ public class CoinOneFunction extends ExchangeFunction{
 
     /** 자전 거래를 이용하기위한 초기값 설정 */
     @Override
-    public void initClass(AutoTrade autoTrade, User user, Exchange exchange) {
+    public void initClass(AutoTrade autoTrade) {
         super.autoTrade = autoTrade;
-        setCommonValue(user, exchange, ServiceCommon.splitCoinWithId(autoTrade.getCoin()));
+        setCoinToken(TradeService.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
     }
 
     /** 호가 유동성을 이용하기 위한 초기값 설정 */
     @Override
-    public void initClass(Liquidity liquidity, User user, Exchange exchange) {
+    public void initClass(Liquidity liquidity) {
         super.liquidity  = liquidity;
-        setCommonValue(user, exchange, ServiceCommon.splitCoinWithId(liquidity.getCoin()));
+        setCoinToken(TradeService.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
+    }
+
+    @Override
+    public void initClass(RealtimeSync realtimeSync){
+        super.realtimeSync = realtimeSync;
+        setCoinToken(TradeService.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
+    }
+
+    /** 매매 긁기를 이용하기 위한 초기값 설정 */
+    @Override
+    public void initClass(Fishing fishing, CoinService coinService) {
+        super.fishing     = fishing;
+        super.coinService = coinService;
+        setCoinToken(TradeService.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
     }
 
     // init 시, keyList 값 세팅
-    private void setCommonValue(User user, Exchange exchange, String[] coinData){
-        super.user       = user;
-        super.exchange   = exchange;
+    private void setCoinToken(String[] coinData, Exchange exchange){
+
         try{
             // Set token key
             for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
@@ -70,17 +83,10 @@ public class CoinOneFunction extends ExchangeFunction{
         }
     }
 
-    /** 매매 긁기를 이용하기 위한 초기값 설정 */
-    @Override
-    public void initClass(Fishing fishing, User user, Exchange exchange, CoinService coinService) {
-        super.fishing     = fishing;
-        super.coinService = coinService;
-        setCommonValue(user, exchange, ServiceCommon.splitCoinWithId(fishing.getCoin()));
-    }
 
     @Override
     public int startLiquidity(Map list){
-        int returnCode = DataCommon.CODE_SUCCESS;
+        int returnCode = TradeData.CODE_SUCCESS;
 
         Queue<String> sellQueue = (LinkedList) list.get("sell");
         Queue<String> buyQueue  = (LinkedList) list.get("buy");
@@ -93,13 +99,13 @@ public class CoinOneFunction extends ExchangeFunction{
             String coin = liquidity.getCoin().split(";")[0];
 
             while(sellQueue.size() > 0 || buyQueue.size() > 0){
-                String randomMode = (ServiceCommon.getRandomInt(1,2) == 1) ? BUY : SELL;
+                String randomMode = (TradeService.getRandomInt(1,2) == 1) ? BUY : SELL;
                 String firstOrderId    = "";
                 String secondsOrderId  = "";
                 String firstPrice      = "";
                 String secondsPrice    = "";
-                String firstCnt        = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double)minCnt, (double)maxCnt) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
-                String secondsCnt      = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double)minCnt, (double)maxCnt) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
+                String firstCnt        = String.valueOf(Math.floor(TradeService.getRandomDouble((double)minCnt, (double)maxCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
+                String secondsCnt      = String.valueOf(Math.floor(TradeService.getRandomDouble((double)minCnt, (double)maxCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
 
                 if(sellQueue.size() > 0 && buyQueue.size() > 0 && randomMode.equals(BUY)){
                     firstPrice   = buyQueue.poll();
@@ -135,7 +141,7 @@ public class CoinOneFunction extends ExchangeFunction{
                 }
             }
         }catch (Exception e){
-            returnCode = DataCommon.CODE_ERROR;
+            returnCode = TradeData.CODE_ERROR;
             log.error("[COINONE][ERROR][LIQUIDITY] {}", e.getMessage());
         }
         log.info("[COINONE][LIQUIDITY] End");
@@ -147,17 +153,17 @@ public class CoinOneFunction extends ExchangeFunction{
 
         log.info("[COINONE][AUTOTRADE] Start");
 
-        int returnCode = DataCommon.CODE_SUCCESS;
+        int returnCode = TradeData.CODE_SUCCESS;
 
         try{
             // mode 처리
             String mode = autoTrade.getMode();
-            if(DataCommon.MODE_RANDOM.equals(mode)){
-                mode = (ServiceCommon.getRandomInt(0,1) == 0) ? DataCommon.MODE_BUY : DataCommon.MODE_SELL;
+            if(TradeData.MODE_RANDOM.equals(mode)){
+                mode = (TradeService.getRandomInt(0,1) == 0) ? TradeData.MODE_BUY : TradeData.MODE_SELL;
             }
 
             String coin = autoTrade.getCoin().split(";")[0];
-            if(DataCommon.MODE_BUY.equals(mode)){
+            if(TradeData.MODE_BUY.equals(mode)){
                 String orderId ="";
                 Map<String, String> buyValue = setDefaultMap(cnt, coin, price);
                 buyValue.put("is_ask","1");
@@ -168,7 +174,7 @@ public class CoinOneFunction extends ExchangeFunction{
                         cancelTrade(buyValue);      // 매수 후 매도 실패 시, 매수 값 취소
                     }
                 }
-            }else if(DataCommon.MODE_SELL.equals(mode)){
+            }else if(TradeData.MODE_SELL.equals(mode)){
                 String orderId ="";
                 Map<String, String> sellValue = setDefaultMap(cnt, coin, price);
                 sellValue.put("is_ask","1");
@@ -181,7 +187,7 @@ public class CoinOneFunction extends ExchangeFunction{
                 }
             }
         }catch(Exception e){
-            returnCode = DataCommon.CODE_ERROR;
+            returnCode = TradeData.CODE_ERROR;
             log.error("[COINONE][ERROR][AUTOTRADE] {}", e.getMessage());
         }
         log.info("[COINONE][AUTOTRADE] End");
@@ -193,7 +199,7 @@ public class CoinOneFunction extends ExchangeFunction{
     public int startFishingTrade(Map<String,List> list, int intervalTime){
 
         log.info("[COINONE][FISHINGTRADE] Start");
-        int returnCode = DataCommon.CODE_SUCCESS;
+        int returnCode = TradeData.CODE_SUCCESS;
 
         try{
             String mode              = "";
@@ -208,10 +214,10 @@ public class CoinOneFunction extends ExchangeFunction{
 
             /* Buy Start */
             for (int i = 0; i < tickPriceList.size(); i++) {
-                String cnt                = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double) fishing.getMinContractCnt(), (double) fishing.getMaxContractCnt()) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
+                String cnt                = String.valueOf(Math.floor(TradeService.getRandomDouble((double) fishing.getMinContractCnt(), (double) fishing.getMaxContractCnt()) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
                 String orderId            = "";
                 Map<String, String> orderMap = setDefaultMap(cnt, coin, tickPriceList.get(i));
-                if(DataCommon.MODE_BUY.equals(mode)) {
+                if(TradeData.MODE_BUY.equals(mode)) {
                     orderId = createOrder(BUY,  tickPriceList.get(i), cnt, coin);
                 }else{
                     orderId = createOrder(SELL, tickPriceList.get(i), cnt, coin);
@@ -225,14 +231,14 @@ public class CoinOneFunction extends ExchangeFunction{
 
             /* Sell Start */
             for (int i = orderList.size() - 1; i >= 0; i--) {
-                Map<String, String> copiedOrderMap = ServiceCommon.deepCopy(orderList.get(i));
+                Map<String, String> copiedOrderMap = TradeService.deepCopy(orderList.get(i));
                 BigDecimal cnt                     = new BigDecimal(copiedOrderMap.get("qty"));
 
                 while (cnt.compareTo(new BigDecimal("0")) > 0) {
                     if (!noMatchFirstTick) break;                   // 최신 매도/매수 건 값이 다를경우 돌 필요 없음.
                     if (noIntervalFlag) Thread.sleep(intervalTime); // intervalTime 만큼 휴식 후 매수 시작
 
-                    BigDecimal cntForExcution = new BigDecimal(String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double) fishing.getMinExecuteCnt(), (double) fishing.getMaxExecuteCnt()) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL));
+                    BigDecimal cntForExcution = new BigDecimal(String.valueOf(Math.floor(TradeService.getRandomDouble((double) fishing.getMinExecuteCnt(), (double) fishing.getMaxExecuteCnt()) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL));
                     if (cnt.compareTo(cntForExcution) < 0) {    // 남은 코인 수와 매도/매수할 코인수를 비교했을 때, 남은 코인 수가 더 적다면.
                         cntForExcution = cnt;
                         noIntervalFlag = false;
@@ -242,10 +248,10 @@ public class CoinOneFunction extends ExchangeFunction{
 
                     // 매도/매수 날리기전에 최신 매도/매수값이 내가 건 값이 맞는지 확인
                     String nowFirstTick = "";
-                    if(DataCommon.MODE_BUY.equals(mode)) {
-                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(DataCommon.MODE_BUY);
+                    if(TradeData.MODE_BUY.equals(mode)) {
+                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(TradeData.MODE_BUY);
                     }else{
-                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(DataCommon.MODE_SELL);
+                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(TradeData.MODE_SELL);
                     }
 
                     if (!copiedOrderMap.get("price").equals(nowFirstTick)) {
@@ -255,7 +261,7 @@ public class CoinOneFunction extends ExchangeFunction{
                     }
 
                     String orderId = "";
-                    if(DataCommon.MODE_BUY.equals(mode)) {
+                    if(TradeData.MODE_BUY.equals(mode)) {
                         orderId = createOrder(SELL, copiedOrderMap.get("price"), cntForExcution.toPlainString(), coin);
                     }else{
                         orderId = createOrder(BUY, copiedOrderMap.get("price"), cntForExcution.toPlainString(), coin);
@@ -278,7 +284,7 @@ public class CoinOneFunction extends ExchangeFunction{
             }
 
         }catch (Exception e){
-            returnCode = DataCommon.CODE_ERROR;
+            returnCode = TradeData.CODE_ERROR;
             log.error("[COINONE][ERROR][FISHINGTRADE] {}", e.getMessage());
         }
 
@@ -295,13 +301,13 @@ public class CoinOneFunction extends ExchangeFunction{
             log.info("[COINONE][Order book] Start");
             String coin = coinWithId[0];
             String inputLine;
-            String request = DataCommon.COINONE_ORDERBOOK + "?currency=" + coin;
+            String request = TradeData.COINONE_ORDERBOOK + "?currency=" + coin;
             URL url = new URL(request);
 
             HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
-            connection.setConnectTimeout(DataCommon.TIMEOUT_VALUE);
-            connection.setReadTimeout(DataCommon.TIMEOUT_VALUE);
+            connection.setConnectTimeout(TradeData.TIMEOUT_VALUE);
+            connection.setReadTimeout(TradeData.TIMEOUT_VALUE);
 
             log.info("[COINONE][Order book - Request] exchagne:{},   currency:{}", "COINONE",  coin);
 
@@ -330,7 +336,7 @@ public class CoinOneFunction extends ExchangeFunction{
         String errorMsg  = "";
 
         try{
-            String url        = ( type.equals(BUY) ) ? DataCommon.COINONE_LIMIT_BUY : DataCommon.COINONE_LIMIT_SELL;
+            String url        = ( type.equals(BUY) ) ? TradeData.COINONE_LIMIT_BUY : TradeData.COINONE_LIMIT_SELL;
             JsonObject header = setDefaultRequest(cnt, coin, price);
             JsonObject json   = postHttpMethod(url, gson.toJson(header));
 
@@ -350,7 +356,7 @@ public class CoinOneFunction extends ExchangeFunction{
 
 
     public int cancelTrade(Map<String,String> data){
-        int returnValue = DataCommon.CODE_ERROR;
+        int returnValue = TradeData.CODE_ERROR;
 
         try{
 
@@ -359,12 +365,12 @@ public class CoinOneFunction extends ExchangeFunction{
             header.addProperty("order_id",data.get("order_id").toString());
 
             for (int i = 0; i < CANCEL_AGAIN; i++) {
-                JsonObject json  = postHttpMethod(DataCommon.COINONE_CANCEL , gson.toJson(header));
+                JsonObject json  = postHttpMethod(TradeData.COINONE_CANCEL , gson.toJson(header));
                 String result    = json.get("result").toString().replace("\"","");
                 String errorCode = json.get("errorCode").toString().replace("\"","");
 
                 if("success".equals(result) || errorCode.equals(ALREADY_TRADED)){
-                    returnValue = DataCommon.CODE_SUCCESS;
+                    returnValue = TradeData.CODE_SUCCESS;
                     log.info("[COINONE][SUCCESS][CANCEL ORDER - response] try count :{}, response : {} ",i, gson.toJson(json) );
                     break;
                 }else{
@@ -441,8 +447,8 @@ public class CoinOneFunction extends ExchangeFunction{
             HttpURLConnection connection = (HttpsURLConnection) url.openConnection();
             connection.setDoOutput(true);
             connection.setDoInput(true);
-            connection.setConnectTimeout(DataCommon.TIMEOUT_VALUE);
-            connection.setReadTimeout(DataCommon.TIMEOUT_VALUE);
+            connection.setConnectTimeout(TradeData.TIMEOUT_VALUE);
+            connection.setReadTimeout(TradeData.TIMEOUT_VALUE);
             connection.setRequestMethod("POST");
             connection.setRequestProperty("Content-Type", "application/json");
             connection.setRequestProperty("X-COINONE-PAYLOAD", encodingPayload);
@@ -460,8 +466,6 @@ public class CoinOneFunction extends ExchangeFunction{
                 response.append(inputLine);
             }
             br.close();
-
-            Gson gson = new Gson();
             returnObj = gson.fromJson(response.toString(), JsonObject.class);
 
         }catch(Exception e){

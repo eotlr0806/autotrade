@@ -4,10 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.DynamicUpdate;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
+import javax.persistence.*;
 
 @Getter
 @Setter
@@ -51,8 +48,10 @@ public class Fishing {
     @Column
     private String mode;
 
-    @Column
-    private String exchange;
+    // 거래소
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "exchange_id")
+    private Exchange exchange;
 
     @Column
     private String coin;

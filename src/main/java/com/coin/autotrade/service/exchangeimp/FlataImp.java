@@ -1,8 +1,8 @@
-package com.coin.autotrade.service.function;
+package com.coin.autotrade.service.exchangeimp;
 
 import com.coin.autotrade.common.BeanUtils;
-import com.coin.autotrade.common.DataCommon;
-import com.coin.autotrade.common.ServiceCommon;
+import com.coin.autotrade.common.TradeData;
+import com.coin.autotrade.common.TradeService;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.repository.ExchangeRepository;
 import com.coin.autotrade.service.CoinService;
@@ -22,37 +22,32 @@ import java.net.URL;
 import java.util.*;
 
 @Slf4j
-public class FlataFunction extends ExchangeFunction{
+public class FlataImp extends AbstractExchange {
 
     String coinMinCnt                          = "";
     final private String BUY                   = "1";
     final private String SELL                  = "2";
     final private String ALREADY_TRADED        = "30044";
 
-    private ExchangeRepository exchageRepository;
-
     @Override
-    public void initClass(AutoTrade autoTrade, User user, Exchange exchange){
+    public void initClass(AutoTrade autoTrade){
         super.autoTrade = autoTrade;
-        setCommonValue(user, exchange);
     }
 
     @Override
-    public void initClass(Liquidity liquidity, User user, Exchange exchange){
+    public void initClass(Liquidity liquidity){
         super.liquidity = liquidity;
-        setCommonValue(user, exchange);
     }
 
     @Override
-    public void initClass(Fishing fishing, User user, Exchange exchange, CoinService coinService){
+    public void initClass(RealtimeSync realtimeSync){
+        super.realtimeSync = realtimeSync;
+    }
+
+    @Override
+    public void initClass(Fishing fishing, CoinService coinService){
         super.fishing     = fishing;
         super.coinService = coinService;
-        setCommonValue(user, exchange);
-    }
-
-    private void setCommonValue(User user,  Exchange exchange){
-        super.user     = user;
-        super.exchange = exchange;
     }
 
 
@@ -64,29 +59,29 @@ public class FlataFunction extends ExchangeFunction{
     public int startAutoTrade(String price, String cnt){
         log.info("[FLATA][AUTOTRADE START]");
 
-        int returnCode    = DataCommon.CODE_SUCCESS;
+        int returnCode    = TradeData.CODE_SUCCESS;
         try{
-            String[] coinData = ServiceCommon.splitCoinWithId(autoTrade.getCoin());
+            String[] coinData = TradeService.splitCoinWithId(autoTrade.getCoin());
             String coin       = coinData[0];
             String coinId     = coinData[1];
-            String sessionKey = getSessionKey(coin, coinId);
-            String symbol     = coinData[0] + "/" + getCurrency(exchange, coinData[0], coinData[1]);
+            String sessionKey = getSessionKey(coin, coinId, autoTrade.getExchange());
+            String symbol     = coinData[0] + "/" + getCurrency(autoTrade.getExchange(), coinData[0], coinData[1]);
 
             // mode 처리
             String mode = autoTrade.getMode();
-            if(DataCommon.MODE_RANDOM.equals(mode)){
-                mode = (ServiceCommon.getRandomInt(0,1) == 0) ? DataCommon.MODE_BUY : DataCommon.MODE_SELL;
+            if(TradeData.MODE_RANDOM.equals(mode)){
+                mode = (TradeService.getRandomInt(0,1) == 0) ? TradeData.MODE_BUY : TradeData.MODE_SELL;
             }
 
             // 1 : 매수 , 2 : 매도
-            if(DataCommon.MODE_BUY.equals(mode)){
+            if(TradeData.MODE_BUY.equals(mode)){
                 String buyOrderId  = "0";
                 if( !(buyOrderId = createOrder(BUY,price, cnt, symbol, sessionKey)).equals("0")){   // 매수 성공
                     if(createOrder(SELL,price, cnt, symbol,sessionKey).equals("0")){                // 매도 실패
                         cancelOrder(buyOrderId, sessionKey);                                        // 매도 실패 시, 매수 취소
                     }
                 }
-            }else if(DataCommon.MODE_SELL.equals(mode)){
+            }else if(TradeData.MODE_SELL.equals(mode)){
                 String sellOrderId  = "0";
                 if( !(sellOrderId = createOrder(SELL,price, cnt, symbol, sessionKey)).equals("0")){
                     if(createOrder(BUY,price, cnt, symbol, sessionKey).equals("0")){
@@ -95,7 +90,7 @@ public class FlataFunction extends ExchangeFunction{
                 }
             }
         }catch (Exception e){
-            returnCode = DataCommon.CODE_ERROR;
+            returnCode = TradeData.CODE_ERROR;
             log.error("[FLATA][ERROR][AUTOTRADE] {}", e.getMessage());
         }
 
@@ -106,7 +101,7 @@ public class FlataFunction extends ExchangeFunction{
     /** 호가유동성 function */
     @Override
     public int startLiquidity(Map list){
-        int returnCode = DataCommon.CODE_SUCCESS;
+        int returnCode = TradeData.CODE_SUCCESS;
 
         Queue<String> sellQueue = (LinkedList) list.get("sell");
         Queue<String> buyQueue  = (LinkedList) list.get("buy");
@@ -114,23 +109,23 @@ public class FlataFunction extends ExchangeFunction{
 
         try{
             log.info("[FLATA][LIQUIDITY] Start");
-            String[] coinData = ServiceCommon.splitCoinWithId(liquidity.getCoin());
+            String[] coinData = TradeService.splitCoinWithId(liquidity.getCoin());
             String coin       = coinData[0];
             String coinId     = coinData[1];
-            String sessionKey = getSessionKey(coin, coinId);
-            String symbol     = coinData[0] + "/" + getCurrency(exchange, coinData[0], coinData[1]);
+            String sessionKey = getSessionKey(coin, coinId, liquidity.getExchange());
+            String symbol     = coinData[0] + "/" + getCurrency(liquidity.getExchange(), coinData[0], coinData[1]);
             int minCnt        = liquidity.getMinCnt();
             int maxCnt        = liquidity.getMaxCnt();
 
 
             while(sellQueue.size() > 0 || buyQueue.size() > 0){
-                String randomMode = (ServiceCommon.getRandomInt(1,2) == 1) ? BUY : SELL;
+                String randomMode = (TradeService.getRandomInt(1,2) == 1) ? BUY : SELL;
                 String firstOrderId    = "";
                 String secondsOrderId  = "";
                 String firstPrice      = "";
                 String secondsPrice    = "";
-                String firstCnt        = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double)minCnt, (double)maxCnt) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
-                String secondsCnt      = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double)minCnt, (double)maxCnt) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
+                String firstCnt        = String.valueOf(Math.floor(TradeService.getRandomDouble((double)minCnt, (double)maxCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
+                String secondsCnt      = String.valueOf(Math.floor(TradeService.getRandomDouble((double)minCnt, (double)maxCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
 
                 if(sellQueue.size() > 0 && buyQueue.size() > 0 && randomMode.equals(BUY)){
                     firstPrice   = buyQueue.poll();
@@ -160,7 +155,7 @@ public class FlataFunction extends ExchangeFunction{
                 }
             }
         }catch (Exception e){
-            returnCode = DataCommon.CODE_ERROR;
+            returnCode = TradeData.CODE_ERROR;
             log.error("[FLATA][ERROR][LIQUIDITY] {}", e.getMessage());
         }
         log.info("[FLATA][LIQUIDITY] End");
@@ -171,19 +166,19 @@ public class FlataFunction extends ExchangeFunction{
     public int startFishingTrade(Map<String,List> list, int intervalTime){
         log.info("[FLATA][FISHINGTRADE START]");
 
-        int returnCode    = DataCommon.CODE_SUCCESS;
+        int returnCode    = TradeData.CODE_SUCCESS;
 
         try{
-            String[] coinData = ServiceCommon.splitCoinWithId(fishing.getCoin());
+            String[] coinData = TradeService.splitCoinWithId(fishing.getCoin());
             String coin       = coinData[0];
             String coinId     = coinData[1];
-            String sessionKey = getSessionKey(coin, coinId);
-            String symbol     = coinData[0] + "/" + getCurrency(exchange, coinData[0], coinData[1]);
+            String sessionKey = getSessionKey(coin, coinId, fishing.getExchange());
+            String symbol     = coinData[0] + "/" + getCurrency(fishing.getExchange(), coinData[0], coinData[1]);
 
             // mode 처리
             String mode = fishing.getMode();
-            if(DataCommon.MODE_RANDOM.equals(mode)){
-                mode = (ServiceCommon.getRandomInt(0,1) == 0) ? DataCommon.MODE_BUY : DataCommon.MODE_SELL;
+            if(TradeData.MODE_RANDOM.equals(mode)){
+                mode = (TradeService.getRandomInt(0,1) == 0) ? TradeData.MODE_BUY : TradeData.MODE_SELL;
             }
 
             boolean noIntervalFlag   = true;    // 해당 플래그를 이용해 마지막 매도/매수 후 바로 intervalTime 없이 바로 다음 매수/매도 진행
@@ -195,9 +190,9 @@ public class FlataFunction extends ExchangeFunction{
 
             /* Start */
             for (int i = 0; i < tickPriceList.size(); i++) {
-                String cnt = String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double) fishing.getMinContractCnt(), (double) fishing.getMaxContractCnt()) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL);
+                String cnt = String.valueOf(Math.floor(TradeService.getRandomDouble((double) fishing.getMinContractCnt(), (double) fishing.getMaxContractCnt()) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
                 String orderId = "";
-                if(DataCommon.MODE_BUY.equals(mode)) {
+                if(TradeData.MODE_BUY.equals(mode)) {
                     orderId = createOrder(BUY, tickPriceList.get(i), cnt, symbol, sessionKey);
                 }else{
                     orderId = createOrder(SELL, tickPriceList.get(i), cnt, symbol, sessionKey);
@@ -214,14 +209,14 @@ public class FlataFunction extends ExchangeFunction{
 
             /* Sell Start */
             for (int i = orderList.size() - 1; i >= 0; i--) {
-                Map<String, String> copiedOrderMap = ServiceCommon.deepCopy(orderList.get(i));
+                Map<String, String> copiedOrderMap = TradeService.deepCopy(orderList.get(i));
                 BigDecimal cnt                     = new BigDecimal(copiedOrderMap.get("cnt"));
 
                 while (cnt.compareTo(new BigDecimal("0")) > 0) {
                     if (!noMatchFirstTick) break;                   // 최신 매도/매수 건 값이 다를경우 돌 필요 없음.
                     if (noIntervalFlag) Thread.sleep(intervalTime); // intervalTime 만큼 휴식 후 매수 시작
                     String orderId            = "";
-                    BigDecimal cntForExcution = new BigDecimal(String.valueOf(Math.floor(ServiceCommon.getRandomDouble((double) fishing.getMinExecuteCnt(), (double) fishing.getMaxExecuteCnt()) * DataCommon.TICK_DECIMAL) / DataCommon.TICK_DECIMAL));
+                    BigDecimal cntForExcution = new BigDecimal(String.valueOf(Math.floor(TradeService.getRandomDouble((double) fishing.getMinExecuteCnt(), (double) fishing.getMaxExecuteCnt()) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL));
                     // 남은 코인 수와 매도/매수할 코인수를 비교했을 때, 남은 코인 수가 더 적다면.
                     if (cnt.compareTo(cntForExcution) < 0) {
                         cntForExcution = cnt;
@@ -231,10 +226,10 @@ public class FlataFunction extends ExchangeFunction{
                     }
                     // 매도/매수 날리기전에 최신 매도/매수값이 내가 건 값이 맞는지 확인
                     String nowFirstTick = "";
-                    if(DataCommon.MODE_BUY.equals(mode)) {
-                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(DataCommon.MODE_BUY);
+                    if(TradeData.MODE_BUY.equals(mode)) {
+                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(TradeData.MODE_BUY);
                     }else{
-                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(DataCommon.MODE_SELL);
+                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(TradeData.MODE_SELL);
                     }
 
                     if (!copiedOrderMap.get("price").equals(nowFirstTick)) {
@@ -243,7 +238,7 @@ public class FlataFunction extends ExchangeFunction{
                         break;
                     }
 
-                    if(DataCommon.MODE_BUY.equals(mode)) {
+                    if(TradeData.MODE_BUY.equals(mode)) {
                         orderId = createOrder(SELL, copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol, sessionKey);
                     }else{
                         orderId = createOrder(BUY, copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol, sessionKey);
@@ -263,7 +258,7 @@ public class FlataFunction extends ExchangeFunction{
             }
 
         }catch (Exception e){
-            returnCode = DataCommon.CODE_ERROR;
+            returnCode = TradeData.CODE_ERROR;
             log.error("[FLATA][ERROR][FISHINGTRADE] {}", e.getMessage());
         }
 
@@ -280,13 +275,13 @@ public class FlataFunction extends ExchangeFunction{
             String coinId = coinWithId[1];
             String inputLine;
             String symbol = getCurrency(exchange, coin, coinId);
-            String request  = DataCommon.FLATA_ORDERBOOK + "?symbol=" + coin + "/" + symbol + "&level=10";
+            String request  = TradeData.FLATA_ORDERBOOK + "?symbol=" + coin + "/" + symbol + "&level=10";
             URL url = new URL(request);
 
             HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
-            connection.setConnectTimeout(DataCommon.TIMEOUT_VALUE);
-            connection.setReadTimeout(DataCommon.TIMEOUT_VALUE);
+            connection.setConnectTimeout(TradeData.TIMEOUT_VALUE);
+            connection.setReadTimeout(TradeData.TIMEOUT_VALUE);
 
             log.info("[FLATA][ORDER BOOK - REQUEST] symbol:{}", coin);
 
@@ -308,21 +303,15 @@ public class FlataFunction extends ExchangeFunction{
     }
 
 
-    /** 생성자로서, 생성될 때, injection**/
-    public FlataFunction(){
-        exchageRepository   = (ExchangeRepository) BeanUtils.getBean(ExchangeRepository.class);
-    }
-
-
     /**
      * Session key 생성
      * 해당 코인에 등록된 key를 가져와 그 코인에 맞는 session key 생성
      */
-    public String setSessionKey(String userPublicKey, String coinCode, String coinId){
+    public String setSessionKey(String userPublicKey, String coinCode, String coinId, Exchange exchange){
 
         // 해당 계정에 대해 세션 키가 있을 경우 반환
-        if(DataCommon.FLATA_SESSION_KEY.get(userPublicKey) != null){
-            return DataCommon.FLATA_SESSION_KEY.get(userPublicKey);
+        if(TradeData.FLATA_SESSION_KEY.get(userPublicKey) != null){
+            return TradeData.FLATA_SESSION_KEY.get(userPublicKey);
         }
 
         String publicKey     = "";
@@ -343,44 +332,22 @@ public class FlataFunction extends ExchangeFunction{
             header.addProperty("acctid",publicKey);
             header.addProperty("acckey",secretKey);
 
-            JsonObject response =  postHttpMethod(DataCommon.FLATA_MAKE_SESSION, gson.toJson(header));
+            JsonObject response =  postHttpMethod(TradeData.FLATA_MAKE_SESSION, gson.toJson(header));
             JsonObject item     =  response.getAsJsonObject("item");
             returnValue         =  item.get("sessionId").toString().replace("\"","");
 
             // 메모리에 저장
-            DataCommon.FLATA_SESSION_KEY.put(userPublicKey, returnValue);
+            TradeData.FLATA_SESSION_KEY.put(userPublicKey, returnValue);
             log.info("[SUCCESS][FLATA][SET SESSION KEY] First session key {}: mapperedPublicKey : {}", returnValue, userPublicKey );
 
         }catch (Exception e){
             log.error("[FLATA][ERROR][MAKE SESSION KEY] {}" , e.getMessage());
         }
 
-        return DataCommon.FLATA_SESSION_KEY.get(userPublicKey);
+        return TradeData.FLATA_SESSION_KEY.get(userPublicKey);
     }
 
     /* 최초에 등록한 세션키를 가져옴. */
-    public String getSessionKey(String coin, String coinId){
-        String publicKey  = "";
-        String sessionKey = "";
-        try{
-            for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
-                if(exCoin.getCoinCode().equals(coin) && exCoin.getId() == Long.parseLong(coinId)){
-                    publicKey = exCoin.getPublicKey();
-                    break;
-                }
-            }
-
-            if(!publicKey.equals("")){
-                sessionKey = setSessionKey(publicKey, coin, coinId);
-            }
-        }catch (Exception e){
-            log.error("[FLATA][ERROR][GET SESSION] {}", e.getMessage());
-        }
-
-        log.info("[FLATA][GET SESSION] Session key : {}", sessionKey );
-        return sessionKey;
-    }
-
     /**
      * 매도/매수 function
      * @param type   - 1: 매수 / 2 : 매도
@@ -428,7 +395,7 @@ public class FlataFunction extends ExchangeFunction{
             String modeKo = (type.equals("1")) ? "BUY":"SELL";
             log.info("[FLATA][CREATE ORDER START] mode {} , valeus {}", modeKo, gson.toJson(header));
 
-            JsonObject response = postHttpMethodWithSession(DataCommon.FLATA_CREATE_ORDER,gson.toJson(header), sessionKey);
+            JsonObject response = postHttpMethodWithSession(TradeData.FLATA_CREATE_ORDER,gson.toJson(header), sessionKey);
             JsonObject item     = gson.fromJson(response.get("item").toString(), JsonObject.class);
             orderId             = item.get("ordNo").toString();
 
@@ -444,14 +411,36 @@ public class FlataFunction extends ExchangeFunction{
         return orderId;
     }
 
+    public String getSessionKey(String coin, String coinId, Exchange exchange){
+        String publicKey  = "";
+        String sessionKey = "";
+        try{
+            for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
+                if(exCoin.getCoinCode().equals(coin) && exCoin.getId() == Long.parseLong(coinId)){
+                    publicKey = exCoin.getPublicKey();
+                    break;
+                }
+            }
+
+            if(!publicKey.equals("")){
+                sessionKey = setSessionKey(publicKey, coin, coinId, exchange);
+            }
+        }catch (Exception e){
+            log.error("[FLATA][ERROR][GET SESSION] {}", e.getMessage());
+        }
+
+        log.info("[FLATA][GET SESSION] Session key : {}", sessionKey );
+        return sessionKey;
+    }
+
     /* 주문 취소 function */
     public int cancelOrder(String orderId, String sessionKey){
-        int returnVal = DataCommon.CODE_ERROR;
+        int returnVal = TradeData.CODE_ERROR;
         try{
             JsonObject header = new JsonObject();
             header.addProperty("orgOrdNo", orderId);
 
-            JsonObject response    = postHttpMethodWithSession(DataCommon.FLATA_CANCEL_ORDER, gson.toJson(header), sessionKey);
+            JsonObject response    = postHttpMethodWithSession(TradeData.FLATA_CANCEL_ORDER, gson.toJson(header), sessionKey);
             JsonObject item        = gson.fromJson(response.get("item").toString(), JsonObject.class);
             String returnOrderId   = item.get("ordNo").toString();
 
@@ -461,7 +450,7 @@ public class FlataFunction extends ExchangeFunction{
             }
 
             if( (!returnOrderId.equals("0") && !"".equals(returnOrderId)) || returnMeesageNo.equals(ALREADY_TRADED)){
-                returnVal = DataCommon.CODE_SUCCESS;
+                returnVal = TradeData.CODE_SUCCESS;
                 log.info("[FLATA][SUCCESS][CANCEL ORDER] response : {}",  gson.toJson(item));
             }else{
                 log.error("[FLATA][ERROR][CANCEL ORDER] response : {}",  gson.toJson(item));
@@ -487,7 +476,7 @@ public class FlataFunction extends ExchangeFunction{
         try{
             log.info("[FLATA][GET COIN INFO] Start");
             String inputLine;
-            String request  = DataCommon.FLATA_COININFO + "?symbol=" + symbol + "&lang=ko";
+            String request  = TradeData.FLATA_COININFO + "?symbol=" + symbol + "&lang=ko";
             URL url = new URL(request);
 
             HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
@@ -565,8 +554,6 @@ public class FlataFunction extends ExchangeFunction{
                 response.append(inputLine);
             }
             br.close();
-
-            Gson gson = new Gson();
             returnObj = gson.fromJson(response.toString(), JsonObject.class);
 
         }catch(Exception e){
@@ -591,8 +578,8 @@ public class FlataFunction extends ExchangeFunction{
             connection.setDoOutput(true);
             connection.setDoInput(true);
             connection.setRequestMethod("POST");
-            connection.setConnectTimeout(DataCommon.TIMEOUT_VALUE);
-            connection.setReadTimeout(DataCommon.TIMEOUT_VALUE);
+            connection.setConnectTimeout(TradeData.TIMEOUT_VALUE);
+            connection.setReadTimeout(TradeData.TIMEOUT_VALUE);
             connection.setRequestProperty("Content-Type", "application/json");
             connection.setRequestProperty("Session", SessionKey);
 
@@ -608,8 +595,6 @@ public class FlataFunction extends ExchangeFunction{
                 response.append(inputLine);
             }
             br.close();
-
-            Gson gson = new Gson();
             returnObj = gson.fromJson(response.toString(), JsonObject.class);
 
         }catch(Exception e){
@@ -617,13 +602,6 @@ public class FlataFunction extends ExchangeFunction{
         }
 
         return returnObj;
-    }
-
-    public void setExchange(Exchange exchange){
-        super.exchange = exchange;
-    }
-    public Exchange getExchange(){
-        return super.exchange;
     }
 
 }

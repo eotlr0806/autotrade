@@ -1,12 +1,11 @@
 package com.coin.autotrade.controller.restcontroller;
 
-import ch.qos.logback.core.joran.conditional.ElseAction;
 import com.coin.autotrade.common.Response;
 import com.coin.autotrade.common.TradeService;
 import com.coin.autotrade.common.code.ReturnCode;
 import com.coin.autotrade.common.code.SessionKey;
-import com.coin.autotrade.model.Fishing;
-import com.coin.autotrade.service.FishingService;
+import com.coin.autotrade.model.RealtimeSync;
+import com.coin.autotrade.service.RealtimeSyncService;
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,62 +19,65 @@ import java.util.List;
 
 @RestController
 @Slf4j
-public class FishingRestController {
+public class RealtimeSyncRestController {
 
     @Autowired
-    FishingService service;
+    RealtimeSyncService service;
 
-    /* Liquidity Get */
-    @GetMapping(value = "/v1/trade/fishing")
-    public String getFishingTrade() {
+    /**
+     * Service Get
+     * @return
+     */
+    @GetMapping(value = "/v1/trade/realtime_sync")
+    public String getRealtimeSync() {
         Response response = new Response(ReturnCode.FAIL);
         try{
-            List<Fishing> fishingList = service.getFishing();
-            if(fishingList.isEmpty()){
+            List<RealtimeSync> realtimeSyncList = service.getRealtimeSync();
+            if(realtimeSyncList.isEmpty()){
                 response.setResponse(ReturnCode.NO_DATA);
             }else{
-                response.setResponseWithObject(ReturnCode.SUCCESS, fishingList);
+                response.setResponseWithObject(ReturnCode.SUCCESS, realtimeSyncList);
             }
-            log.info("[GET FISHING TRADE] Get fishingtrade list : {}", TradeService.getMapper().writeValueAsString(fishingList));
+            log.info("[GET REALTIME SYNC] Get realtime sync success :{}", TradeService.getMapper().writeValueAsString(realtimeSyncList));
         }catch(Exception e){
-            response.setResponse(ReturnCode.FAIL);
-            log.error("[GET FISHING TRADE] Occur error : {} ", e.getMessage());
+            log.error("[GET REALTIME SYNC] {}", e.getMessage());
             e.printStackTrace();
         }
-
         return response.toString();
     }
 
 
-    /* schedule의 action type에 따라 분기 */
-    @PostMapping(value = "/v1/trade/fishing")
-    public String postFishingTrade(HttpServletRequest request, @RequestBody String body) {
+    /**
+     * schedule의 action type에 따라 분기
+     */
+    @PostMapping(value = "/v1/trade/realtime_sync")
+    public String postRealtimeSync(HttpServletRequest request, @RequestBody String body) {
 
         ReturnCode returnVal  = ReturnCode.FAIL;
         Response response     = new Response(ReturnCode.FAIL);
         Gson gson             = TradeService.getGson();
 
         try{
-            Fishing fishing = gson.fromJson(body, Fishing.class);
+            RealtimeSync realtimeSync = gson.fromJson(body, RealtimeSync.class);
 
-            switch(fishing.getStatus()) {
+            switch(realtimeSync.getStatus()) {
                 case "RUN":
-                    returnVal = service.postFishing(fishing, request.getSession().getAttribute(SessionKey.USER_ID.toString()).toString());
+                    returnVal = service.postRealtimeSync(realtimeSync, request.getSession().getAttribute(SessionKey.USER_ID.toString()).toString());
                     break;
                 case "STOP" :
-                    returnVal = service.stopFishing(fishing);
+                    returnVal = service.stopRealtimeSync(realtimeSync);
                     break;
                 case "DELETE":
-                    returnVal = service.deleteFishing(fishing);
+                    returnVal = service.deleteRealtimeSync(realtimeSync);
                     break;
                 default:
                     break;
             }
-
             response.setResponse(returnVal);
 
         }catch(Exception e){
-            log.error("[POST FISHING TRADE] {} ", e.getMessage());
+            response.setResponse(ReturnCode.FAIL);
+            log.error("[POST REALTIME SYNC] error : {}", e.getMessage());
             e.printStackTrace();
         }
 

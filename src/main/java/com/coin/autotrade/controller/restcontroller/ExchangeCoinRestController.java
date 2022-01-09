@@ -1,7 +1,7 @@
 package com.coin.autotrade.controller.restcontroller;
 
-import com.coin.autotrade.common.DataCommon;
 import com.coin.autotrade.common.Response;
+import com.coin.autotrade.common.TradeService;
 import com.coin.autotrade.common.code.ReturnCode;
 import com.coin.autotrade.model.ExchangeCoin;
 import com.coin.autotrade.service.ExchangeCoinService;
@@ -20,8 +20,6 @@ public class ExchangeCoinRestController {
     @Autowired
     ExchangeCoinService coinService;
 
-    Gson gson = new Gson();
-
     /**
      * 거래 화면에서 코인 추가시 사용하는 API
      * @param body
@@ -31,7 +29,9 @@ public class ExchangeCoinRestController {
     public String addExchangeCoin(@RequestBody String body){
 
         Response response = new Response(ReturnCode.FAIL);
+        Gson gson         = TradeService.getGson();
         try {
+
             ExchangeCoin coin     = gson.fromJson(body, ExchangeCoin.class);
             ReturnCode returnVal  = coinService.insertUpdateCoin(coin);
             response.setResponse(returnVal);
@@ -47,6 +47,7 @@ public class ExchangeCoinRestController {
     public String deleteExchangeCoin(@RequestBody String body){
 
         Response response = new Response(ReturnCode.FAIL);
+        Gson gson         = TradeService.getGson();
         try {
             ExchangeCoin coin = gson.fromJson(body, ExchangeCoin.class);
             ReturnCode returnVal  = coinService.deleteCoin(coin.getId());

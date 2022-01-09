@@ -9,37 +9,31 @@ import javax.persistence.*;
 @Getter
 @Setter
 @Entity
-@Table(name = "liquidity")
+@Table(name = "realtime_sync")
 @DynamicUpdate
-public class Liquidity {
+public class RealtimeSync {
 
     @Id
     @Column(name = "id")
     private Long id;
 
-    @Column(name = "min_cnt")
-    private Integer minCnt;
+    @Column(name = "sync_coin")
+    private String syncCoin;
 
-    @Column(name = "max_cnt")
-    private Integer maxCnt;
+    @Column(name = "price_percent")
+    private Integer pricePercent;
 
-    @Column(name = "min_seconds")
-    private Integer minSeconds;
+    @Column(name = "sync_time")
+    private Integer syncTime;
 
-    @Column(name = "max_seconds")
-    private Integer maxSeconds;
+    @Column(name = "min_price")
+    private String minPrice;
 
-    @Column(name = "random_tick")
-    private String randomTick;
+    @Column(name = "max_price")
+    private String maxPrice;
 
-    @Column(name = "range_tick")
-    private String rangeTick;
-
-    @Column(name = "self_tick")
-    private String selfTick;
-
-    @Column
-    private String mode;
+    @Column(name = "limit_trade_cnt")
+    private Integer limitTradeCnt;
 
     // 거래소
     @ManyToOne(fetch = FetchType.EAGER)

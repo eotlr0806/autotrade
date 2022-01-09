@@ -1,17 +1,13 @@
 package com.coin.autotrade.service.thread;
 
 import com.coin.autotrade.common.BeanUtils;
-import com.coin.autotrade.common.DataCommon;
-import com.coin.autotrade.common.ServiceCommon;
-import com.coin.autotrade.model.Exchange;
+import com.coin.autotrade.common.TradeService;
 import com.coin.autotrade.model.Fishing;
 import com.coin.autotrade.model.User;
-import com.coin.autotrade.repository.ExchangeRepository;
 import com.coin.autotrade.repository.FishingRepository;
 import com.coin.autotrade.service.CoinService;
-import com.coin.autotrade.service.function.*;
+import com.coin.autotrade.service.exchangeimp.AbstractExchange;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,15 +17,14 @@ import java.util.Map;
  * Fishing Trade Thread
  * DESC : 매매긁기 쓰레드
  */
-@Service
+@org.springframework.stereotype.Service
 @Slf4j
 public class FishingTradeThread implements Runnable{
 
 
     CoinService           coinService;
     FishingRepository     fishingRepository;
-    ExchangeRepository    exchangeRepository;
-    ExchangeFunction exchangeFunction;
+    AbstractExchange abstractExchange;
 
     boolean run                  = true;
     Fishing fishing              = null;
@@ -39,39 +34,13 @@ public class FishingTradeThread implements Runnable{
      * @param fishing
      * @param user
      */
-    public void initClass(Fishing inputFishing, User inputUser, Exchange exchange){
-        fishing             = inputFishing;
+    public void setTrade(Fishing inputFishing) throws Exception{
         coinService         = (CoinService) BeanUtils.getBean(CoinService.class);
         fishingRepository   = (FishingRepository) BeanUtils.getBean(FishingRepository.class);
-        exchangeRepository  = (ExchangeRepository) BeanUtils.getBean(ExchangeRepository.class);
 
-        initExchangeValue(inputFishing, inputUser, exchange);
-        return;
-    }
-
-    /**
-     * 각 거래소 정보들 초기값 셋팅
-     * @param user
-     */
-    public void initExchangeValue(Fishing fishing, User user, Exchange exchange){
-        try{
-            exchangeFunction = ServiceCommon.initExchange(fishing.getExchange());
-            exchangeFunction.initClass(fishing, user, exchange, coinService);
-        }catch (Exception e){
-            log.error("[ERROR][FISHING THREAD INIT ERROR] error : {}" , e.getMessage());
-        }
-        return;
-    }
-
-
-    // best offer가 없어서 멈춤
-    public void setTempStopNoBestOffer () {
-        // DB의 스케줄을 STOP으로
-        if(!fishing.getStatus().equals(NO_BEST_OFFER)){
-            fishing.setStatus(NO_BEST_OFFER);
-            fishingRepository.save(fishing);
-        }
-        log.info("[FISHINGTRADE THREAD] Temporarily Stop , There is no best offer");
+        fishing             = inputFishing;
+        abstractExchange    = TradeService.getInstance(fishing.getExchange().getExchangeCode());
+        abstractExchange.initClass(fishing, coinService);
     }
 
     // Stop thread
@@ -86,29 +55,45 @@ public class FishingTradeThread implements Runnable{
             while(run){
 
                 /** Check is there best offer */
-                Map<String, List> list     = coinService.getFishingList(fishing);
-                intervalTime = ServiceCommon.getRandomInt(fishing.getMinSeconds(), fishing.getMaxSeconds()) * 1000;
+                Map<String, List> list = coinService.getFishingList(fishing);
+                if(!list.isEmpty()){    // 아무런 key도 없을 경우.
+                    intervalTime = TradeService.getRandomInt(fishing.getMinSeconds(), fishing.getMaxSeconds()) * 1000;
 
-                String mode = "";
-                for(String temp : list.keySet()){  mode = temp; }
-                ArrayList<String> tickList = (ArrayList) list.get(mode);
-
-                if(tickList.size() < 1){
-                    setTempStopNoBestOffer();
-                }else{
-                    if(!fishing.getStatus().equals("RUN")){
-                        fishing.setStatus("RUN");
-                        log.info("[FISHINGTRADE THREAD][RESTART] Find best offer");
-                        fishingRepository.save(fishing);
+                    ArrayList<String> tickList = new ArrayList<>();
+                    for(String mode : list.keySet()){   // sell or buy 1개만 들어가 있음.
+                        tickList = (ArrayList) list.get(mode);
                     }
-                    /** Start Fishing Thread **/
-                    exchangeFunction.startFishingTrade(list, intervalTime);
+
+                    if(tickList.size() < 1){
+                        setTempStopNoBestOffer();
+                    }else{
+                        if(!fishing.getStatus().equals("RUN")){
+                            fishing.setStatus("RUN");
+                            log.info("[FISHINGTRADE THREAD] Restart because find best offer");
+                            fishingRepository.save(fishing);
+                        }
+
+                        /** Start Fishing Thread **/
+                        abstractExchange.startFishingTrade(list, intervalTime);
+                    }
                 }
-                log.info("[FISHING THREAD][START] , intervalTime : {} seconds", intervalTime/1000);
+                log.info("[FISHING THREAD] Run thread , intervalTime : {} seconds", intervalTime/1000);
                 Thread.sleep(intervalTime);
             }
         }catch(Exception e){
-            log.error("[ERROR][FISHING THREAD] Run is failed {}", e.getMessage());
+            log.error("[FISHING THREAD] Run is failed {}", e.getMessage());
+            e.printStackTrace();
         }
+    }
+
+
+    // best offer가 없어서 멈춤
+    private void setTempStopNoBestOffer () throws Exception{
+        // DB의 스케줄을 STOP으로
+        if(!fishing.getStatus().equals(NO_BEST_OFFER)){
+            fishing.setStatus(NO_BEST_OFFER);
+            fishingRepository.save(fishing);
+        }
+        log.info("[FISHINGTRADE THREAD] Temporarily Stop , There is no best offer");
     }
 }
