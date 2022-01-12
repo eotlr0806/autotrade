@@ -46,20 +46,23 @@ public class TradeData {
     public static String KUCOIN_ORDERBOOK         = "https://api.kucoin.com/api/v1/market/orderbook/level2_100";
     public static String OKEX_ORDERBOOK           = "https://www.okex.com/api/v5/market/books";
     public static String GATEIO_ORDERBOOK         = "https://api.gateio.ws/api/v4/spot/order_book";
+    public static String FOBLGATE_TICK            = "https://api2.foblgate.com/api/chart/selectChart";
+    public static String DCOIN_TICK               = "https://openapi.dcoin.com/open/api/get_ticker";
 
     /** Define Private Api URL */
     public static String COINONE_LIMIT_BUY           = "https://api.coinone.co.kr/v2/order/limit_buy/";
     public static String COINONE_LIMIT_SELL          = "https://api.coinone.co.kr/v2/order/limit_sell/";
     public static String COINONE_CANCEL              = "https://api.coinone.co.kr/v2/order/cancel/";
+
     public static String DCOIN_CREATE_ORDER          = "https://openapi.dcoin.com/open/api/create_order";
     public static String DCOIN_CANCEL_ORDER          = "https://openapi.dcoin.com/open/api/cancel_order";
+
     public static String FLATA_MAKE_SESSION          = "https://www.flata.exchange/out/api/confirm/check";
     public static String FLATA_CREATE_ORDER          = "https://www.flata.exchange/out/api/trading/newOrder";
     public static String FLATA_CANCEL_ORDER          = "https://www.flata.exchange/out/api/trading/cancelOrder";
 
     public static String FOBLGATE_CREATE_ORDER       = "https://api2.foblgate.com/api/trade/orderPlace";
     public static String FOBLGATE_CANCEL_ORDER       = "https://api2.foblgate.com/api/trade/orderCancel";
-    public static String FOBLGATE_TICK               = "https://api2.foblgate.com/api/chart/selectChart";
 
     public static String BITHUMB_GLOBAL_CREATE_ORDER = "https://global-openapi.bithumb.pro/openapi/v1/spot/placeOrder";
     public static String BITHUMB_GLOBAL_CANCEL_ORDER = "https://global-openapi.bithumb.pro/openapi/v1/spot/cancelOrder";

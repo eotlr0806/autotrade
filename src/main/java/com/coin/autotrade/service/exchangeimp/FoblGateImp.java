@@ -7,16 +7,14 @@ import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import javafx.beans.property.StringProperty;
 import lombok.extern.slf4j.Slf4j;
+import retrofit2.http.HTTP;
 
 import javax.net.ssl.HttpsURLConnection;
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.InputStreamReader;
-import java.lang.reflect.Array;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.net.URL;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
@@ -37,39 +35,47 @@ public class FoblGateImp extends AbstractExchange {
 
     /* Foblgate Function initialize for autotrade */
     @Override
-    public void initClass(AutoTrade autoTrade){
+    public void initClass(AutoTrade autoTrade) throws Exception{
         super.autoTrade = autoTrade;
+        setApiKey(TradeService.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
     }
 
     /* Foblgate Function initialize for liquidity */
     @Override
-    public void initClass(Liquidity liquidity){
+    public void initClass(Liquidity liquidity) throws Exception{
         super.liquidity = liquidity;
+        setApiKey(TradeService.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
     }
 
     @Override
-    public void initClass(RealtimeSync realtimeSync){
+    public void initClass(RealtimeSync realtimeSync) throws Exception{
         super.realtimeSync = realtimeSync;
+        setApiKey(TradeService.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
     }
 
     /* Foblgate Function initialize for fishing */
     @Override
-    public void initClass(Fishing fishing, CoinService coinService){
+    public void initClass(Fishing fishing, CoinService coinService) throws Exception{
         super.fishing     = fishing;
         super.coinService = coinService;
+        setApiKey(TradeService.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
     }
 
     /** 해당 정보를 이용해 API 키를 셋팅한다 */
-    public void setApiKey(String coin, String coinId, Exchange exchange) throws Exception{
-        if(keyList.isEmpty()){
-            for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
-                if(exCoin.getCoinCode().equals(coin) && exCoin.getId() == Long.parseLong(coinId)){
-                    keyList.put(USER_ID,     exCoin.getExchangeUserId());
-                    keyList.put(API_KEY,     exCoin.getPublicKey());
-                    keyList.put(SECRET_KEY,  exCoin.getPrivateKey());
-                }
+    private void setApiKey(String[] coinData, Exchange exchange) throws Exception{
+
+        for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
+            if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1])){
+                keyList.put(USER_ID,     exCoin.getExchangeUserId());
+                keyList.put(API_KEY,     exCoin.getPublicKey());
+                keyList.put(SECRET_KEY,  exCoin.getPrivateKey());
             }
-            log.info("[FOBLGATE][SET API KEY] First Key setting in instance API:{}, secret:{}",keyList.get(API_KEY), keyList.get(SECRET_KEY));
+        }
+        log.info("[FOBLGATE][SET API KEY] First Key setting in instance API:{}, secret:{}",keyList.get(API_KEY), keyList.get(SECRET_KEY));
+
+        if(keyList.isEmpty()){
+            String msg = "There is no match coin. " + Arrays.toString(coinData) + " " + exchange.getExchangeCode();
+            throw new Exception(msg);
         }
     }
 
@@ -80,10 +86,7 @@ public class FoblGateImp extends AbstractExchange {
         int returnCode = ReturnCode.SUCCESS.getCode();
 
         try{
-            String[] coinData = TradeService.splitCoinWithId(autoTrade.getCoin());
-            String symbol     = coinData[0] + "/" + getCurrency(autoTrade.getExchange(), coinData[0], coinData[1]);
-            setApiKey(coinData[0], coinData[1], autoTrade.getExchange());    // Key 값 셋팅
-
+            String symbol = getSymbol(TradeService.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
             // mode 처리
             String firstAction  = "";
             String secondAction = "";
@@ -127,14 +130,12 @@ public class FoblGateImp extends AbstractExchange {
 
         try{
             log.info("[FOBLGATE][LIQUIDITY] Start");
-            String[] coinData = TradeService.splitCoinWithId(liquidity.getCoin());
-            setApiKey(coinData[0], coinData[1], liquidity.getExchange());    // Key 값 셋팅
-            String symbol = coinData[0] + "/" + getCurrency(liquidity.getExchange(), coinData[0], coinData[1]);
-            int minCnt = liquidity.getMinCnt();
-            int maxCnt = liquidity.getMaxCnt();
+            String symbol = getSymbol(TradeService.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
+            int minCnt    = liquidity.getMinCnt();
+            int maxCnt    = liquidity.getMaxCnt();
 
-            while(sellQueue.size() > 0 || buyQueue.size() > 0){
-                String mode = (TradeService.getRandomInt(1,2) == 1) ? BUY : SELL;
+            while(!sellQueue.isEmpty() || !buyQueue.isEmpty()){
+                String mode = (TradeService.getRandomInt(1,2) == 1) ? TradeData.MODE_BUY : TradeData.MODE_SELL;
                 String firstOrderId    = "";
                 String secondsOrderId  = "";
                 String firstPrice      = "";
@@ -144,12 +145,12 @@ public class FoblGateImp extends AbstractExchange {
                 String firstCnt        = String.valueOf(Math.floor(TradeService.getRandomDouble((double)minCnt, (double)maxCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
                 String secondsCnt      = String.valueOf(Math.floor(TradeService.getRandomDouble((double)minCnt, (double)maxCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
 
-                if(sellQueue.size() > 0 && buyQueue.size() > 0 && mode.equals(BUY)){
+                if(!sellQueue.isEmpty() && !buyQueue.isEmpty() && mode.equals(TradeData.MODE_BUY)){
                     firstPrice   = buyQueue.poll();
                     secondsPrice = sellQueue.poll();
                     firstAction  = BUY;
                     secondAction = SELL;
-                }else if(buyQueue.size() > 0 && sellQueue.size() > 0 && mode.equals(SELL)){
+                }else if(!buyQueue.isEmpty() && !sellQueue.isEmpty() && mode.equals(TradeData.MODE_SELL)){
                     firstPrice   = sellQueue.poll();
                     secondsPrice = buyQueue.poll();
                     firstAction  = SELL;
@@ -187,17 +188,14 @@ public class FoblGateImp extends AbstractExchange {
         int returnCode = ReturnCode.SUCCESS.getCode();
 
         try{
-            String mode       = "";
-            String[] coinData = TradeService.splitCoinWithId(fishing.getCoin());
-            setApiKey(coinData[0], coinData[1], fishing.getExchange());    // Key 값 셋팅
-            String symbol     = coinData[0] + "/" + getCurrency(fishing.getExchange(), coinData[0], coinData[1]);
+            String mode   = "";
+            String symbol = getSymbol(TradeService.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
 
             boolean noIntervalFlag   = true;    // 해당 플래그를 이용해 마지막 매도/매수 후 바로 intervalTime 없이 바로 다음 매수/매도 진행
             boolean noMatchFirstTick = true;    // 해당 플래그를 이용해 매수/매도를 올린 가격이 현재 최상위 값이 맞는지 다른 사람의 코인을 사지 않게 방지
 
             for(String temp : list.keySet()){  mode = temp; }
             ArrayList<String> tickPriceList = (ArrayList) list.get(mode);
-
             ArrayList<Map<String, String>> orderList = new ArrayList<>();
 
             /* Buy Start */
@@ -299,8 +297,9 @@ public class FoblGateImp extends AbstractExchange {
         String coin      = coinWithId[0];
         String coinId    = coinWithId[1];
         try{
-            setApiKey(coin, coinId, exchange);
-            String pairName = coin + "/" + getCurrency(exchange, coin, coinId);
+            // SET API KEY
+            setApiKey(coinWithId, exchange);
+            String pairName = getSymbol(coinWithId, exchange);
 
             Map<String, String> header = new HashMap<>();
             header.put("apiKey",keyList.get(API_KEY));
@@ -334,38 +333,54 @@ public class FoblGateImp extends AbstractExchange {
         String realtimeChangeRate = "signed_change_rate";
 
         try {
-            String[] currentTick = getCurrentData(TradeService.splitCoinWithId(realtimeSync.getCoin()));
+            boolean isStart      = false;
+            String symbol        = getSymbol(TradeService.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
+            String[] currentTick = getTodayTick(symbol);
             String openingPrice  = currentTick[0];
             String currentPrice  = currentTick[1];
-            String orderId       = "";
+            String firstOrderId  = "";
+            String secondOrderId = "";
             String targetPrice   = "";
-            String mode          = "";
+            String firstAction   = "";
+            String secondAction  = "";
             String cnt           = realtimeSync.getLimitTradeCnt().toString();
-            String[] coinData    = TradeService.splitCoinWithId(realtimeSync.getCoin());
-            setApiKey(coinData[0], coinData[1], realtimeSync.getExchange());    // Key 값 셋팅
-            String symbol = coinData[0] + "/" + getCurrency(realtimeSync.getExchange(), coinData[0], coinData[1]);
+            int isInRange        = isMoreOrLessPrice(currentPrice);
 
-            int flag = isMoreOrLessPrice(currentPrice);
-            if(flag != 0){              // 구간 밖일 경우
-                if(flag == -1){         // 지지선보다 낮을 경우
-                    mode        = BUY;
-                    targetPrice = realtimeSync.getMinPrice();
-                }else if(flag == 1){    // 저항선보다 높을 경우
-                    mode        = SELL;
-                    targetPrice = realtimeSync.getMaxPrice();
+            if(isInRange != 0){              // 구간 밖일 경우
+                if(isInRange == -1){         // 지지선보다 낮을 경우
+                    firstAction  = BUY;
+                    secondAction = SELL;
+                    targetPrice  = realtimeSync.getMinPrice();
+                }else if(isInRange == 1){    // 저항선보다 높을 경우
+                    firstAction  = SELL;
+                    secondAction = BUY;
+                    targetPrice  = realtimeSync.getMaxPrice();
                 }
-                // 그 양만큼 매수하고, 일단 무조건 취소
-                if(!(orderId = createOrder(mode,targetPrice, cnt,symbol)).equals(ReturnCode.NO_DATA.getValue())){
-                    cancelOrder(orderId, mode, targetPrice, symbol);
-                }
+                isStart = true;
             }else{
                 // 지정한 범위 안에 없을 경우 매수 혹은 매도로 맞춰준다.
                 Map<String,String> tradeInfo = getTargetTick(openingPrice, currentPrice, realtime.get(realtimeChangeRate).getAsString());
                 if(!tradeInfo.isEmpty()){
                     targetPrice = tradeInfo.get("price");
-                    mode        = tradeInfo.get("mode");
-                    if(!(orderId = createOrder(mode,targetPrice, cnt,symbol)).equals(ReturnCode.NO_DATA.getValue())){
-                        cancelOrder(orderId, mode, targetPrice, symbol);
+                    if(tradeInfo.get("mode").equals(TradeData.MODE_BUY)){
+                        firstAction  = BUY;
+                        secondAction = SELL;
+                    }else{
+                        firstAction  = SELL;
+                        secondAction = BUY;
+                    }
+                    isStart = true;
+                }
+            }
+
+            if(isStart){
+                if( !(firstOrderId = createOrder(firstAction, targetPrice, cnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){    // 매수/OrderId가 있으면 성공
+                    Thread.sleep(300);
+                    if( !(secondOrderId = createOrder(secondAction,targetPrice, cnt,symbol)).equals(ReturnCode.NO_DATA.getValue())){                   // 매도/OrderId가 없으면 실패
+                        Thread.sleep(300);
+                        cancelOrder(firstOrderId,firstAction, targetPrice, symbol);
+                        Thread.sleep(300);
+                        cancelOrder(secondOrderId,firstAction, targetPrice, symbol);
                     }
                 }
             }
@@ -377,105 +392,6 @@ public class FoblGateImp extends AbstractExchange {
         return returnCode;
     }
 
-    /**
-     * minPrice / maxPrice 보다 낮거나 높으면 매수
-     * @param currentPriceStr
-     * @param realtimeSync
-     * @return 해당 구간에 있을 경우 0, 지지선보다 낮을 경우 -1, 저항선보다 높을 경우 1
-     */
-    private int isMoreOrLessPrice(String currentPriceStr){
-        BigDecimal minPrice     = new BigDecimal(realtimeSync.getMinPrice());
-        BigDecimal maxPrice     = new BigDecimal(realtimeSync.getMaxPrice());
-        BigDecimal currentPrice = new BigDecimal(currentPriceStr);
-
-        if(currentPrice.compareTo(minPrice) < 0){
-            return -1;
-        }else if(currentPrice.compareTo(maxPrice) > 0){
-            return 1;
-        }else{
-            return 0;
-        }
-    }
-
-    /**
-     * 설정한 구간안에 있는지 확인
-     * @param openingPrice
-     * @param currentPrice
-     * @param realtimePercent
-     * @return empty 일 경우 거래할 필요 없음. 그게 아닐 경우 Map에 mode:buy or sell / price:0.00025 형식으로 반환
-     * @throws Exception
-     */
-    private Map<String, String> getTargetTick(String openingPrice, String currentPrice, String realtimePercent) throws Exception{
-        int roundUpScale   = 15;     // 반올림 소수점
-        Map<String,String> returnMap = new HashMap<>();
-
-        BigDecimal openingDecimalPrice = new BigDecimal(openingPrice);                          // 시가
-        BigDecimal currentDecimalPrice = new BigDecimal(currentPrice);                          // 현재가
-        BigDecimal differencePrice     = currentDecimalPrice.subtract(openingDecimalPrice);     // 현재가 - 시가
-        BigDecimal differencePercent    = differencePrice.divide(openingDecimalPrice, roundUpScale, BigDecimal.ROUND_CEILING); // 시가 대비 현재가 증가 및 감소율
-
-        BigDecimal realtimeDecimalPercent  = new BigDecimal(realtimePercent);                // 실시간 연동하는 코인의 증감률
-        BigDecimal syncPercent             = new BigDecimal(realtimeSync.getPricePercent()); // 1~100 까지의 %값
-        BigDecimal realtimeTargetPercent   = realtimeDecimalPercent.multiply(syncPercent).divide(new BigDecimal(100),roundUpScale, BigDecimal.ROUND_CEILING); // 실시간 연동 코인 증감률 * 설정 값
-
-        // 1의 자리가 같을 경우 패스 ex) 1.9 == 1.1 같은 선상이라고 보고, 패스함.
-        // 추가적으로 -0.3은 -1 로 취급
-        BigDecimal realtimeTargetPercentFloor = realtimeTargetPercent.setScale(2, BigDecimal.ROUND_FLOOR);
-        BigDecimal differencePercentFloor     = differencePercent.setScale(2, BigDecimal.ROUND_FLOOR);
-        if(realtimeTargetPercentFloor.compareTo(differencePercentFloor) != 0){  // 두개의 차이가 같은 구간이 아닐 경우
-            if(realtimeTargetPercent.compareTo(differencePercent) < 0){    // 동기화 코인 %가 기준 코인 상승률보다 적으면 true
-                returnMap.put("mode",SELL);
-            }else if(realtimeTargetPercent.compareTo(differencePercent) > 0){
-                returnMap.put("mode",BUY);
-            }
-        }
-
-        if(!returnMap.isEmpty()){
-            // Set target price
-            BigDecimal targetPrice = makeTargetPrice(openingDecimalPrice, realtimeTargetPercent);
-            returnMap.put("price",targetPrice.toPlainString());
-
-            log.info("[FOBLGATE][REALTIME SYNC TRADE] Realtime target percent with sync: {}, " +
-                            "Local target coin : {}, " +
-                            "Local target percent : {} , " +
-                            "Local target price : {}, " +
-                            "Mode : {}",
-                    realtimeTargetPercent.multiply(new BigDecimal(100)), realtimeSync.getCoin(),
-                    differencePercent.multiply(new BigDecimal(100)), targetPrice.toPlainString(), returnMap.get("mode"));
-        }else{
-            log.info("[FOBLGATE][REALTIME SYNC TRADE] target price within realtime target price.");
-        }
-
-        return returnMap;
-    }
-
-    /**
-     * realtimeSync 에서 사용하며, 매수/매도해야 할 특정 가격을 구함.
-     * @param openingPrice
-     * @param targetPercent
-     * @throws Exception
-     */
-    private BigDecimal makeTargetPrice(BigDecimal openingPrice, BigDecimal targetPercent) throws Exception{
-        String coinPriceStr   = "";
-        String[] coinArr      = TradeService.splitCoinWithId(realtimeSync.getCoin());
-        for(ExchangeCoin coin : realtimeSync.getExchange().getExchangeCoin()){
-            if(coin.getCoinCode().equals(coinArr[0]) && coin.getId() == Long.parseLong(coinArr[1])){
-                coinPriceStr = coin.getCoinPrice();
-                break;
-            }
-        }
-
-        int scale = coinPriceStr.length() - (coinPriceStr.indexOf(".") + 1);    // 어디서 버림을 해야 하는지 값 체크
-        BigDecimal coinPrice              = new BigDecimal(coinPriceStr);
-        BigDecimal targetPriceWithoutDrop = openingPrice.add(openingPrice.multiply(targetPercent));
-        BigDecimal returnTargetPrice      = null;
-        if(coinPrice.compareTo(new BigDecimal("1.0")) < 0){
-            returnTargetPrice = targetPriceWithoutDrop.setScale(scale, BigDecimal.ROUND_FLOOR);
-        }else{
-            returnTargetPrice = targetPriceWithoutDrop.subtract(targetPriceWithoutDrop.remainder(coinPrice));
-        }
-        return returnTargetPrice;
-    }
 
     /**
      * 현재 Tick 가져오기
@@ -483,25 +399,21 @@ public class FoblGateImp extends AbstractExchange {
      * @param coinWithId
      * @return [ 시가 , 종가 ] String Array
      */
-    private String[] getCurrentData(String[] coinWithId) throws Exception{
+    private String[] getTodayTick(String symbol) throws Exception{
         String[] returnRes   = new String[2];
-        String coin          = coinWithId[0];
-        String coinId        = coinWithId[1];
         String typeDay       = "1";     // 1일 경우 일단위로 데이터 반환
         String min           = "240";   // typeDay 가 0일 경우에만 의미있음.
         String startDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String dateCount     = "2";     // 하루치(2일 경우 어제, 3일경우 그제까지 반환)
 
-        setApiKey(coin, coinId, realtimeSync.getExchange());
-        String pairName = coin + "/" + getCurrency(realtimeSync.getExchange(), coin, coinId);
         Map<String, String> header = new HashMap<>();
         header.put("apiKey",keyList.get(API_KEY));
-        header.put("pairName",pairName);
+        header.put("pairName",symbol);
         header.put("type",typeDay);
         header.put("min",min);
         header.put("startDateTime",startDateTime);
         header.put("cnt", dateCount);
-        String secretHash    = makeApiHash(keyList.get(API_KEY) + pairName + typeDay + min + startDateTime + dateCount + keyList.get(SECRET_KEY));
+        String secretHash    = makeApiHash(keyList.get(API_KEY) + symbol + typeDay + min + startDateTime + dateCount + keyList.get(SECRET_KEY));
         JsonObject returnVal = postHttpMethod(TradeData.FOBLGATE_TICK, secretHash, header);
         String status        = returnVal.get("status").getAsString();
         if(status.equals(SUCCESS)){
@@ -511,9 +423,9 @@ public class FoblGateImp extends AbstractExchange {
             JsonArray array   = object.get("series").getAsJsonArray();
             returnRes[0]      = array.get(0).getAsString().split("\\|")[4];  // 전날의 종가가 오늘의 시가
             returnRes[1]      = array.get(1).getAsString().split("\\|")[4];  // 현재의 종가(현재가)
-            log.info("[FOBLGATE][GET CURRENT TICK] Response : {}", Arrays.toString(returnRes));
+            log.info("[FOBLGATE][GET TODAY TICK] Response : {}", Arrays.toString(returnRes));
         }else{
-            log.error("[FOBLGATE][GET CURRENT TICK] Response:{}", gson.toJson(returnVal));
+            log.error("[FOBLGATE][GET TODAY TICK] Response:{}", gson.toJson(returnVal));
             throw new Exception(gson.toJson(returnVal));
         }
 
@@ -611,7 +523,7 @@ public class FoblGateImp extends AbstractExchange {
      * @param targetStr
      * @throws Exception 예외는 호출한 곳에서 처리하도록 진행.
      */
-    public String makeApiHash(String targetStr) throws Exception{
+    private String makeApiHash(String targetStr) throws Exception{
         StringBuffer sb  = new StringBuffer();
         MessageDigest md = MessageDigest.getInstance("SHA-256");
         md.update(targetStr.getBytes());
@@ -636,7 +548,7 @@ public class FoblGateImp extends AbstractExchange {
      * @param formData   - post에 들어가는 body 데이터
      * @throws HTTP 예외 외에도, 서버 에러코드 전송 시에도 예외를 던져 호출한곳에서 처리하도록 진행하였음.
      */
-    public JsonObject postHttpMethod(String targetUrl, String secretHash,  Map<String, String> datas ) throws Exception{
+    private JsonObject postHttpMethod(String targetUrl, String secretHash,  Map<String, String> datas ) throws Exception{
 
         String twoHyphens    = "--";
         String boundary      = "*******";
@@ -665,25 +577,26 @@ public class FoblGateImp extends AbstractExchange {
         dos.writeBytes(twoHyphens + boundary + twoHyphens + lineEnd);
         dos.flush();
         dos.close();
-        int returnCode = connection.getResponseCode();
-        BufferedReader br = null;
-        if(returnCode == HttpsURLConnection.HTTP_OK){   // OK 일 경우
-            br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-        }else{                                          // 아닐 경우
-            br = new BufferedReader(new InputStreamReader(connection.getErrorStream()));
-        }
+
         StringBuffer response = new StringBuffer();
-        String inputLine = "";
-        while ((inputLine = br.readLine()) != null) {
-            response.append(inputLine);
-        }
-        br.close();
-
-
-        // 200 응답이 아닐 경우 throw exception
-        if(returnCode != HttpsURLConnection.HTTP_OK){
-            log.error("[FOBLGATE][POST HTTP] Return Code is not 200. msg : {}", response.toString());
-            throw new Exception(response.toString());
+        if(connection.getResponseCode() == HttpsURLConnection.HTTP_OK){
+            BufferedReader br = null;
+            if(connection.getInputStream() != null){
+                br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+            }else if(connection.getErrorStream() != null){
+                br = new BufferedReader(new InputStreamReader(connection.getErrorStream()));
+            }else{
+                log.error("[FOBLGATE][POST HTTP] Return Code is 200. But inputstream and errorstream is null");
+                throw new Exception();
+            }
+            String inputLine = "";
+            while ((inputLine = br.readLine()) != null) {
+                response.append(inputLine);
+            }
+            br.close();
+        }else{
+            log.error("[FOBLGATE][POST HTTP] Return code : {}, msg : {}",connection.getResponseCode(), connection.getResponseMessage());
+            throw new Exception();
         }
 
         return gson.fromJson(response.toString(), JsonObject.class);
@@ -704,4 +617,8 @@ public class FoblGateImp extends AbstractExchange {
         return mapForRequest;
     }
 
+    // 거래소에 맞춰 심볼 반환
+    private String getSymbol(String[] coinData, Exchange exchange) throws Exception {
+        return coinData[0] + "/" + getCurrency(exchange, coinData[0], coinData[1]);
+    }
 }

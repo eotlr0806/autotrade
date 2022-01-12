@@ -1,11 +1,11 @@
 package com.coin.autotrade.service.exchangeimp;
 
-import com.coin.autotrade.common.BeanUtils;
 import com.coin.autotrade.common.TradeData;
 import com.coin.autotrade.common.TradeService;
+import com.coin.autotrade.common.code.ReturnCode;
 import com.coin.autotrade.model.*;
-import com.coin.autotrade.repository.ExchangeRepository;
 import com.coin.autotrade.service.CoinService;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 
@@ -19,6 +19,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.security.MessageDigest;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Slf4j
@@ -28,171 +30,165 @@ public class DcoinImp extends AbstractExchange {
     final private String SECRET_KEY           = "secretKey";
     final private String BUY                  = "BUY";
     final private String SELL                 = "SELL";
+    final private String SUCCESS              = "0";
+    final private String SUCCESS_CANCEL       = "2";
     private Map<String, String> keyList       = new HashMap<>();
 
 
     @Override
-    public void initClass(AutoTrade autoTrade){
+    public void initClass(AutoTrade autoTrade) throws Exception{
         super.autoTrade = autoTrade;
-        setCoinToken(TradeService.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
+        setApiKey(TradeService.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
     }
 
     @Override
-    public void initClass(Liquidity liquidity){
+    public void initClass(Liquidity liquidity) throws Exception{
         super.liquidity = liquidity;
-        setCoinToken(TradeService.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
+        setApiKey(TradeService.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
     }
 
     @Override
-    public void initClass(RealtimeSync realtimeSync){
+    public void initClass(RealtimeSync realtimeSync) throws Exception{
         super.realtimeSync = realtimeSync;
-        setCoinToken(TradeService.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
+        setApiKey(TradeService.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
     }
 
     @Override
-    public void initClass(Fishing fishing ,CoinService coinService){
+    public void initClass(Fishing fishing ,CoinService coinService) throws Exception{
         super.fishing     = fishing;
         super.coinService = coinService;
-        setCoinToken(TradeService.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
+        setApiKey(TradeService.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
     }
 
-    private void setCoinToken(String[] coinData, Exchange exchange){
+    private void setApiKey(String[] coinData, Exchange exchange) throws Exception{
+
         // Set token key
-        try{
-            for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
-                if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1]) ){
-                    keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
-                    keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
-                }
+        for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
+            if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1]) ){
+                keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
+                keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
             }
-        }catch (Exception e){
-            log.error("[DCOIN][ERROR][SET COIN TOKEN] error : {} ", e.getMessage());
+        }
+        if(keyList.isEmpty()){
+            String msg = "There is no match coin. " + Arrays.toString(coinData) + " " + exchange.getExchangeCode();
+            throw new Exception(msg);
         }
     }
 
 
     /**
      * Auto Trade Start
-     * @param symbol - coin + currency
      */
     @Override
     public int startAutoTrade(String price, String cnt){
 
-        log.info("[DCOIN][AUTOTRADE] Start");
+        log.info("[DCOIN][AUTOTRADE] START");
 
-        int returnCode = TradeData.CODE_SUCCESS;
+        int returnCode = ReturnCode.SUCCESS.getCode();
         try{
-            String[] coinData = TradeService.splitCoinWithId(autoTrade.getCoin());
-            String     symbol = coinData[0] + "" + getCurrency(autoTrade.getExchange(), coinData[0], coinData[1]);
-
+            String     symbol   = getSymbol(TradeService.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
+            String firstAction  = "";
+            String secondAction = "";
             // mode 처리
             String mode = autoTrade.getMode();
             if(TradeData.MODE_RANDOM.equals(mode)){
                 mode = (TradeService.getRandomInt(0,1) == 0) ? TradeData.MODE_BUY : TradeData.MODE_SELL;
             }
-
+            // Trade 모드에 맞춰 순서에 맞게 거래 타입 생성
             if(TradeData.MODE_BUY.equals(mode)){
-                String orderId = "";
-                if(!(orderId = createOrder("BUY",price, cnt, symbol)).equals("")){
-                    if(createOrder("SELL",price, cnt, symbol).equals("")){          // SELL 모드가 실패 시,
-                        cancelOrder(symbol, orderId);
-                    }
-                }
+                firstAction  = BUY;
+                secondAction = SELL;
             }else if(TradeData.MODE_SELL.equals(mode)){
-                String orderId = "";
-                if(!(orderId = createOrder("SELL",price, cnt, symbol)).equals("")){
-                    if(createOrder("BUY",price, cnt, symbol).equals("")){           // BUY 모드가 실패 시,
-                        cancelOrder(symbol, orderId);
-                    }
+                firstAction  = SELL;
+                secondAction = BUY;
+            }
+            String orderId = ReturnCode.NO_DATA.getValue();
+            if(!(orderId = createOrder(firstAction,price, cnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){
+                if(createOrder(secondAction,price, cnt, symbol).equals(ReturnCode.NO_DATA.getValue())){          // SELL 모드가 실패 시,
+                    cancelOrder(symbol, orderId);
                 }
             }
         }catch (Exception e){
-            returnCode = TradeData.CODE_ERROR;
-            log.error("[DCOIN][ERROR][AUTOTRADE] {}", e.getMessage());
+            returnCode = ReturnCode.FAIL.getCode();
+            log.error("[DCOIN][AUTOTRADE] Error {}", e.getMessage());
+            e.printStackTrace();
         }
-
-        log.info("[DCOIN][AUTOTRADE] End");
-
+        log.info("[DCOIN][AUTOTRADE] END");
         return returnCode;
     }
 
     /* 호가유동성 메서드 */
     @Override
     public int startLiquidity(Map list){
-        int returnCode = TradeData.CODE_SUCCESS;
+        int returnCode = ReturnCode.SUCCESS.getCode();
 
         Queue<String> sellQueue = (LinkedList) list.get("sell");
         Queue<String> buyQueue  = (LinkedList) list.get("buy");
         List<Map<String,String>> CancelList = new ArrayList();
 
         try{
-            log.info("[DCOIN][LIQUIDITY] Start");
-            String[] coinData = TradeService.splitCoinWithId(liquidity.getCoin());
-            String symbol     = coinData[0] + "" + getCurrency(liquidity.getExchange(),coinData[0], coinData[1]);
-            int minCnt        = liquidity.getMinCnt();
-            int maxCnt        = liquidity.getMaxCnt();
+            log.info("[DCOIN][LIQUIDITY] START");
+            String symbol = getSymbol(TradeService.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
+            int minCnt    = liquidity.getMinCnt();
+            int maxCnt    = liquidity.getMaxCnt();
 
-
-
-            while(sellQueue.size() > 0 || buyQueue.size() > 0){
-                String randomMode = (TradeService.getRandomInt(1,2) == 1) ? BUY : SELL;
+            while(!sellQueue.isEmpty() || !buyQueue.isEmpty()){
+                String mode = (TradeService.getRandomInt(1,2) == 1) ? TradeData.MODE_BUY : TradeData.MODE_SELL;
                 String firstOrderId    = "";
                 String secondsOrderId  = "";
                 String firstPrice      = "";
                 String secondsPrice    = "";
+                String firstAction     = "";
+                String secondAction    = "";
                 String firstCnt        = String.valueOf(Math.floor(TradeService.getRandomDouble((double)minCnt, (double)maxCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
                 String secondsCnt      = String.valueOf(Math.floor(TradeService.getRandomDouble((double)minCnt, (double)maxCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
 
-                if(sellQueue.size() > 0 && buyQueue.size() > 0 && randomMode.equals(BUY)){
+                if(!sellQueue.isEmpty() && !buyQueue.isEmpty() && mode.equals(TradeData.MODE_BUY)){
                     firstPrice   = buyQueue.poll();
-                    firstOrderId = createOrder(BUY, firstPrice, firstCnt, symbol);
-
-                    Thread.sleep(300);
-                    secondsPrice   = sellQueue.poll();
-                    secondsOrderId = createOrder(SELL, secondsPrice, secondsCnt, symbol);
-                }else if(buyQueue.size() > 0 && sellQueue.size() > 0 && randomMode.equals(SELL)){
+                    secondsPrice = sellQueue.poll();
+                    firstAction  = BUY;
+                    secondAction = SELL;
+                }else if(!buyQueue.isEmpty() && !sellQueue.isEmpty() && mode.equals(TradeData.MODE_SELL)){
                     firstPrice   = sellQueue.poll();
-                    firstOrderId = createOrder(SELL, firstPrice, firstCnt, symbol);
-
-                    Thread.sleep(300);
-                    secondsPrice   = buyQueue.poll();
-                    secondsOrderId = createOrder(BUY, secondsPrice, secondsCnt, symbol);
+                    secondsPrice = buyQueue.poll();
+                    firstAction  = SELL;
+                    secondAction = BUY;
                 }
 
-                if(!firstOrderId.equals("") || !secondsOrderId.equals("")){
+                firstOrderId   = createOrder(firstAction,  firstPrice, firstCnt, symbol);
+                Thread.sleep(300);
+                secondsOrderId = createOrder(secondAction, secondsPrice, secondsCnt, symbol);
+
+                // first / second 둘 중 하나라도 거래가 성사 되었을 경우
+                if(!firstOrderId.equals(ReturnCode.NO_DATA.getValue())  || !secondsOrderId.equals(ReturnCode.NO_DATA.getValue())){
                     Thread.sleep(1000);
-                    if(!firstOrderId.equals("")){
-                        cancelOrder(symbol, firstOrderId);
+                    if(!firstOrderId.equals(ReturnCode.NO_DATA.getValue())){
+                        cancelOrder(symbol,firstOrderId);
                     }
-                    if(!secondsOrderId.equals("")){
-                        Thread.sleep(300);
+                    Thread.sleep(300);
+                    if(!secondsOrderId.equals(ReturnCode.NO_DATA.getValue())){
                         cancelOrder(symbol, secondsOrderId);
                     }
                 }
             }
         }catch (Exception e){
-            returnCode = TradeData.CODE_ERROR;
-            log.error("[DCOIN][ERROR][LIQUIDITY] {}", e.getMessage());
+            returnCode = ReturnCode.FAIL.getCode();
+            log.error("[DCOIN][LIQUIDITY] {}", e.getMessage());
+            e.printStackTrace();
         }
-        log.info("[DCOIN][LIQUIDITY] End");
+        log.info("[DCOIN][LIQUIDITY] END");
         return returnCode;
     }
 
     @Override
     public int startFishingTrade(Map<String,List> list, int intervalTime){
-        log.info("[DCOIN][FISHINGTRADE START]");
+        log.info("[DCOIN][FISHINGTRADE] START");
 
-        int returnCode    = TradeData.CODE_SUCCESS;
+        int returnCode = ReturnCode.SUCCESS.getCode();
 
         try{
-            String[] coinData = TradeService.splitCoinWithId(fishing.getCoin());
-            String     symbol = coinData[0] + "" + getCurrency(fishing.getExchange(), coinData[0], coinData[1]);
-
-            // mode 처리
-            String mode = fishing.getMode();
-            if(TradeData.MODE_RANDOM.equals(mode)){
-                mode = (TradeService.getRandomInt(0,1) == 0) ? TradeData.MODE_BUY : TradeData.MODE_SELL;
-            }
+            String mode   = "";
+            String symbol = getSymbol(TradeService.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
 
             boolean noIntervalFlag   = true;    // 해당 플래그를 이용해 마지막 매도/매수 후 바로 intervalTime 없이 바로 다음 매수/매도 진행
             boolean noMatchFirstTick = true;    // 해당 플래그를 이용해 매수/매도를 올린 가격이 현재 최상위 값이 맞는지 다른 사람의 코인을 사지 않게 방지
@@ -202,15 +198,16 @@ public class DcoinImp extends AbstractExchange {
             ArrayList<Map<String, String>> orderList = new ArrayList<>();
 
             /* Start */
+            log.info("[DCOIN][FISHINGTRADE][START BUY OR SELL TARGET ALL COIN]");
             for (int i = 0; i < tickPriceList.size(); i++) {
-                String cnt = String.valueOf(Math.floor(TradeService.getRandomDouble((double) fishing.getMinContractCnt(), (double) fishing.getMaxContractCnt()) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
-                String orderId = "";
-                if(TradeData.MODE_BUY.equals(mode)) {
-                    orderId = createOrder("BUY", tickPriceList.get(i), cnt, symbol);
+                String cnt     = String.valueOf(Math.floor(TradeService.getRandomDouble((double) fishing.getMinContractCnt(), (double) fishing.getMaxContractCnt()) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
+                String orderId = ReturnCode.NO_DATA.getValue();
+                if(mode.equals(TradeData.MODE_BUY)) {
+                    orderId = createOrder(BUY, tickPriceList.get(i), cnt, symbol);
                 }else{
-                    orderId = createOrder("SELL", tickPriceList.get(i), cnt, symbol);
+                    orderId = createOrder(SELL, tickPriceList.get(i), cnt, symbol);
                 }
-                if(!orderId.equals("")){                                                // 매수/매도가 정상적으로 이뤄졌을 경우 데이터를 list에 담는다
+                if(!orderId.equals(ReturnCode.NO_DATA.getValue())){                                                // 매수/매도가 정상적으로 이뤄졌을 경우 데이터를 list에 담는다
                     Map<String, String> orderMap = new HashMap<>();
                     orderMap.put("price" ,tickPriceList.get(i));
                     orderMap.put("cnt" ,cnt);
@@ -218,6 +215,7 @@ public class DcoinImp extends AbstractExchange {
                     orderList.add(orderMap);
                 }
             }
+            log.info("[DCOIN][FISHINGTRADE][END BUY OR SELL TARGET ALL COIN]");
 
             /* Sell Start */
             for (int i = orderList.size() - 1; i >= 0; i--) {
@@ -227,7 +225,7 @@ public class DcoinImp extends AbstractExchange {
                 while (cnt.compareTo(new BigDecimal("0")) > 0) {
                     if (!noMatchFirstTick) break;                   // 최신 매도/매수 건 값이 다를경우 돌 필요 없음.
                     if (noIntervalFlag) Thread.sleep(intervalTime); // intervalTime 만큼 휴식 후 매수 시작
-                    String orderId            = "";
+                    String orderId = ReturnCode.NO_DATA.getValue();
                     BigDecimal cntForExcution = new BigDecimal(String.valueOf(Math.floor(TradeService.getRandomDouble((double) fishing.getMinExecuteCnt(), (double) fishing.getMaxExecuteCnt()) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL));
                     // 남은 코인 수와 매도/매수할 코인수를 비교했을 때, 남은 코인 수가 더 적다면.
                     if (cnt.compareTo(cntForExcution) < 0) {
@@ -251,12 +249,12 @@ public class DcoinImp extends AbstractExchange {
                     }
 
                     if(TradeData.MODE_BUY.equals(mode)) {
-                        orderId = createOrder("SELL", copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol);
+                        orderId = createOrder(SELL, copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol);
                     }else{
-                        orderId = createOrder("BUY", copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol);
+                        orderId = createOrder(BUY, copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol);
                     }
 
-                    if(!orderId.equals("")){
+                    if(!orderId.equals(ReturnCode.NO_DATA.getValue())){
                         cnt = cnt.subtract(cntForExcution);
                     }else{
                         break;
@@ -268,56 +266,130 @@ public class DcoinImp extends AbstractExchange {
 
             }
         }catch (Exception e){
-            returnCode = TradeData.CODE_ERROR;
-            log.error("[DCOIN][ERROR][FISHINGTRADE] {}", e.getMessage());
+            returnCode = ReturnCode.FAIL.getCode();
+            log.error("[DCOIN][FISHINGTRADE] {}", e.getMessage());
+            e.printStackTrace();
         }
-
         log.info("[DCOIN][FISHINGTRADE END]");
         return returnCode;
     }
 
     @Override
     public String getOrderBook(Exchange exchange, String[] coinWithId) {
-        String returnRes = "";
+        String returnRes = ReturnCode.FAIL.getValue();
         try{
-            String coin = coinWithId[0];
-            String coinId = coinWithId[1];
-            String inputLine;
-            String currency = getCurrency(exchange, coin, coinId);
-            if(currency.equals("")){
-                log.error("[DCOIN][ERROR][ORDER BOOK] There is no coin");
-                return "";
-            }
-            String symbol = coin.toLowerCase().concat(currency);
-
+            String symbol      = getSymbol(coinWithId, exchange);
             String encodedData = "symbol=" + URLEncoder.encode(symbol) + "&type=" + URLEncoder.encode("step0");
-
-            String request = TradeData.DCOIN_ORDERBOOK + "?" + encodedData;
-            URL url = new URL(request);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestProperty("Context-Type", "application/x-www-form-urlencoded");
-            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
-            connection.setConnectTimeout(TradeData.TIMEOUT_VALUE);
-            connection.setReadTimeout(TradeData.TIMEOUT_VALUE);
-
-            log.info("[DCOIN][ORDER BOOK - Request]  symbol:{}, type:{}", symbol, "step0");
-
-            int returnCode = connection.getResponseCode();
-            BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            StringBuffer response = new StringBuffer();
-            while ((inputLine = br.readLine()) != null) {
-                response.append(inputLine);
-            }
-            br.close();
-
-            returnRes = response.toString();
-
+            returnRes          = getHttpMethod(TradeData.DCOIN_ORDERBOOK + "?" + encodedData);
         }catch (Exception e){
-            log.error("[DCOIN][ERROR][ORDER BOOK] {}",e.getMessage());
+            log.error("[DCOIN][ORDER BOOK] {}",e.getMessage());
+            e.printStackTrace();
         }
 
         return returnRes;
     }
+
+
+    /**
+     * Realtime Sync 거래
+     * @param realtime
+     * @return
+     */
+    public int startRealtimeTrade(JsonObject realtime) {
+        log.info("[DCOIN][REALTIME SYNC TRADE START]");
+        int returnCode   = ReturnCode.SUCCESS.getCode();
+        String realtimeChangeRate = "signed_change_rate";
+
+        try {
+
+            boolean isStart      = false;
+            String symbol        = getSymbol(TradeService.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
+            String[] currentTick = getTodayTick(symbol);
+            String openingPrice  = currentTick[0];
+            String currentPrice  = currentTick[1];
+            String firstOrderId  = "";
+            String secondOrderId = "";
+            String targetPrice   = "";
+            String firstAction   = "";
+            String secondAction  = "";
+            String cnt           = realtimeSync.getLimitTradeCnt().toString();
+
+            int isInRange = isMoreOrLessPrice(currentPrice);
+
+            if(isInRange != 0){              // 구간 밖일 경우
+                if(isInRange == -1){         // 지지선보다 낮을 경우
+                    firstAction  = BUY;
+                    secondAction = SELL;
+                    targetPrice  = realtimeSync.getMinPrice();
+                }else if(isInRange == 1){    // 저항선보다 높을 경우
+                    firstAction  = SELL;
+                    secondAction = BUY;
+                    targetPrice  = realtimeSync.getMaxPrice();
+                }
+                isStart = true;
+            }else{
+                // 지정한 범위 안에 없을 경우 매수 혹은 매도로 맞춰준다.
+                Map<String,String> tradeInfo = getTargetTick(openingPrice, currentPrice, realtime.get(realtimeChangeRate).getAsString());
+                if(!tradeInfo.isEmpty()){
+                    targetPrice = tradeInfo.get("price");
+                    if(tradeInfo.get("mode").equals(TradeData.MODE_BUY)){
+                        firstAction  = BUY;
+                        secondAction = SELL;
+                    }else{
+                        firstAction  = SELL;
+                        secondAction = BUY;
+                    }
+                    isStart = true;
+                }
+            }
+
+            if(isStart){
+                if( !(firstOrderId = createOrder(firstAction, targetPrice, cnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){    // 매수/OrderId가 있으면 성공
+                    Thread.sleep(300);
+                    if( !(secondOrderId = createOrder(secondAction,targetPrice, cnt,symbol)).equals(ReturnCode.NO_DATA.getValue())){                   // 매도/OrderId가 없으면 실패
+                        Thread.sleep(300);
+                        cancelOrder(symbol, firstOrderId);
+                        Thread.sleep(300);
+                        cancelOrder(symbol, secondOrderId);
+                    }
+                }
+            }
+        }catch (Exception e){
+            log.error("[DCOIN][REALTIME SYNC TRADE] Error :{} ", e.getMessage());
+            e.printStackTrace();
+        }
+        log.info("[DCOIN][REALTIME SYNC TRADE END]");
+        return returnCode;
+    }
+
+
+    /**
+     * 현재 Tick 가져오기
+     * @param exchange
+     * @param coinWithId
+     * @return [ 시가 , 종가 ] String Array
+     */
+    private String[] getTodayTick(String symbol) throws Exception{
+
+        String[] returnRes   = new String[2];
+        String request       = TradeData.DCOIN_TICK + "?symbol=" + URLEncoder.encode(symbol);
+        String response      = getHttpMethod(request);
+        JsonObject resObject = gson.fromJson(response, JsonObject.class);
+        String returnCode    = resObject.get("code").getAsString();
+        if(SUCCESS.equals(returnCode)){
+            returnRes[0] = resObject.get("data").getAsJsonObject().get("open").getAsString();
+            returnRes[1] = resObject.get("data").getAsJsonObject().get("close").getAsString();
+            log.info("[DCOIN][GET TODAY TICK] response : {}", Arrays.toString(returnRes));
+        }else{
+            log.error("[DCOIN][GET TODAY TICK] response : {}", response);
+            throw new Exception(response);
+        }
+
+        return returnRes;
+    }
+
+
+
 
     /**
      * 매수 매도 로직
@@ -326,34 +398,32 @@ public class DcoinImp extends AbstractExchange {
      */
     public String createOrder(String side, String price, String cnt, String symbol) {
 
-        String orderId   = "";
-        String errorCode = "";
-        String errorMsg  = "";
+        String orderId   = ReturnCode.NO_DATA.getValue();
 
         try {
             // DCoin 의 경우, property 값들이 오름차순으로 입력되야 해서, 공통 함수로 빼기 어려움.
             JsonObject header = new JsonObject();
             header.addProperty("api_key", keyList.get(ACCESS_TOKEN));
-            header.addProperty("price", Double.parseDouble(price));
-            header.addProperty("side", side);
-            header.addProperty("symbol", symbol.toLowerCase());
+            header.addProperty("price",   Double.parseDouble(price));
+            header.addProperty("side",    side);
+            header.addProperty("symbol",  symbol.toLowerCase());
             header.addProperty("type", 1);
-            header.addProperty("volume", Double.parseDouble(cnt));
-            header.addProperty("sign",  createSign(gson.toJson(header)));
+            header.addProperty("volume",  Double.parseDouble(cnt));
+            header.addProperty("sign",    createSign(gson.toJson(header)));
 
-            String params = makeEncodedParas(header);
+            String params   = makeEncodedParas(header);
             JsonObject json = postHttpMethod(TradeData.DCOIN_CREATE_ORDER, params);
-            String result = json.get("code").toString().replace("\"", "");
-            if ("0".equals(result)) {
-                String data        = json.get("data").toString().replace("\"", "");
-                JsonObject dataObj = gson.fromJson(data, JsonObject.class);
-                orderId = dataObj.get("order_id").toString().replace("\"", "");
-                log.info("[DCOIN][SUCCESS][CREATE ORDER - response] response :{}", gson.toJson(json));
+            String returnCode   = json.get("code").getAsString();
+            if (SUCCESS.equals(returnCode)) {
+                JsonObject dataObj = json.get("data").getAsJsonObject();
+                orderId            = dataObj.get("order_id").getAsString();
+                log.info("[DCOIN][CREATE ORDER] response :{}", gson.toJson(json));
             } else {
-                log.error("[DCOIN][ERROR][CREATE ORDER - response] response {}", gson.toJson(json));
+                log.error("[DCOIN][CREATE ORDER] response {}", gson.toJson(json));
             }
         }catch(Exception e){
-            log.error("[DCOIN][ERROR][CREATE ORDER] {}", e.getMessage());
+            log.error("[DCOIN][CREATE ORDER] Error {}", e.getMessage());
+            e.printStackTrace();
         }
         return orderId;
     }
@@ -364,58 +434,51 @@ public class DcoinImp extends AbstractExchange {
      */
     public int cancelOrder(String symbol, String orderId) {
 
-        int returnValue = TradeData.CODE_ERROR;
-        String errorCode = "";
-        String errorMsg = "";
-
+        int returnValue = ReturnCode.FAIL.getCode();
         try {
             JsonObject header = new JsonObject();
-            header.addProperty("api_key", keyList.get(ACCESS_TOKEN));
+            header.addProperty("api_key",  keyList.get(ACCESS_TOKEN));
             header.addProperty("order_id", orderId);
-            header.addProperty("symbol", symbol.toLowerCase());
-            header.addProperty("sign", createSign(gson.toJson(header)));
+            header.addProperty("symbol",   symbol.toLowerCase());
+            header.addProperty("sign",     createSign(gson.toJson(header)));
 
-            JsonObject json = postHttpMethod(TradeData.DCOIN_CANCEL_ORDER, makeEncodedParas(header));
-            String result   = json.get("code").toString().replace("\"", "");
-            if ("0".equals(result)) {
-                returnValue = TradeData.CODE_SUCCESS;
-                log.info("[DCOIN][SUCCESS][CANCEL ORDER - response] response:{}", gson.toJson(json));
+            JsonObject json   = postHttpMethod(TradeData.DCOIN_CANCEL_ORDER, makeEncodedParas(header));
+            String returnCode = json.get("code").getAsString();
+            if (SUCCESS.equals(returnCode) || SUCCESS_CANCEL.equals(returnCode)) {
+                returnValue = ReturnCode.SUCCESS.getCode();
+                log.info("[DCOIN][CANCEL ORDER] response:{}", gson.toJson(json));
             } else {
-                log.error("[DCOIN][ERROR][CANCEL ORDER - response] response:{}", gson.toJson(json));
+                log.error("[DCOIN][CANCEL ORDER] response:{}", gson.toJson(json));
             }
         }catch(Exception e){
-            log.error("[DCOIN][ERROR][CANCEL ORDER] {}", e.getMessage());
+            log.error("[DCOIN][CANCEL ORDER] Error: {}", e.getMessage());
+            e.printStackTrace();
         }
         return returnValue;
     }
 
     /** 암호화된 값 생성 */
-    public String createSign(String params){
-        String returnVal = "";
+    private String createSign(String params) throws Exception{
+        String returnVal = ReturnCode.FAIL.getValue();
         String replaceParams = params.replace("\"","").replace("{","").replace("}","").replace(":","").replace(",","");
         String message = replaceParams.concat(keyList.get(SECRET_KEY));
-        try {
-            MessageDigest md5 = MessageDigest.getInstance("md5");
-            byte[] code = md5.digest(message.getBytes());
-            StringBuffer sb = new StringBuffer();
-            for (byte b : code) {
-                sb.append(String.format("%02x", b));
-            }
-            returnVal = sb.toString();
 
-        } catch (Exception e) {
-            e.printStackTrace();
-            returnVal = null;
-            log.error("[DCOIN][ERROR][Create Sign] {}", e.getMessage());
+        MessageDigest md5 = MessageDigest.getInstance("md5");
+        byte[] code = md5.digest(message.getBytes());
+        StringBuffer sb = new StringBuffer();
+        for (byte b : code) {
+            sb.append(String.format("%02x", b));
         }
+        returnVal = sb.toString();
         return returnVal;
     }
 
-    public String makeEncodedParas(JsonObject header){
+
+    private String makeEncodedParas(JsonObject header) throws Exception {
         String returnVal = "";
-        int i =0;
+        int i = 0;
         for(String key : header.keySet()){
-            String value = header.get(key).toString().replace("\"","");
+            String value = header.get(key).getAsString();
             if(i < header.size() -1){
                 returnVal += (key + "=" + value + "&");
             }else{
@@ -423,62 +486,112 @@ public class DcoinImp extends AbstractExchange {
             }
             i++;
         }
-
         return returnVal;
     }
 
     /* DCOIN 의 경우 통화 기준으로 필요함.*/
-    public String getCurrency(Exchange exchange, String coin, String coinId){
-        String returnVal = "";
-        try {
-            // 거래소를 체크하는 이유는 여러거래소에서 같은 코인을 할 수 있기에
-            if(exchange.getExchangeCoin().size() > 0){
-                for(ExchangeCoin data : exchange.getExchangeCoin()){
-                    if(data.getCoinCode().equals(coin) && data.getId() == Long.parseLong(coinId)){
-                        returnVal = data.getCurrency();
-                    }
+    public String getCurrency(Exchange exchange, String coin, String coinId) throws Exception{
+        String returnVal = ReturnCode.FAIL.getValue();
+
+        // 거래소를 체크하는 이유는 여러거래소에서 같은 코인을 할 수 있기에
+        if(exchange.getExchangeCoin().size() > 0){
+            for(ExchangeCoin data : exchange.getExchangeCoin()){
+                if(data.getCoinCode().equals(coin) && data.getId() == Long.parseLong(coinId)){
+                    returnVal = data.getCurrency();
                 }
             }
-        }catch(Exception e){
-            log.error("[DCOIN][ERROR][Get Currency] {}",e.getMessage());
+        }
+        if(returnVal.equals(ReturnCode.FAIL.getValue())){
+            String msg = "There is no currency with " + coin + " and " + coinId;
+            throw new Exception(msg);
         }
         return returnVal;
     }
 
     /* HTTP POST Method for coinone */
-    public JsonObject postHttpMethod(String targetUrl, String payload) {
-        URL url;
-        String inputLine;
-        JsonObject returnObj = null;
-        try{
+    private JsonObject postHttpMethod(String targetUrl, String payload) throws Exception{
 
-            log.info("[DCOIN][POST HTTP] request:{}", payload);
+        log.info("[DCOIN][POST HTTP] url : {}, payload : {}", targetUrl, payload);
 
-            url = new URL(targetUrl);
-            HttpURLConnection connection = (HttpsURLConnection) url.openConnection();
-            connection.setDoOutput(true);
-            connection.setDoInput(true);
-            connection.setRequestMethod("POST");
-            connection.setConnectTimeout(TradeData.TIMEOUT_VALUE);
-            connection.setReadTimeout(TradeData.TIMEOUT_VALUE);
-            connection.setRequestProperty("Context-Type", "application/x-www-form-urlencoded");
-            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
+        URL url = new URL(targetUrl);
+        HttpURLConnection connection = (HttpsURLConnection) url.openConnection();
+        connection.setDoOutput(true);
+        connection.setDoInput(true);
+        connection.setRequestMethod("POST");
+        connection.setConnectTimeout(TradeData.TIMEOUT_VALUE);
+        connection.setReadTimeout(TradeData.TIMEOUT_VALUE);
+        connection.setRequestProperty("Context-Type", "application/x-www-form-urlencoded");
+        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
+        // Writing the post data to the HTTP request body
+        BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream()));
+        bw.write(payload);
+        bw.close();
 
-            // Writing the post data to the HTTP request body
-            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream()));
-            bw.write(payload);
-            bw.close();
-            connection.getResponseCode();
-            BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            StringBuffer response = new StringBuffer();
+        StringBuffer response = new StringBuffer();
+        if(connection.getResponseCode() == HttpsURLConnection.HTTP_OK){
+            BufferedReader br = null;
+            if(connection.getInputStream() != null){
+                br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+            }else if(connection.getErrorStream() != null){
+                br = new BufferedReader(new InputStreamReader(connection.getErrorStream()));
+            }else{
+                log.error("[DCOIN][POST HTTP] Return Code is 200. But inputstream and errorstream is null");
+                throw new Exception();
+            }
+            String inputLine = "";
             while ((inputLine = br.readLine()) != null) {
                 response.append(inputLine);
             }
             br.close();
-            returnObj = gson.fromJson(response.toString(), JsonObject.class);
-        }catch(Exception e){
-            log.error("[DCOIN][ERROR][POST HTTP] {}", e.getMessage());
+        }else{
+            log.error("[DCOIN][POST HTTP] Return code : {}, msg : {}",connection.getResponseCode(), connection.getResponseMessage());
+            throw new Exception();
         }
-        return returnObj;
+
+        return gson.fromJson(response.toString(), JsonObject.class);
+    }
+
+    // Http get method
+    private String getHttpMethod(String url) throws Exception{
+        log.info("[DCOIN][GET HTTP] url : {}", url);
+        StringBuffer response = null;
+
+        URL urlObject = new URL(url);
+        HttpURLConnection connection = (HttpURLConnection) urlObject.openConnection();
+        connection.setRequestProperty("Context-Type", "application/x-www-form-urlencoded");
+        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
+        connection.setConnectTimeout(TradeData.TIMEOUT_VALUE);
+        connection.setReadTimeout(TradeData.TIMEOUT_VALUE);
+
+
+        int returnCode    = connection.getResponseCode();
+        String returnMsg  = connection.getResponseMessage();
+        if(returnCode == HttpURLConnection.HTTP_OK){
+            InputStreamReader reader = null;
+            if(connection.getInputStream() != null){
+                reader = new InputStreamReader(connection.getInputStream());
+            }else if(connection.getErrorStream() != null){
+                reader = new InputStreamReader(connection.getErrorStream());
+            }else{
+                log.error("[DCOIN][GET HTTP] Http response is 200. But inputstream is null!!");
+                throw new Exception();
+            }
+            BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+            response = new StringBuffer();
+            String inputLine = "";
+            while ((inputLine = br.readLine()) != null) {
+                response.append(inputLine);
+            }
+            br.close();
+        }else{
+            log.error("[DCOIN][GET HTTP] Error code : {}, Error msg : {}", returnCode, returnMsg);
+            throw new Exception();
+        }
+        return response.toString();
+    }
+
+    // 거래소에 맞춰 심볼 반환
+    private String getSymbol(String[] coinData, Exchange exchange) throws Exception {
+        return coinData[0].toLowerCase() + getCurrency(exchange,coinData[0], coinData[1]);
     }
 }
