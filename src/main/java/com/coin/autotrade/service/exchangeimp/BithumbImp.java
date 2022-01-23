@@ -1,23 +1,23 @@
 package com.coin.autotrade.service.exchangeimp;
 
-import com.coin.autotrade.common.TradeData;
 import com.coin.autotrade.common.HttpRequest;
+import com.coin.autotrade.common.TradeData;
 import com.coin.autotrade.common.TradeService;
+import com.coin.autotrade.common.code.ReturnCode;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
+import org.apache.commons.lang3.StringEscapeUtils;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import javax.net.ssl.HttpsURLConnection;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
-import java.net.URL;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -27,55 +27,55 @@ import java.util.*;
 @Slf4j
 public class BithumbImp extends AbstractExchange {
 
-    private final String DEFAULT_ENCODING = "UTF-8";
-    private final String HMAC_SHA512      = "HmacSHA512";
+    final private String ACCESS_TOKEN     = "access_token";
+    final private String SECRET_KEY       = "secret_key";
+    final private String ALREADY_TRADED   = "3000";
+    final private String SUCCESS          = "0000";
 
-    final private String ACCESS_TOKEN  = "access_token";
-    final private String SECRET_KEY    = "secret_key";
-    final private String ALREADY_TRADED= "3000";
-    final private String BUY           = "bid";
-    final private String SELL          = "ask";
-    Map<String, String> keyList        = new HashMap<>();
+    final private String BUY              = "bid";
+    final private String SELL             = "ask";
+    Map<String, String> keyList           = new HashMap<>();
 
 
 
     @Override
-    public void initClass(AutoTrade autoTrade){
+    public void initClass(AutoTrade autoTrade) throws Exception{
         super.autoTrade = autoTrade;
         setCoinToken(TradeService.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
     }
 
     @Override
-    public void initClass(Liquidity liquidity){
+    public void initClass(Liquidity liquidity) throws Exception{
         super.liquidity = liquidity;
         setCoinToken(TradeService.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
     }
 
     @Override
-    public void initClass(RealtimeSync realtimeSync){
+    public void initClass(RealtimeSync realtimeSync, CoinService coinService) throws Exception{
         super.realtimeSync = realtimeSync;
+        super.coinService = coinService;
         setCoinToken(TradeService.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
     }
 
     @Override
-    public void initClass(Fishing fishing, CoinService coinService){
+    public void initClass(Fishing fishing, CoinService coinService) throws Exception{
         super.fishing     = fishing;
         super.coinService = coinService;
         setCoinToken(TradeService.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
     }
 
     /** 코인 토큰 정보 셋팅 **/
-    private void setCoinToken(String[] coinData, Exchange exchange){
+    private void setCoinToken(String[] coinData, Exchange exchange) throws Exception{
         // Set token key
-        try{
-            for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
-                if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1])){
-                    keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
-                    keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
-                }
+        for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
+            if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1]) ){
+                keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
+                keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
             }
-        }catch (Exception e){
-            log.error("[BITHUMB][ERROR][SET COIN TOKEN] {}", e.getMessage());
+        }
+        if(keyList.isEmpty()){
+            String msg = "There is no match coin. " + Arrays.toString(coinData) + " " + exchange.getExchangeCode();
+            throw new Exception(msg);
         }
     }
 
@@ -85,9 +85,10 @@ public class BithumbImp extends AbstractExchange {
      */
     @Override
     public int startAutoTrade(String price, String cnt){
-        log.info("[BITHUMB][AUTOTRADE START]");
-        int returnCode    = TradeData.CODE_SUCCESS;
-
+        log.info("[BITHUMB][AUTOTRADE] START");
+        int returnCode = ReturnCode.SUCCESS.getCode();
+        String firstAction  = "";
+        String secondAction = "";
         try{
 
             String[] coinData = TradeService.splitCoinWithId(autoTrade.getCoin());
@@ -98,107 +99,99 @@ public class BithumbImp extends AbstractExchange {
             if(TradeData.MODE_RANDOM.equals(mode)){
                 mode = (TradeService.getRandomInt(0,1) == 0) ? TradeData.MODE_BUY : TradeData.MODE_SELL;
             }
-
-            // 1 : 매수 , 2 : 매도
             if(TradeData.MODE_BUY.equals(mode)){
-                String buyOrderId  = "";
-                if( !(buyOrderId = createOrder(BUY, price, cnt, coinData[0],currency)).equals("")){   // 매수
-                    Thread.sleep(300);
-                    createOrder(SELL,price, cnt,  coinData[0],currency);
-                    cancelOrder(BUY,buyOrderId, coinData[0], currency);                      // 매도 실패 시, 매수 취소
-                }
-            }else if(TradeData.MODE_SELL.equals(mode)){
-                String sellOrderId  = "";
-                if( !(sellOrderId = createOrder(SELL,price, cnt,  coinData[0],currency)).equals("")){
-                    Thread.sleep(300);
-                    createOrder(BUY,price, cnt,  coinData[0],currency);
-                    cancelOrder(SELL, sellOrderId, coinData[0], currency);
+                firstAction  = BUY;
+                secondAction = SELL;
+            }else{
+                firstAction  = SELL;
+                secondAction = BUY;
+            }
+
+            String orderId = ReturnCode.NO_DATA.getValue();
+            if(!(orderId = createOrder(firstAction, price, cnt, coinData[0],currency)).equals(ReturnCode.NO_DATA.getValue())){   // 매수
+                Thread.sleep(500);
+                if(createOrder(secondAction,price, cnt, coinData[0],currency).equals(ReturnCode.NO_DATA.getValue())){               // 매도
+                    cancelOrder(firstAction,orderId, coinData[0], currency);                      // 매도 실패 시, 매수 취소
                 }
             }
+
         }catch (Exception e){
-            returnCode = TradeData.CODE_ERROR;
-            log.error("[BITHUMB][ERROR][AUTOTRADE] {}", e.getMessage());
+            returnCode = ReturnCode.FAIL.getCode();
+            log.error("[BITHUMB][AUTOTRADE] Error : {}", e.getMessage());
         }
 
-        log.info("[BITHUMB][AUTOTRADE End]");
+        log.info("[BITHUMB][AUTOTRADE] END");
         return returnCode;
     }
 
     /** 호가유동성 function */
     @Override
     public int startLiquidity(Map list){
-        int returnCode = TradeData.CODE_SUCCESS;
+        int returnCode = ReturnCode.SUCCESS.getCode();
 
         Queue<String> sellQueue = (LinkedList) list.get("sell");
         Queue<String> buyQueue  = (LinkedList) list.get("buy");
         List<Map<String,String>> CancelList = new ArrayList();
 
         try{
-            log.info("[BITHUMB][LIQUIDITY] Start");
+            log.info("[BITHUMB][LIQUIDITY] START");
             String[] coinData = TradeService.splitCoinWithId(liquidity.getCoin());
             String currency   = getCurrency(liquidity.getExchange(), coinData[0], coinData[1]);
             int minCnt        = liquidity.getMinCnt();
             int maxCnt        = liquidity.getMaxCnt();
 
 
-            while(sellQueue.size() > 0 || buyQueue.size() > 0){
-                String randomMode = (TradeService.getRandomInt(1,2) == 1) ? BUY : SELL;
+            while(!sellQueue.isEmpty() || !buyQueue.isEmpty()){
+                String mode            = (TradeService.getRandomInt(1,2) == 1) ? TradeData.MODE_BUY : TradeData.MODE_SELL;
                 String firstOrderId    = "";
                 String secondsOrderId  = "";
                 String firstPrice      = "";
                 String secondsPrice    = "";
+                String firstAction     = "";
+                String secondAction    = "";
                 String firstCnt        = String.valueOf(Math.floor(TradeService.getRandomDouble((double)minCnt, (double)maxCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
                 String secondsCnt      = String.valueOf(Math.floor(TradeService.getRandomDouble((double)minCnt, (double)maxCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
 
-                if(sellQueue.size() > 0 && buyQueue.size() > 0 && randomMode.equals(BUY)){
+                if(!sellQueue.isEmpty() && !buyQueue.isEmpty() && mode.equals(TradeData.MODE_BUY)){
                     firstPrice   = buyQueue.poll();
-                    firstOrderId = createOrder(BUY, firstPrice, firstCnt,  coinData[0],currency);
-
-                    Thread.sleep(300);
-                    secondsPrice   = sellQueue.poll();
-                    secondsOrderId = createOrder(SELL, secondsPrice, secondsCnt,  coinData[0],currency);
-                }else if(buyQueue.size() > 0 && sellQueue.size() > 0 && randomMode.equals(SELL)){
+                    secondsPrice = sellQueue.poll();
+                    firstAction  = BUY;
+                    secondAction = SELL;
+                }else if(!buyQueue.isEmpty() && !sellQueue.isEmpty() && mode.equals(TradeData.MODE_SELL)){
                     firstPrice   = sellQueue.poll();
-                    firstOrderId = createOrder(SELL, firstPrice, firstCnt,  coinData[0],currency);
-
-                    Thread.sleep(300);
-                    secondsPrice   = buyQueue.poll();
-                    secondsOrderId = createOrder(BUY, secondsPrice, secondsCnt,  coinData[0],currency);
+                    secondsPrice = buyQueue.poll();
+                    firstAction  = SELL;
+                    secondAction = BUY;
                 }
+                firstOrderId   = createOrder(firstAction, firstPrice, firstCnt,  coinData[0],currency);
+                Thread.sleep(300);
+                secondsOrderId = createOrder(secondAction, secondsPrice, secondsCnt,  coinData[0],currency);
 
+                // first / second 둘 중 하나라도 거래가 성사 되었을 경우
                 Thread.sleep(1000);
-                if(randomMode.equals(BUY)){
-                    if(!firstOrderId.equals("")){
-                        cancelOrder(BUY,firstOrderId,coinData[0],currency);
+                if(!firstOrderId.equals(ReturnCode.NO_DATA.getValue())  || !secondsOrderId.equals(ReturnCode.NO_DATA.getValue())){
+                    if(!firstOrderId.equals(ReturnCode.NO_DATA.getValue())){
+                        cancelOrder(firstAction,  firstOrderId, coinData[0],currency);
                     }
-                    if(!secondsOrderId.equals("")){
-                        Thread.sleep(300);
-                        cancelOrder(SELL,secondsOrderId,coinData[0],currency);
-                    }
-                }else{
-                    if(!firstOrderId.equals("")){
-                        cancelOrder(SELL,firstOrderId,coinData[0],currency);
-                    }
-                    if(!secondsOrderId.equals("")){
-                        Thread.sleep(300);
-                        cancelOrder(BUY,secondsOrderId,coinData[0],currency);
+                    Thread.sleep(300);
+                    if(!secondsOrderId.equals(ReturnCode.NO_DATA.getValue())){
+                        cancelOrder(secondAction, secondsOrderId,coinData[0],currency);
                     }
                 }
-
             }
         }catch (Exception e){
-            returnCode = TradeData.CODE_ERROR;
-            log.error("[BITHUMB][ERROR][LIQUIDITY] {}", e.getMessage());
+            returnCode = ReturnCode.FAIL.getCode();
+            log.error("[BITHUMB][LIQUIDITY] ERROR : {}", e.getMessage());
         }
-        log.info("[BITHUMB][LIQUIDITY] End");
+        log.info("[BITHUMB][LIQUIDITY] END");
         return returnCode;
     }
 
     @Override
     public int startFishingTrade(Map<String,List> list, int intervalTime){
-        log.info("[BITHUMB][FISHINGTRADE START]");
+        log.info("[BITHUMB][FISHINGTRADE] START");
 
-        int returnCode    = TradeData.CODE_SUCCESS;
+        int returnCode = ReturnCode.SUCCESS.getCode();
 
         try{
             String[] coinData = TradeService.splitCoinWithId(fishing.getCoin());
@@ -221,13 +214,13 @@ public class BithumbImp extends AbstractExchange {
             for (int i = 0; i < tickPriceList.size(); i++) {
                 String cnt = String.valueOf(Math.floor(TradeService.getRandomDouble((double) fishing.getMinContractCnt(), (double) fishing.getMaxContractCnt()) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
 
-                String orderId = "";
+                String orderId = ReturnCode.NO_DATA.getValue();
                 if(TradeData.MODE_BUY.equals(mode)) {
                     orderId = createOrder(BUY,  tickPriceList.get(i), cnt,  coinData[0],currency);
                 }else{
                     orderId = createOrder(SELL, tickPriceList.get(i), cnt,  coinData[0],currency);
                 }
-                if(!orderId.equals("")){                                                // 매수/매도가 정상적으로 이뤄졌을 경우 데이터를 list에 담는다
+                if(!orderId.equals(ReturnCode.NO_DATA.getValue())){         // 매수/매도가 정상적으로 이뤄졌을 경우 데이터를 list에 담는다
                     Map<String, String> orderMap = new HashMap<>();
                     orderMap.put("price" ,tickPriceList.get(i));
                     orderMap.put("cnt" ,cnt);
@@ -279,7 +272,7 @@ public class BithumbImp extends AbstractExchange {
                         orderId = createOrder(BUY,  copiedOrderMap.get("price"), cntForExcution.toPlainString(),  coinData[0],currency);
                     }
 
-                    if(!orderId.equals("")){
+                    if(!orderId.equals(ReturnCode.NO_DATA.getValue())){
                         cnt = cnt.subtract(cntForExcution);
                     }else{
                         log.error("[BITHUMB][FISHINGTRADE] While loop is broken, Because create order is failed");
@@ -292,56 +285,136 @@ public class BithumbImp extends AbstractExchange {
                 Thread.sleep(2000);
             }
         }catch (Exception e){
-            returnCode = TradeData.CODE_ERROR;
-            log.error("[BITHUMB][ERROR][FISHINGTRADE] {}", e.getMessage());
+            returnCode = ReturnCode.FAIL.getCode();
+            log.error("[BITHUMB][FISHINGTRADE] ERROR {}", e.getMessage());
         }
 
-        log.info("[BITHUMB][FISHINGTRADE END]");
+        log.info("[BITHUMB][FISHINGTRADE] END");
         return returnCode;
     }
 
+
+    @Override
+    public int startRealtimeTrade(JsonObject realtime) {
+        log.info("[BITHUMB][REALTIME SYNC TRADE] START");
+        int returnCode   = ReturnCode.SUCCESS.getCode();
+        String realtimeChangeRate = "signed_change_rate";
+
+        try {
+
+            boolean isStart      = false;
+            String[] coinWithId  = TradeService.splitCoinWithId(realtimeSync.getCoin());
+            String currency      = getCurrency(realtimeSync.getExchange(), coinWithId[0], coinWithId[1]);
+            String symbol        = getSymbol(coinWithId, realtimeSync.getExchange());
+            String[] currentTick = getTodayTick();
+            String openingPrice  = currentTick[0];
+            String currentPrice  = currentTick[1];
+            String orderId       = "";
+            String targetPrice   = "";
+            String action        = "";
+            String mode          = "";
+            double minCnt        = Double.parseDouble(realtimeSync.getMinTradeCnt());
+            double maxCnt        = Double.parseDouble(realtimeSync.getMaxTradeCnt());
+            String cnt           = String.valueOf(Math.floor(TradeService.getRandomDouble(minCnt, maxCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
+
+            int isInRange = isMoreOrLessPrice(currentPrice);
+
+            if(isInRange != 0){              // 구간 밖일 경우
+                if(isInRange == -1){         // 지지선보다 낮을 경우
+                    action       = BUY;
+                    mode         = TradeData.MODE_BUY;
+                    targetPrice  = realtimeSync.getMinPrice();
+                }else if(isInRange == 1){    // 저항선보다 높을 경우
+                    action       = SELL;
+                    mode         = TradeData.MODE_SELL;
+                    targetPrice  = realtimeSync.getMaxPrice();
+                }
+                isStart = true;
+            }else{
+                // 지정한 범위 안에 없을 경우 매수 혹은 매도로 맞춰준다.
+                Map<String,String> tradeInfo = getTargetTick(openingPrice, currentPrice, realtime.get(realtimeChangeRate).getAsString());
+                if(!tradeInfo.isEmpty()){
+                    targetPrice = tradeInfo.get("price");
+                    mode        = tradeInfo.get("mode");
+                    action      = (mode.equals(TradeData.MODE_BUY)) ? BUY : SELL;
+                    isStart     = true;
+                }
+            }
+
+            if(isStart){
+                if( !(orderId = createOrder(action, targetPrice, cnt, coinWithId[0], currency)).equals(ReturnCode.NO_DATA.getValue())){    // 매수/OrderId가 있으면 성공
+
+                    Thread.sleep(300);
+
+                    // 3. bestoffer set 로직
+                    JsonArray array = makeBestofferAfterRealtimeSync(targetPrice, mode);
+                    for (int i = 0; i < array.size(); i++) {
+                        JsonObject object       = array.get(i).getAsJsonObject();
+                        String bestofferPrice   = object.get("price").getAsString();
+                        String bestofferCnt     = object.get("cnt").getAsString();
+                        String bestofferOrderId = ReturnCode.NO_DATA.getValue();
+
+                        if( !(bestofferOrderId = createOrder(action, bestofferPrice, bestofferCnt, coinWithId[0], currency)).equals(ReturnCode.NO_DATA.getValue())){
+                            log.info("[BITHUMB][REALTIME SYNC] Bestoffer is setted. price:{}, cnt:{}", bestofferPrice, bestofferCnt);
+                        }
+                    }
+                    cancelOrder(action, orderId, coinWithId[0], currency);
+                }
+            }
+        }catch (Exception e){
+            log.error("[BITHUMB][REALTIME SYNC TRADE] Error :{} ", e.getMessage());
+            e.printStackTrace();
+        }
+        log.info("[BITHUMB][REALTIME SYNC TRADE] END");
+        return returnCode;
+    }
+
+
+
+    /**
+     * 현재 Tick 가져오기
+     * @param exchange
+     * @param coinWithId
+     * @return [ 시가 , 종가 ] String Array
+     */
+    private String[] getTodayTick() throws Exception{
+
+        String[] returnRes   = new String[2];
+        String request       = TradeData.BITHUMB_TICK + "/" + getSymbol(TradeService.splitCoinWithId(realtimeSync.getCoin()),realtimeSync.getExchange());
+        String response      = getHttpMethod(request);
+        JsonObject resObject = gson.fromJson(response, JsonObject.class);
+        String returnCode    = resObject.get("status").getAsString();
+        if(SUCCESS.equals(returnCode)){
+            JsonObject data = resObject.get("data").getAsJsonObject();
+            returnRes[0]    = data.get("prev_closing_price").getAsString();
+            returnRes[1]    = data.get("closing_price").getAsString();
+            log.info("[BITHUMB][GET TODAY TICK] response : {}", Arrays.toString(returnRes));
+        }else{
+            log.error("[BITHUMB][GET TODAY TICK] response : {}", response);
+            throw new Exception(response);
+        }
+        return returnRes;
+    }
+
+
     @Override
     public String getOrderBook(Exchange exchange, String[] coinWithId) {
-        String returnRes = "";
+        String returnRes = ReturnCode.FAIL.getValue();
         try{
-            log.info("[BITHUMB][ORDER BOOK START]");
-            String coin = coinWithId[0];
-            String coinId = coinWithId[1];
-            String inputLine;
-            String symbol   = getCurrency(exchange, coin, coinId);
-            String request  = TradeData.BITHUMB_ORDERBOOK + "/" + coin + "_" + symbol;
-            URL url = new URL(request);
-
-            HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
-            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
-            connection.setRequestMethod("GET");
-
-            log.info("[BITHUMB][ORDER BOOK - REQUEST] symbol:{}", "BITHUMB",  coin);
-
-            int returnCode = connection.getResponseCode();
-            BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            StringBuffer response = new StringBuffer();
-            while ((inputLine = br.readLine()) != null) {
-                response.append(inputLine);
-            }
-            br.close();
-            returnRes = response.toString();
-
-            log.info("[BITHUMB][ORDER BOOK END]");
-
+            String request  = TradeData.BITHUMB_ORDERBOOK + "/" + getSymbol(coinWithId,exchange);
+            returnRes       = getHttpMethod(request);
         }catch (Exception e){
-            log.error("[BITHUMB][ERROR][ORDER BOOK] {}",e.getMessage());
+            log.error("[BITHUMB][ORDER BOOK] ERROR : {}",e.getMessage());
+            e.printStackTrace();
         }
-
         return returnRes;
     }
 
 
 
     /** Biyhumb global 매수/매도 로직 */
-    public String createOrder(String type, String price, String cnt, String coin, String currency){
-
-        String orderId = "";
+    private String createOrder(String type, String price, String cnt, String coin, String currency){
+        String orderId = ReturnCode.NO_DATA.getValue();
 
         try{
 
@@ -352,32 +425,29 @@ public class BithumbImp extends AbstractExchange {
             rgParams.put("price", price);
             rgParams.put("type", type);
 
-            String api_host = TradeData.BITHUMB_URL + TradeData.BITHUMB_ENDPOINT_CREATE_ORDER;
-            HashMap<String, String> httpHeaders = getHttpHeaders(TradeData.BITHUMB_ENDPOINT_CREATE_ORDER, rgParams, keyList.get(ACCESS_TOKEN), keyList.get(SECRET_KEY));
-            String rgResultDecode = postHttpMethod(api_host,  rgParams, httpHeaders);
+            String api_host                     = TradeData.BITHUMB_URL + TradeData.BITHUMB_ENDPOINT_CREATE_ORDER;
+            HashMap<String, String> httpHeaders = getHttpHeaders(TradeData.BITHUMB_ENDPOINT_CREATE_ORDER, rgParams);
+            String rgResultDecode               = postHttpMethod(api_host,  rgParams, httpHeaders);
 
             JsonObject returnVal = gson.fromJson(rgResultDecode, JsonObject.class);
-            String status        = gson.fromJson(returnVal.get("status"), String.class);
-            if(status.equals("0000")){
-                orderId         = gson.fromJson(returnVal.get("order_id"), String.class);
-                log.info("[BITHUMB][SUCCESS][CREATE ORDER - response] response : {}", gson.toJson(returnVal));
+            String status        = returnVal.get("status").getAsString();
+            if(status.equals(SUCCESS)){
+                orderId = returnVal.get("order_id").getAsString();
+                log.info("[BITHUMB][CREATE ORDER] response : {}", rgResultDecode);
             }else{
-                log.error("[BITHUMB][ERROR][CREATE ORDER - response] response :{}", gson.toJson(returnVal));
+                log.error("[BITHUMB][CREATE ORDER] response :{}", rgResultDecode);
             }
-
         }catch (Exception e){
-            log.error("[BITHUMB][ERROR][CREATE ORDER] {}",e.getMessage());
+            log.error("[BITHUMB][CREATE ORDER] ERROR {}",e.getMessage());
+            e.printStackTrace();
         }
         return orderId;
     }
 
     /* Bithumb global 거래 취소 */
-    public int cancelOrder(String type, String orderId, String coin, String currency) {
+    private int cancelOrder(String type, String orderId, String coin, String currency) {
 
-        int returnValue = TradeData.CODE_ERROR;
-        String errorCode = "";
-        String errorMsg = "";
-
+        int returnValue = ReturnCode.NO_DATA.getCode();
         try {
             HashMap<String, String> rgParams = new HashMap<String, String>();
             rgParams.put("type", type);
@@ -385,124 +455,81 @@ public class BithumbImp extends AbstractExchange {
             rgParams.put("order_currency", coin);
             rgParams.put("payment_currency", currency);
 
-            String api_host = TradeData.BITHUMB_URL + TradeData.BITHUMB_ENDPOINT_CANCEL_ORDER;
-            HashMap<String, String> httpHeaders = getHttpHeaders(TradeData.BITHUMB_ENDPOINT_CANCEL_ORDER, rgParams, keyList.get(ACCESS_TOKEN), keyList.get(SECRET_KEY));
-            String rgResultDecode = postHttpMethod(api_host,  rgParams, httpHeaders);
+            String api_host                     = TradeData.BITHUMB_URL + TradeData.BITHUMB_ENDPOINT_CANCEL_ORDER;
+            HashMap<String, String> httpHeaders = getHttpHeaders(TradeData.BITHUMB_ENDPOINT_CANCEL_ORDER, rgParams);
+            String rgResultDecode               = postHttpMethod(api_host,  rgParams, httpHeaders);
 
             JsonObject returnVal = gson.fromJson(rgResultDecode, JsonObject.class);
-            String status        = gson.fromJson(returnVal.get("status"), String.class);
-            if(status.equals("0000") || status.equals(ALREADY_TRADED)){
-                orderId         = gson.fromJson(returnVal.get("order_id"), String.class);
-                log.info("[BITHUMB][SUCCESS][CANCEL ORDER - response] response : {}", gson.toJson(returnVal));
+            String status        = returnVal.get("status").getAsString();
+            if(status.equals(SUCCESS) || status.equals(ALREADY_TRADED)){
+                log.info("[BITHUMB][CANCEL ORDER] response : {}", rgResultDecode);
             }else{
-                log.error("[BITHUMB][ERROR][CANCEL ORDER - response] response :{}", gson.toJson(returnVal));
+                log.error("[BITHUMB][CANCEL ORDER] response :{}", rgResultDecode);
             }
-
         }catch(Exception e){
-            log.error("[BITHUMB][ERROR][CANCEL ORDER] {}", e.getMessage());
+            log.error("[BITHUMB][CANCEL ORDER] ERROR : {}", e.getMessage());
+            e.printStackTrace();
         }
         return returnValue;
     }
 
-    /* Get 각 코인에 등록한 통화 */
-    public String getCurrency(Exchange exchange,String coin, String coinId){
-        String returnVal = "";
-        try {
-            // Thread로 돌때는 최초에 셋팅을 해줘서 DB 조회가 필요 없음.
-            if(exchange.getExchangeCoin().size() > 0){
-                for(ExchangeCoin data : exchange.getExchangeCoin()){
-                    if(data.getCoinCode().equals(coin) && data.getId() == Long.parseLong(coinId)){
-                        returnVal = data.getCurrency();
-                    }
-                }
-            }
-        }catch(Exception e){
-            log.error("[BITHUMB][ERROR][GET CURRENCY] {}",e.getMessage());
+
+    /** Bithum 에서 제공하는 메서드를 이용한 http */
+    private String postHttpMethod(String targetUrl, HashMap<String, String> rgParams,  HashMap<String, String> httpHeaders) throws Exception{
+        String response = ReturnCode.NO_DATA.getValue();
+
+        log.info("[BITHUMB][POST HTTP] url : {} , request : {}", targetUrl, rgParams.toString());
+        HttpRequest request = new HttpRequest(targetUrl, "POST");
+        request.readTimeout(10000);
+        if (httpHeaders != null && !httpHeaders.isEmpty()) {    // setRequestProperty on header
+            httpHeaders.put("api-client-type", "2");
+            request.headers(httpHeaders);
         }
-        return returnVal;
-    }
-
-
-    private String postHttpMethod(String targetUrl, HashMap<String, String> rgParams,  HashMap<String, String> httpHeaders) {
-        String response = "";
-
-        // SSL
-        try{
-            log.info("[BITHUMB][POST HTTP] url : {} , request : {}", targetUrl, rgParams.toString());
-
-            if (targetUrl.startsWith("https://")) {
-                HttpRequest request = HttpRequest.get(targetUrl);
-                // Accept all certificates
-                request.trustAllCerts();
-                // Accept all hostnames
-                request.trustAllHosts();
-            }
-
-            HttpRequest request = null;
-            request = new HttpRequest(targetUrl, "POST");
-            request.readTimeout(10000);
-
-            if (httpHeaders != null && !httpHeaders.isEmpty()) {
-                httpHeaders.put("api-client-type", "2");
-                request.headers(httpHeaders);
-            }
-            if (rgParams != null && !rgParams.isEmpty()) {
-                request.form(rgParams);
-            }
-            response = request.body();
-            log.info("[BITTHUMB][POST HTTP] response {}", response);
-            request.disconnect();
-        }catch (Exception e){
-            log.error("[BITTHUMB][ERROR][POST HTTP] {}", e.getMessage());
+        if (rgParams != null && !rgParams.isEmpty()) {
+            request.form(rgParams);
         }
+        response = StringEscapeUtils.unescapeJava(request.body());
+        log.info("[BITTHUMB][POST HTTP] Response : {}", response);
+        request.disconnect();
+
         return response;
     }
 
-    // Bithumb 에서 제공하는 메서드
-    private HashMap<String, String> getHttpHeaders(String endpoint, HashMap<String, String> rgData, String apiKey, String apiSecret) {
+    /** Bithum 에서 제공하는 메서드를 이용한 http를 이용하기 위해 header를 만드는 작업 */
+    private HashMap<String, String> getHttpHeaders(String endpoint, HashMap<String, String> rgData) throws Exception{
 
-        String strData = mapToQueryString(rgData).replace("?", "");
-        String nNonce = usecTime();
-
-        strData = strData.substring(0, strData.length()-1);
-        strData = encodeURIComponent(strData);
+        String strData = mapToQueryString(rgData);
+        String nNonce  = String.valueOf(System.currentTimeMillis());
+        strData        = encodeURIComponent(strData);
 
         HashMap<String, String> array = new HashMap<String, String>();
-        String str = endpoint + ";"	+ strData + ";" + nNonce;
+        String str                    = endpoint + ";"	+ strData + ";" + nNonce;
+        String encoded                = asHex(hmacSha512(str, keyList.get(SECRET_KEY)));
 
-        String encoded = asHex(hmacSha512(str, apiSecret));
-        array.put("Api-Key", apiKey);
-        array.put("Api-Sign", encoded);
-        array.put("Api-Nonce", String.valueOf(nNonce));
+        array.put("Api-Key",   keyList.get(ACCESS_TOKEN));
+        array.put("Api-Sign",  encoded);
+        array.put("Api-Nonce", nNonce);
 
         return array;
-
     }
 
-    // Bithumb 에서 제공하는 메서드
-    public static String mapToQueryString(Map<String, String> map) {
+    // Map으로 받은 파라미터 값들을 쿼리 스트링 형식으로 변경
+    private String mapToQueryString(Map<String, String> map) throws Exception{
         StringBuilder string = new StringBuilder();
-
-        if (map.size() > 0) {
-            string.append("?");
-        }
-
+        int i = 0;
         for (Map.Entry<String, String> entry : map.entrySet()) {
             string.append(entry.getKey());
             string.append("=");
             string.append(entry.getValue());
-            string.append("&");
+            if(i < map.size() - 1){
+                string.append("&");
+            }
+            i++;
         }
-
         return string.toString();
     }
 
-    // Bithumb 에서 제공하는 메서드
-    private String usecTime() {
-        return String.valueOf(System.currentTimeMillis());
-    }
-
-    // Bithumb 에서 제공하는 메서드
+    // Bithum 에서 암호화를 하기위한 메서드
     private String encodeURIComponent(String s) {
         String result = null;
         try {
@@ -522,21 +549,15 @@ public class BithumbImp extends AbstractExchange {
         return result;
     }
 
-    // Bithumb 에서 제공하는 메서드
-    private byte[] hmacSha512(String value, String key){
+    // Bithum 에서 암호화를 하기위한 메서드
+    private byte[] hmacSha512(String value, String key) throws Exception {
         try {
-            SecretKeySpec keySpec = new SecretKeySpec(
-                    key.getBytes(DEFAULT_ENCODING),
-                    HMAC_SHA512);
-
-            Mac mac = Mac.getInstance(HMAC_SHA512);
+            SecretKeySpec keySpec = new SecretKeySpec(key.getBytes("UTF-8"), "HmacSHA512");
+            Mac mac               = Mac.getInstance("HmacSHA512");
             mac.init(keySpec);
 
-            final byte[] macData = mac.doFinal( value.getBytes( ) );
-
-            byte[] hex = new Hex().encode( macData );
-
-            //return mac.doFinal(value.getBytes(DEFAULT_ENCODING));
+            final byte[] macData  = mac.doFinal( value.getBytes( ) );
+            byte[] hex            = new Hex().encode( macData );
             return hex;
 
         } catch (NoSuchAlgorithmException e) {
@@ -549,8 +570,15 @@ public class BithumbImp extends AbstractExchange {
     }
 
     // Bithumb 에서 제공하는 메서드
-    public static String asHex(byte[] bytes){
+    private String asHex(byte[] bytes){
         return new String(Base64.encodeBase64(bytes));
     }
+
+    // 거래소에 맞춰 심볼 반환
+    private String getSymbol(String[] coinData, Exchange exchange) throws Exception {
+        return coinData[0]+ "_" + getCurrency(exchange,coinData[0], coinData[1]);
+    }
+
+
 
 }

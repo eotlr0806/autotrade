@@ -42,6 +42,7 @@ public class CoinService {
     private AbstractExchange abstractExchange;
     private String BUY_CODE  = "BUY";
     private String SELL_CODE = "SELL";
+    private Gson gson        = new Gson();
 
     /** best offer 구간 여부를 구하는 메서드
      * AutoTrade 를 이용하는데 사용됨. */
@@ -49,7 +50,6 @@ public class CoinService {
 
         String returnVal  = "false";
         String list       = "";
-        Gson gson         = new Gson();
 
         try{
             String[] coinData = TradeService.splitCoinWithId(autoTrade.getCoin());
@@ -130,12 +130,9 @@ public class CoinService {
 
     public Map getLiquidityList(Liquidity liquidity){
 
-        String list     = "";
-        Gson gson       = new Gson();
-
         Map<String, LinkedList<String>> returnMap = new HashMap<>();
-        LinkedList<String> sellList = new LinkedList<>();
-        LinkedList<String> buyList  = new LinkedList<>();
+        LinkedList<String> sellList               = new LinkedList<>();
+        LinkedList<String> buyList                = new LinkedList<>();
         returnMap.put("sell" , sellList);
         returnMap.put("buy", buyList);
 
@@ -146,50 +143,41 @@ public class CoinService {
             Exchange findedEx = liquidity.getExchange();
             for(ExchangeCoin coin : findedEx.getExchangeCoin()) {
                 if(coin.getCoinCode().equals(coinData[0]) && coin.getId() == Long.parseLong(coinData[1])){
-                    list = getOrderBookByExchange(findedEx,coinData);
+                    String list = getOrderBookByExchange(findedEx,coinData);
 
-                    JsonObject json = gson.fromJson(list, JsonObject.class);
+                    JsonObject json     = gson.fromJson(list, JsonObject.class);
                     JsonArray ask       = json.getAsJsonArray("ask");             // 매도
                     JsonObject firstAsk = ask.get(0).getAsJsonObject();
                     JsonArray bid       = json.getAsJsonArray("bid");             // 매수
                     JsonObject firstBid = bid.get(0).getAsJsonObject();
 
-                    double askValue  = Double.parseDouble(firstAsk.get("price").getAsString());
-                    double bidValue  = Double.parseDouble(firstBid.get("price").getAsString());
+                    BigDecimal firstAskValue = new BigDecimal(firstAsk.get("price").getAsString());
+                    BigDecimal firstBidValue = new BigDecimal(firstBid.get("price").getAsString());
+                    BigDecimal tickRange     = new BigDecimal(liquidity.getRangeTick()); // 해당 코인 저장 시 등록한 틱 간격
+
                     // 수동 모드
-                    double tick        = Double.parseDouble(liquidity.getRangeTick());
-                    BigDecimal tickDecimal     = new BigDecimal(String.valueOf(tick));
                     if(TradeData.MODE_SELF_L.equals(liquidity.getMode())){
                         String[] selfTicks = liquidity.getSelfTick().split(",");
                         Arrays.sort(selfTicks);
                         for(int i = 0; i < selfTicks.length; i++){
-                            int value               = Integer.parseInt(selfTicks[i]);
-                            BigDecimal decimalValue = new BigDecimal(String.valueOf(value));
-                            BigDecimal sellDecimal  = new BigDecimal(String.valueOf(askValue));
-                            BigDecimal buyDecimal   = new BigDecimal(String.valueOf(bidValue));
-                            BigDecimal valueDecimal = tickDecimal.multiply(decimalValue);
-                            String insertSellVal = sellDecimal.add(valueDecimal).toString();
-                            String insertBuyVal  = buyDecimal.subtract(valueDecimal).toString();
-                            sellList.add(String.valueOf(insertSellVal));
-                            buyList.add(String.valueOf(insertBuyVal));
+                            BigDecimal decimalValue = new BigDecimal(selfTicks[i]);
+                            BigDecimal valueDecimal = tickRange.multiply(decimalValue);
+                            String insertSellVal    = firstAskValue.add(valueDecimal).toPlainString();
+                            String insertBuyVal     = firstBidValue.subtract(valueDecimal).toPlainString();
+                            sellList.add(insertSellVal);
+                            buyList.add(insertBuyVal);
                         }
                     }
                     // 자동 모드
                     else{
-                        double coinTick = Double.parseDouble(coin.getCoinPrice());             // Coin 등록 시 저장한 Tick
-                        int randomTick  = Integer.parseInt(liquidity.getRandomTick());      // Liquidity 실행 시, 저장한 랜덤 Tick 값
-                        BigDecimal variableTick;
-                        BigDecimal randomInx       = new BigDecimal(String.valueOf(TradeService.getRandomInt(0,4))) ;                  // 호가 0~4 인덱스
-                        BigDecimal decimalCoinTick = new BigDecimal(String.valueOf(coinTick));
-                        BigDecimal inputRandomTick = decimalCoinTick.multiply(randomInx); // 현재 호가창에서 최소매도/최대매수의 랜덤 시작 값을 구하기 위한 수
-                        BigDecimal insertSellVal   = new BigDecimal(String.valueOf(askValue));  // 현재 호가창 최소 매도가격
-                        BigDecimal insertBuyVal    = new BigDecimal(String.valueOf(bidValue));  // 현재 호가창 최대 매수가격
-
+                        BigDecimal randomInx       = new BigDecimal(TradeService.getRandomInt(0,4)) ;  // 호가 0~4 까지(5개) 중 한개를 무작위로 뽑음
+                        BigDecimal inputRandomTick = tickRange.multiply(randomInx);                  // 현재 호가창에서 최소매도/최대매수의 랜덤 시작 값을 구하기 위한 수
+                        int randomTick             = Integer.parseInt(liquidity.getRandomTick());      // Liquidity 실행 시, 저장한 랜덤 Tick 값
                         for(int i=0; i < randomTick; i ++){
-                            BigDecimal index   = new BigDecimal(String.valueOf(i));
-                            variableTick       = tickDecimal.multiply(index);
-                            String decimalSell = insertSellVal.add(inputRandomTick).add(variableTick).toPlainString();
-                            String decimalBuy  = insertBuyVal.subtract(inputRandomTick).subtract(variableTick).toPlainString();
+                            BigDecimal index        = new BigDecimal(i);
+                            BigDecimal variableTick = tickRange.multiply(index);
+                            String decimalSell      = firstAskValue.add(inputRandomTick).add(variableTick).toPlainString();
+                            String decimalBuy       = firstBidValue.subtract(inputRandomTick).subtract(variableTick).toPlainString();
                             sellList.add(decimalSell);
                             buyList.add(decimalBuy);
                         }
@@ -198,6 +186,7 @@ public class CoinService {
             }
         }catch(Exception e){
             log.error("[ERROR][GET Liquidity List] {}",e.getMessage());
+            e.printStackTrace();
         }
         return returnMap;
     }
@@ -219,7 +208,7 @@ public class CoinService {
                 if(coin.getCoinCode().equals(coinData[0]) && coin.getId() == Long.parseLong(coinData[1])){
                     String list = getOrderBookByExchange(findedEx,coinData);
 
-                    JsonObject json     = TradeService.getGson().fromJson(list, JsonObject.class);
+                    JsonObject json     = gson.fromJson(list, JsonObject.class);
                     JsonArray bid       = json.getAsJsonArray("bid");
                     JsonObject firstBid = bid.get(0).getAsJsonObject();
                     JsonArray ask       = json.getAsJsonArray("ask");
@@ -282,8 +271,6 @@ public class CoinService {
      */
     public Map<String, String> getFirstTick(String coinBeforeSplit, Exchange exchange){
 
-        String list                   = "";
-        Gson gson                     = TradeService.getGson();
         Map<String, String> returnMap = new HashMap<>();
 
         try{
@@ -292,7 +279,7 @@ public class CoinService {
 
             for(ExchangeCoin coin : exchange.getExchangeCoin()){
                 if(coin.getCoinCode().equals(coinData[0]) && coin.getId() == Long.parseLong(coinData[1])){
-                    list = getOrderBookByExchange(exchange,coinData);
+                    String list = getOrderBookByExchange(exchange,coinData);
 
                     JsonObject json     = gson.fromJson(list, JsonObject.class);
                     JsonArray bid       = json.getAsJsonArray("bid");
@@ -310,6 +297,41 @@ public class CoinService {
             }
         }catch (Exception e){
             log.error("[GET FIRST TICK] Error {}",e.getMessage());
+            e.printStackTrace();
+        }
+        return returnMap;
+    }
+
+
+    /**
+     * 현재 매도/매수에 대한 최소/최대 호가 조회
+     * @param exchange
+     * @param mode
+     * @return
+     */
+    public Map<String, JsonArray> getTick(String coinBeforeSplit, Exchange exchange){
+
+        Map<String, JsonArray> returnMap = new HashMap<>();
+
+        try{
+            Thread.sleep(1200); // 매도/매수 후 바로 조회 시, 반영이 안됨. 1.2초 정도 대기해보자..
+            String[] coinData = TradeService.splitCoinWithId(coinBeforeSplit);
+
+            for(ExchangeCoin coin : exchange.getExchangeCoin()){
+                if(coin.getCoinCode().equals(coinData[0]) && coin.getId() == Long.parseLong(coinData[1])){
+                    String list = getOrderBookByExchange(exchange,coinData);
+
+                    JsonObject json     = gson.fromJson(list, JsonObject.class);
+                    JsonArray bid       = json.getAsJsonArray("bid");
+                    JsonArray ask       = json.getAsJsonArray("ask");
+
+                    returnMap.put(TradeData.MODE_BUY, bid);
+                    returnMap.put(TradeData.MODE_SELL, ask);
+                    break;
+                }
+            }
+        }catch (Exception e){
+            log.error("[GET TICK] Error {}",e.getMessage());
             e.printStackTrace();
         }
         return returnMap;

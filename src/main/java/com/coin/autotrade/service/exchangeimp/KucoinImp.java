@@ -4,6 +4,7 @@ import com.coin.autotrade.common.TradeData;
 import com.coin.autotrade.common.TradeService;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
+import com.google.gson.JsonObject;
 import com.kucoin.sdk.KucoinClientBuilder;
 import com.kucoin.sdk.KucoinRestClient;
 import com.kucoin.sdk.exception.KucoinApiException;
@@ -49,8 +50,9 @@ public class KucoinImp extends AbstractExchange {
     }
 
     @Override
-    public void initClass(RealtimeSync realtimeSync){
+    public void initClass(RealtimeSync realtimeSync, CoinService coinService){
         super.realtimeSync = realtimeSync;
+        super.coinService  = coinService;
         setCoinToken(TradeService.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
         setKucoinRestClient();
     }
@@ -304,6 +306,11 @@ public class KucoinImp extends AbstractExchange {
     }
 
     @Override
+    public int startRealtimeTrade(JsonObject realtime) {
+        return 0;
+    }
+
+    @Override
     public String getOrderBook(Exchange exchange, String[] coinWithId) {
         String returnRes = "";
         try{
@@ -389,21 +396,4 @@ public class KucoinImp extends AbstractExchange {
         return returnValue;
     }
 
-    /* KUCOIN 의 경우 통화 기준으로 필요함.*/
-    public String getCurrency(Exchange exchange, String coin, String coinId){
-        String returnVal = "";
-        try {
-            // 거래소를 체크하는 이유는 여러거래소에서 같은 코인을 할 수 있기에
-            if(exchange.getExchangeCoin().size() > 0){
-                for(ExchangeCoin data : exchange.getExchangeCoin()){
-                    if(data.getCoinCode().equals(coin) && data.getId() == Long.parseLong(coinId)){
-                        returnVal = data.getCurrency();
-                    }
-                }
-            }
-        }catch(Exception e){
-            log.error("[KUCOIN][ERROR][Get Currency] {}",e.getMessage());
-        }
-        return returnVal;
-    }
 }

@@ -48,8 +48,9 @@ public class FoblGateImp extends AbstractExchange {
     }
 
     @Override
-    public void initClass(RealtimeSync realtimeSync) throws Exception{
+    public void initClass(RealtimeSync realtimeSync, CoinService coinService) throws Exception{
         super.realtimeSync = realtimeSync;
+        super.coinService  = coinService;
         setApiKey(TradeService.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
     }
 
@@ -338,22 +339,24 @@ public class FoblGateImp extends AbstractExchange {
             String[] currentTick = getTodayTick(symbol);
             String openingPrice  = currentTick[0];
             String currentPrice  = currentTick[1];
-            String firstOrderId  = "";
-            String secondOrderId = "";
+            String orderId       = "";
             String targetPrice   = "";
-            String firstAction   = "";
-            String secondAction  = "";
-            String cnt           = realtimeSync.getLimitTradeCnt().toString();
-            int isInRange        = isMoreOrLessPrice(currentPrice);
+            String action        = "";
+            String mode          = "";
+            double minTradeCnt   = Double.parseDouble(realtimeSync.getMinTradeCnt());
+            double maxTradeCnt   = Double.parseDouble(realtimeSync.getMaxTradeCnt());
+            String cnt           = String.valueOf(Math.floor(TradeService.getRandomDouble(minTradeCnt, maxTradeCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
 
+            // 1. 최소/최대 매수 구간에 있는지 확인
+            int isInRange        = isMoreOrLessPrice(currentPrice);
             if(isInRange != 0){              // 구간 밖일 경우
                 if(isInRange == -1){         // 지지선보다 낮을 경우
-                    firstAction  = BUY;
-                    secondAction = SELL;
+                    mode         = TradeData.MODE_BUY;
+                    action       = BUY;
                     targetPrice  = realtimeSync.getMinPrice();
                 }else if(isInRange == 1){    // 저항선보다 높을 경우
-                    firstAction  = SELL;
-                    secondAction = BUY;
+                    mode         = TradeData.MODE_SELL;
+                    action       = SELL;
                     targetPrice  = realtimeSync.getMaxPrice();
                 }
                 isStart = true;
@@ -362,28 +365,37 @@ public class FoblGateImp extends AbstractExchange {
                 Map<String,String> tradeInfo = getTargetTick(openingPrice, currentPrice, realtime.get(realtimeChangeRate).getAsString());
                 if(!tradeInfo.isEmpty()){
                     targetPrice = tradeInfo.get("price");
-                    if(tradeInfo.get("mode").equals(TradeData.MODE_BUY)){
-                        firstAction  = BUY;
-                        secondAction = SELL;
-                    }else{
-                        firstAction  = SELL;
-                        secondAction = BUY;
-                    }
-                    isStart = true;
+                    mode        = tradeInfo.get("mode");
+                    action      = (mode.equals(TradeData.MODE_BUY)) ? BUY : SELL;
+                    isStart     = true;
                 }
             }
 
+            // 2. %를 맞추기 위한 매수/매도 로직
             if(isStart){
-                if( !(firstOrderId = createOrder(firstAction, targetPrice, cnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){    // 매수/OrderId가 있으면 성공
+                if( !(orderId = createOrder(action, targetPrice, cnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){    // 매수/OrderId가 있으면 성공
                     Thread.sleep(300);
-                    if( !(secondOrderId = createOrder(secondAction,targetPrice, cnt,symbol)).equals(ReturnCode.NO_DATA.getValue())){                   // 매도/OrderId가 없으면 실패
-                        Thread.sleep(300);
-                        cancelOrder(firstOrderId,firstAction, targetPrice, symbol);
-                        Thread.sleep(300);
-                        cancelOrder(secondOrderId,firstAction, targetPrice, symbol);
+
+                    // 3. bestoffer set 로직
+                    JsonArray array = makeBestofferAfterRealtimeSync(targetPrice, mode);
+                    for (int i = 0; i < array.size(); i++) {
+                        JsonObject object       = array.get(i).getAsJsonObject();
+                        String bestofferPrice   = object.get("price").getAsString();
+                        String bestofferCnt     = object.get("cnt").getAsString();
+                        String bestofferOrderId = ReturnCode.NO_DATA.getValue();
+
+                        if( !(bestofferOrderId = createOrder(action, bestofferPrice, bestofferCnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){
+                            log.info("[FOBLGATE][REALTIME SYNC] Bestoffer is setted. price:{}, cnt:{}", bestofferPrice, bestofferCnt);
+                        }
                     }
+
+                    // 베스트 오퍼 체크 작업 이후 기존에 걸었던 매수에 대해 캔슬
+                    cancelOrder(orderId, action, targetPrice, symbol);
                 }
             }
+
+
+
         }catch (Exception e){
             log.error("[FOBLGATE][REALTIME SYNC TRADE] Error :{} ", e.getMessage());
             e.printStackTrace();
@@ -491,30 +503,6 @@ public class FoblGateImp extends AbstractExchange {
             e.printStackTrace();
         }
         return returnCode;
-    }
-
-
-
-
-    /**
-     * 해당 코인 저장 시, 등록한 화폐 정보 반환
-     * @throws Exception 호출한 곳에서 예외 처리. / 해당 거래소에 등록된 코인이 없을 경우 Exception 발생
-     */
-    public String getCurrency(Exchange exchange, String coin, String coinId) throws Exception{
-        String returnVal = ReturnCode.FAIL.getValue();
-        // 거래소를 체크하는 이유는 거래소에서 같은 코인을 여러개 등록 할 경우 체크하기 위함.
-        if(!exchange.getExchangeCoin().isEmpty()){
-            for(ExchangeCoin data : exchange.getExchangeCoin()){
-                if(data.getCoinCode().equals(coin) && data.getId() == Long.parseLong(coinId)){
-                    returnVal = data.getCurrency();
-                }
-            }
-        }
-        if(returnVal.equals(ReturnCode.FAIL.getValue())){
-            String msg = coin + "is not existed in " + exchange.getExchangeCode();
-            throw new Exception(msg);
-        }
-        return returnVal;
     }
 
 

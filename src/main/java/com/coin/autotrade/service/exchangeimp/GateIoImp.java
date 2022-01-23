@@ -46,8 +46,9 @@ public class GateIoImp extends AbstractExchange {
     }
 
     @Override
-    public void initClass(RealtimeSync realtimeSync){
+    public void initClass(RealtimeSync realtimeSync, CoinService coinService){
         super.realtimeSync = realtimeSync;
+        super.coinService  = coinService;
         setCoinToken(TradeService.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
     }
 
@@ -298,6 +299,11 @@ public class GateIoImp extends AbstractExchange {
     }
 
     @Override
+    public int startRealtimeTrade(JsonObject realtime) {
+        return 0;
+    }
+
+    @Override
     public String getOrderBook(Exchange exchange, String[] coinWithId) {
         String returnRes = "";
         try{
@@ -393,22 +399,5 @@ public class GateIoImp extends AbstractExchange {
     }
 
 
-    /* Get 각 코인에 등록한 통화 */
-    public String getCurrency(Exchange exchange,String coin, String coinId){
-        String returnVal = "";
-        try {
-            // Thread로 돌때는 최초에 셋팅을 해줘서 DB 조회가 필요 없음.
-            if(exchange.getExchangeCoin().size() > 0){
-                for(ExchangeCoin data : exchange.getExchangeCoin()){
-                    if(data.getCoinCode().equals(coin) && data.getId() == Long.parseLong(coinId)){
-                        returnVal = data.getCurrency();
-                    }
-                }
-            }
-        }catch(Exception e){
-            log.error("[GATEIO][ERROR][GET CURRENCY] {}",e.getMessage());
-        }
-        return returnVal;
-    }
 
 }

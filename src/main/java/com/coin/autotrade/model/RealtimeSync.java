@@ -32,8 +32,23 @@ public class RealtimeSync {
     @Column(name = "max_price")
     private String maxPrice;
 
-    @Column(name = "limit_trade_cnt")
-    private Integer limitTradeCnt;
+    @Column(name = "min_bestoffer_cnt")
+    private String minBestofferCnt;
+
+    @Column(name = "max_bestoffer_cnt")
+    private String maxBestofferCnt;
+
+    @Column(name = "tick_cnt")
+    private Integer tickCnt;
+
+    @Column(name = "tick_Range")
+    private String tickRange;
+
+    @Column(name = "min_trade_cnt")
+    private String minTradeCnt;
+
+    @Column(name = "max_trade_cnt")
+    private String maxTradeCnt;
 
     // 거래소
     @ManyToOne(fetch = FetchType.EAGER)

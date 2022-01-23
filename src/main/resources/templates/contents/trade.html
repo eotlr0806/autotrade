@@ -196,7 +196,9 @@
         {title: "동기화 코인",   orderable: true},
         {title: "동기화 주기",   orderable: true},
         {title: "지지/저항선 가격",   orderable: true, width:200},
-        {title: "최대 거래 수량",   orderable: true, width:200},
+        {title: "1회 거래수량",   orderable: true, width:200},
+        {title: "베스트오퍼 수량",   orderable: true, width:200},
+        {title: "베스트오퍼 간격",   orderable: true},
         {title: "가격변동 %",   orderable: true},
 
         {title: "상태",   orderable: true},
@@ -373,7 +375,9 @@
                     innerTrade.push(`${item.syncCoin}`);
                     innerTrade.push(`${item.syncTime}`);
                     innerTrade.push(`${item.minPrice} ~ ${item.maxPrice}`);
-                    innerTrade.push(`${item.limitTradeCnt}`);
+                    innerTrade.push(`${item.minTradeCnt} ~ ${item.maxTradeCnt}`);
+                    innerTrade.push(`${item.minBestofferCnt} ~ ${item.maxBestofferCnt}`);
+                    innerTrade.push(item.tickRange);
                     innerTrade.push(item.pricePercent);
                 }
 

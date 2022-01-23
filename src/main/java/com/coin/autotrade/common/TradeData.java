@@ -46,8 +46,12 @@ public class TradeData {
     public static String KUCOIN_ORDERBOOK         = "https://api.kucoin.com/api/v1/market/orderbook/level2_100";
     public static String OKEX_ORDERBOOK           = "https://www.okex.com/api/v5/market/books";
     public static String GATEIO_ORDERBOOK         = "https://api.gateio.ws/api/v4/spot/order_book";
+
     public static String FOBLGATE_TICK            = "https://api2.foblgate.com/api/chart/selectChart";
     public static String DCOIN_TICK               = "https://openapi.dcoin.com/open/api/get_ticker";
+    public static String BITHUMB_GLOBAL_TICK      = "https://global-openapi.bithumb.pro/openapi/v1/spot/ticker";
+    public static String COINONE_TICK             = "https://api.coinone.co.kr/ticker_utc";
+    public static String BITHUMB_TICK             = "https://api.bithumb.com/public/ticker";
 
     /** Define Private Api URL */
     public static String COINONE_LIMIT_BUY           = "https://api.coinone.co.kr/v2/order/limit_buy/";

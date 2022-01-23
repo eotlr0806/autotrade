@@ -44,7 +44,7 @@ public class RealtimeSyncThread implements Runnable{
 
         realtimeSync           = inputRealtimeSync;
         abstractExchange       = TradeService.getInstance(realtimeSync.getExchange().getExchangeCode());
-        abstractExchange.initClass(realtimeSync);
+        abstractExchange.initClass(realtimeSync, coinService);
     }
 
     // Stop thread

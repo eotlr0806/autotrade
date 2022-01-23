@@ -40,8 +40,9 @@ public class FlataImp extends AbstractExchange {
     }
 
     @Override
-    public void initClass(RealtimeSync realtimeSync){
+    public void initClass(RealtimeSync realtimeSync, CoinService coinService){
         super.realtimeSync = realtimeSync;
+        super.coinService  = coinService;
     }
 
     @Override
@@ -264,6 +265,11 @@ public class FlataImp extends AbstractExchange {
 
         log.info("[FLATA][FISHINGTRADE END]");
         return returnCode;
+    }
+
+    @Override
+    public int startRealtimeTrade(JsonObject realtime) {
+        return 0;
     }
 
     @Override
@@ -509,23 +515,6 @@ public class FlataImp extends AbstractExchange {
         return returnRes;
     }
 
-    /* Coin의 등록된 화폐를 가져오는 로직 */
-    public String getCurrency(Exchange exchange,String coin, String coinId){
-        String returnVal = "";
-        try {
-            // Thread로 돌때는 최초에 셋팅을 해줘서 DB 조회가 필요 없음.
-            if(exchange.getExchangeCoin().size() > 0){
-                for(ExchangeCoin data : exchange.getExchangeCoin()){
-                    if(data.getCoinCode().equals(coin) && data.getId() == Long.parseLong(coinId)){
-                        returnVal = data.getCurrency();
-                    }
-                }
-            }
-        }catch(Exception e){
-            log.error("[FLATA][ERROR][GET CUREENCY] {}",e.getMessage());
-        }
-        return returnVal;
-    }
 
     /* HTTP POST Method for coinone */
     public JsonObject postHttpMethod(String targetUrl, String payload) {
