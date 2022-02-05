@@ -41,20 +41,21 @@
                 <div class="content">
 					<!-- Form horizontal -->
                     <div class="row">
-                        <div class="panel panel-flat col-lg-4">
+                        <div class="panel panel-flat col-md-6">
                             <div class="panel-heading">
                                 <h5 class="panel-title">거래 유형 설정</h5>
                             </div>
 
                             <div class="panel-body">
                                 <fieldset class="content-group">
-                                    <label class="control-label col-lg-2">거래 유형</label>
-                                    <div class="col-lg-4">
+                                    <label class="control-label col-md-2">거래 유형</label>
+                                    <div class="col-md-4">
                                         <select name="trade_select" id="trade_select" class="form-control">
                                             <option value="-1000">거래 유형 선택</option>
                                             <option value="AUTOTRADE">자전 거래</option>
                                             <option value="LIQUIDITY">호가 유동성</option>
                                             <option value="FISHING">매매 긁기</option>
+                                            <option value="REALTIME_SYNC">실시간 거래</option>
                                         </select>
                                     </div>
                                     <div>
@@ -143,6 +144,7 @@
         {title: "id",   orderable: true},
         {title: "거래소",   orderable: true},
         {title: "코인",   orderable: true},
+
         {title: "수량",   orderable: true},
         {title: "시간",   orderable: true},
 
@@ -156,10 +158,10 @@
         {title: "id",   orderable: true},
         {title: "거래소",   orderable: true},
         {title: "코인",   orderable: true},
+
         {title: "수량",   orderable: true},
         {title: "시간",   orderable: true},
-
-        {title: "랜덤틱수",   orderable: true},
+        {title: "랜덤틱수",   orderable: true, width:150},
         {title: "틱간격",   orderable: true},
         {title: "수동틱",   orderable: true},
 
@@ -176,11 +178,29 @@
 
         {title: "주문 범위",   orderable: true},
         {title: "체결 범위",   orderable: true},
-        {title: "시간 범위",   orderable: true},
+        {title: "시간 범위",   orderable: true, width:150},
         {title: "활성틱수",   orderable: true},
         {title: "틱간격",   orderable: true},
 
         {title: "모드",   orderable: true},
+        {title: "상태",   orderable: true},
+        {title: "동작",   orderable: true},
+        {title: "삭제",   orderable: true},
+    ];
+
+    let realtimeSyncColumn = [
+        {title: "id",   orderable: true},
+        {title: "거래소",   orderable: true},
+        {title: "코인",   orderable: true},
+
+        {title: "동기화 코인",   orderable: true},
+        {title: "동기화 주기",   orderable: true},
+        {title: "지지/저항선 가격",   orderable: true, width:200},
+        {title: "1회 거래수량",   orderable: true, width:200},
+        {title: "베스트오퍼 수량",   orderable: true, width:200},
+        {title: "베스트오퍼 간격",   orderable: true},
+        {title: "가격변동 %",   orderable: true},
+
         {title: "상태",   orderable: true},
         {title: "동작",   orderable: true},
         {title: "삭제",   orderable: true},
@@ -218,15 +238,14 @@
                 returnVal = await common.get(API.LIQUIDITY);
             }else if (type === TRADE_LIST.FISHING){
                 returnVal = await common.get(API.FISHING);
+            }else if (type === TRADE_LIST.REALTIME_SYNC){
+                returnVal = await common.get(API.REALTIME_SYNC);
             }
 
             if(returnVal.data != null){
-                if (returnVal.data.length !== undefined){
-                    tradeList = returnVal.data;
-                    dataObj.makeTradeTable();
-                }else{
-                    return common.noti("거래 유형 조회","해당 유형에 대해 저장된 거래가 없습니다.","error");
-                }
+                tradeList = returnVal.data;
+                common.noti("거래 유형 조회","거래 정보들을 조회하였습니다.","success");
+                dataObj.makeTradeTable();
             }
         },
 
@@ -252,6 +271,9 @@
             }else if (mode === TRADE_LIST.FISHING){
                 api = API.FISHING;
                 title = "매매 긁기";
+            }else if (mode === TRADE_LIST.REALTIME_SYNC){
+                api =API.REALTIME_SYNC;
+                title = "실시간 동기화";
             }
 
             params = {
@@ -286,26 +308,6 @@
 
     /** Function object for data setter / getter **/
     let dataObj = {
-        setParamParser : (mode) => {
-            let params = {};
-            if (mode === TRADE_LIST.AUTOTRADE){
-                let dataIdList = ['id','exchange','coin','minCnt','maxCnt','minSeconds','maxSeconds','mode','status'];
-                for (let i = 0; i < dataIdList.length; i++) {
-                    // 모드만 변경 필요
-                    if (dataIdList[i] !== 'mode'){
-                        params[dataIdList[i]] = clickedRow[i];
-                    }else{
-                        params[dataIdList[i]] = 'RUN';
-                    }
-                }
-            }else if (mode === TRADE_LIST.LIQUIDITY){
-
-            }else if (mode === TRADE_LIST.FISHING){
-
-            }
-
-            return params;
-        },
 
         // Data table clear method
         clearTradeTable : () => {
@@ -317,8 +319,16 @@
             let dataSet = dataObj.makeTradeTableArr();
 
             let type = $('#trade_select option:selected').val();
-            let tableColumn = (type === TRADE_LIST.AUTOTRADE) ? autotradeColumn :
-                                                ((type === TRADE_LIST.LIQUIDITY) ? liquidityColumn : fishingColumn)
+            let tableColumn;
+            if (type === TRADE_LIST.AUTOTRADE){
+                tableColumn = autotradeColumn;
+            }else if (type === TRADE_LIST.LIQUIDITY){
+                tableColumn = liquidityColumn;
+            }else if (type === TRADE_LIST.FISHING){
+                tableColumn = fishingColumn;
+            }else if (type === TRADE_LIST.REALTIME_SYNC){
+                tableColumn = realtimeSyncColumn;
+            }
 
             $('#trade_table').DataTable({
                 data: dataSet,
@@ -332,54 +342,49 @@
 
             tradeList.forEach((item, index) => {
                 let innerTrade = [];
-                let runBtn;
-                let stopBtn;
-                let delBtn;
 
+                // Set Button
+                let runBtn  = `<input onclick="fncObj.postTrade('${type}', '${TRADE_STATUS.RUN}',    ${item.id});" type="button" class="btn btn-info"    value="시작">`;
+                let stopBtn = `<input onclick="fncObj.postTrade('${type}', '${TRADE_STATUS.STOP}',   ${item.id});" type="button" class="btn btn-warning" value="정지">`;
+                let delBtn  = `<input onclick="fncObj.postTrade('${type}', '${TRADE_STATUS.DELETE}', ${item.id});" type="button" class="btn btn-danger"  value="삭제">`
+
+                // Set Common
                 innerTrade.push(item.id);
-                innerTrade.push(item.exchange);
+                innerTrade.push(item.exchange.exchangeName);
                 innerTrade.push(item.coin);
 
                 if (type === TRADE_LIST.AUTOTRADE){
-                    runBtn  = `<input onclick="fncObj.postTrade('${TRADE_LIST.AUTOTRADE}', '${TRADE_STATUS.RUN}',    ${item.id});" type="button" class="btn btn-info"    value="시작">`;
-                    stopBtn = `<input onclick="fncObj.postTrade('${TRADE_LIST.AUTOTRADE}', '${TRADE_STATUS.STOP}',   ${item.id});" type="button" class="btn btn-warning" value="정지">`;
-                    delBtn  = `<input onclick="fncObj.postTrade('${TRADE_LIST.AUTOTRADE}', '${TRADE_STATUS.DELETE}', ${item.id});" type="button" class="btn btn-danger"  value="삭제">`
-
                     innerTrade.push(`${item.minCnt} ~ ${item.maxCnt}`);
                     innerTrade.push(`${item.minSeconds} ~ ${item.maxSeconds}`);
+                    innerTrade.push(item.mode);
                 }else if (type === TRADE_LIST.LIQUIDITY){
-                    runBtn  = `<input onclick="fncObj.postTrade('${TRADE_LIST.LIQUIDITY}', '${TRADE_STATUS.RUN}',    ${item.id});" type="button" class="btn btn-info"    value="시작">`;
-                    stopBtn = `<input onclick="fncObj.postTrade('${TRADE_LIST.LIQUIDITY}', '${TRADE_STATUS.STOP}',   ${item.id});" type="button" class="btn btn-warning" value="정지">`;
-                    delBtn  = `<input onclick="fncObj.postTrade('${TRADE_LIST.LIQUIDITY}', '${TRADE_STATUS.DELETE}', ${item.id});" type="button" class="btn btn-danger"  value="삭제">`
-
                     innerTrade.push(`${item.minCnt} ~ ${item.maxCnt}`);
                     innerTrade.push(`${item.minSeconds} ~ ${item.maxSeconds}`);
                     innerTrade.push(item.randomTick);
                     innerTrade.push(item.rangeTick);
                     innerTrade.push(item.selfTick);
+                    innerTrade.push(item.mode);
                 }else if (type === TRADE_LIST.FISHING){
-                    runBtn  = `<input onclick="fncObj.postTrade('${TRADE_LIST.FISHING}', '${TRADE_STATUS.RUN}',    ${item.id});" type="button" class="btn btn-info"    value="시작">`;
-                    stopBtn = `<input onclick="fncObj.postTrade('${TRADE_LIST.FISHING}', '${TRADE_STATUS.STOP}',   ${item.id});" type="button" class="btn btn-warning" value="정지">`;
-                    delBtn  = `<input onclick="fncObj.postTrade('${TRADE_LIST.FISHING}', '${TRADE_STATUS.DELETE}', ${item.id});" type="button" class="btn btn-danger"  value="삭제">`
-
                     innerTrade.push(`${item.minContractCnt} ~ ${item.maxContractCnt}`);
                     innerTrade.push(`${item.minExecuteCnt} ~ ${item.maxExecuteCnt}`);
                     innerTrade.push(`${item.minSeconds} ~ ${item.maxSeconds}`);
                     innerTrade.push(item.tickCnt);
                     innerTrade.push(item.rangeTick);
+                    innerTrade.push(item.mode);
+                }else if (type === TRADE_LIST.REALTIME_SYNC){
+                    innerTrade.push(`${item.syncCoin}`);
+                    innerTrade.push(`${item.syncTime}`);
+                    innerTrade.push(`${item.minPrice} ~ ${item.maxPrice}`);
+                    innerTrade.push(`${item.minTradeCnt} ~ ${item.maxTradeCnt}`);
+                    innerTrade.push(`${item.minBestofferCnt} ~ ${item.maxBestofferCnt}`);
+                    innerTrade.push(item.tickRange);
+                    innerTrade.push(item.pricePercent);
                 }
 
-                innerTrade.push(item.mode);
                 innerTrade.push(item.status);
-
-                // Set status
-                if (item.status === 'RUN' || item.status === 'NO_BEST_OFFER') {
-                    innerTrade.push(stopBtn);
-                }else{
-                    innerTrade.push(runBtn)
-                }
-
-                innerTrade.push(delBtn);
+                // 동작 버튼
+                (item.status !== 'STOP') ? innerTrade.push(stopBtn) : innerTrade.push(runBtn);
+                innerTrade.push(delBtn);    // 삭제 버튼
 
                 parseTrade.push(innerTrade);
             });

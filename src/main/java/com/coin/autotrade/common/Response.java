@@ -1,26 +1,50 @@
 package com.coin.autotrade.common;
 
-public class Response {
-    private int status;
-    private String msg;
-    private String data;
+import com.coin.autotrade.common.code.ReturnCode;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.json.JsonMapper;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
-    public void setResponseWhenSuccess(int status, String data){
+@Slf4j
+@Getter
+public class Response {
+
+    private ReturnCode status;
+    private Object data = null;
+    JsonMapper mapper = new JsonMapper();
+
+    public Response(ReturnCode status){
+        this.status = status;
+    }
+
+    public void setResponseWithObject(ReturnCode status, Object data){
         this.status = status;
         this.data   = data;
     }
 
-    public void setResponseWhenFail(int status, String msg){
+    public void setResponse(ReturnCode status){
         this.status = status;
-        this.msg    = msg;
     }
 
     @Override
     public String toString() {
-        return "{" +
-                "\"status\": " + status +
-                ", \"msg\" : \"" + msg + "\"" +
-                ", \"data\": " + data +
-                "}";
+        String  returnVal = "{" +
+                            "\"status\": " + ReturnCode.FAIL +
+                            ", \"msg\" : \"" + ReturnCode.FAIL.getMsg() + "\"" +
+                            "}";
+        try {
+            returnVal = "{" +
+                        "\"status\": " + status.getCode() +
+                        ", \"msg\" : \"" + status.getMsg() + "\"" +
+                        ", \"data\": " + mapper.writeValueAsString(data) +
+                        "}";
+        } catch (JsonProcessingException e) {
+            log.error("[TO STRING] Response toString() error");
+            e.printStackTrace();
+            return returnVal;
+        }
+
+        return returnVal;
     }
 }

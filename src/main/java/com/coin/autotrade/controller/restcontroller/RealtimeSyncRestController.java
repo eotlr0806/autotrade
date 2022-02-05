@@ -4,8 +4,8 @@ import com.coin.autotrade.common.Response;
 import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.common.code.ReturnCode;
 import com.coin.autotrade.common.code.SessionKey;
-import com.coin.autotrade.model.Liquidity;
-import com.coin.autotrade.service.LiquidityService;
+import com.coin.autotrade.model.RealtimeSync;
+import com.coin.autotrade.service.RealtimeSyncService;
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,61 +19,65 @@ import java.util.List;
 
 @RestController
 @Slf4j
-public class LiquidityRestController {
+public class RealtimeSyncRestController {
 
     @Autowired
-    LiquidityService service;
+    RealtimeSyncService service;
 
-    /* Liquidity Get */
-    @GetMapping(value = "/v1/trade/liquidity")
-    public String getLiquidityTrade() {
+    /**
+     * Service Get
+     * @return
+     */
+    @GetMapping(value = "/v1/trade/realtime_sync")
+    public String getRealtimeSync() {
         Response response = new Response(ReturnCode.FAIL);
         try{
-            List<Liquidity> liquidity = service.getLiquidity();
-            if(liquidity.isEmpty()){
+            List<RealtimeSync> realtimeSyncList = service.getRealtimeSync();
+            if(realtimeSyncList.isEmpty()){
                 response.setResponse(ReturnCode.NO_DATA);
             }else{
-                response.setResponseWithObject(ReturnCode.SUCCESS, liquidity);
+                response.setResponseWithObject(ReturnCode.SUCCESS, realtimeSyncList);
             }
-            log.info("[GET LIQUIDITY] Get liquidity list : {}", Utils.getMapper().writeValueAsString(liquidity));
+            log.info("[GET REALTIME SYNC] Get realtime sync success :{}", Utils.getMapper().writeValueAsString(realtimeSyncList));
         }catch(Exception e){
-            log.error("[GET LIQUIDITY] Occur error : {} ", e.getMessage());
-            response.setResponse(ReturnCode.FAIL);
+            log.error("[GET REALTIME SYNC] {}", e.getMessage());
             e.printStackTrace();
         }
         return response.toString();
     }
 
 
-    /* schedule의 action type에 따라 분기 */
-    @PostMapping(value = "/v1/trade/liquidity")
-    public String postLiquidityTrade(HttpServletRequest request, @RequestBody String body) {
+    /**
+     * schedule의 action type에 따라 분기
+     */
+    @PostMapping(value = "/v1/trade/realtime_sync")
+    public String postRealtimeSync(HttpServletRequest request, @RequestBody String body) {
 
         ReturnCode returnVal  = ReturnCode.FAIL;
         Response response     = new Response(ReturnCode.FAIL);
         Gson gson             = Utils.getGson();
 
         try{
-            Liquidity liquidity = gson.fromJson(body, Liquidity.class);
+            RealtimeSync realtimeSync = gson.fromJson(body, RealtimeSync.class);
 
-            switch(liquidity.getStatus()) {
+            switch(realtimeSync.getStatus()) {
                 case "RUN":
-                    returnVal = service.postLiquidity(liquidity, request.getSession().getAttribute(SessionKey.USER_ID.toString()).toString());
+                    returnVal = service.postRealtimeSync(realtimeSync, request.getSession().getAttribute(SessionKey.USER_ID.toString()).toString());
                     break;
                 case "STOP" :
-                    returnVal = service.stopLiquidity(liquidity);
+                    returnVal = service.stopRealtimeSync(realtimeSync);
                     break;
                 case "DELETE":
-                    returnVal = service.deleteLiquidity(liquidity);
+                    returnVal = service.deleteRealtimeSync(realtimeSync);
                     break;
                 default:
                     break;
             }
-
             response.setResponse(returnVal);
+
         }catch(Exception e){
             response.setResponse(ReturnCode.FAIL);
-            log.error("[POST LIQUIDITY] Occur error : {}", e.getMessage());
+            log.error("[POST REALTIME SYNC] error : {}", e.getMessage());
             e.printStackTrace();
         }
 
