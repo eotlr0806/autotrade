@@ -1,14 +1,13 @@
 package com.coin.autotrade.model;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import org.hibernate.annotations.DynamicUpdate;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
+import javax.persistence.*;
 
-@Data
+@Getter
+@Setter
 @Entity
 @Table(name = "autotrade")
 @DynamicUpdate
@@ -19,7 +18,7 @@ public class AutoTrade {
     private Long id;
     // 최소 자전거래 수량
     @Column(name = "min_cnt")
-    private Double minCnt;
+    private Integer minCnt;
     // 최대 자전거래 수량
     @Column(name = "max_cnt")
     private Integer maxCnt;
@@ -33,8 +32,9 @@ public class AutoTrade {
     @Column
     private String mode;
     // 거래소
-    @Column
-    private String exchange;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "exchange_id")
+    private Exchange exchange;
     // 코인
     @Column
     private String coin;

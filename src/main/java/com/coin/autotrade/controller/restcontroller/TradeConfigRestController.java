@@ -2,7 +2,7 @@ package com.coin.autotrade.controller.restcontroller;
 
 import com.coin.autotrade.common.Response;
 import com.coin.autotrade.common.code.ReturnCode;
-import com.coin.autotrade.service.TradeService;
+import com.coin.autotrade.service.TradeConfigService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -11,23 +11,23 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @Slf4j
-public class TradeSaveRestController {
+public class TradeConfigRestController {
 
     @Autowired
-    TradeService tradeService;
+    TradeConfigService tradeConfigService;
 
     /* schedule의 action type에 따라 분기 */
     @PostMapping(value = "/v1/trade/save")
     public String saveTrade(@RequestBody String body) {
 
-        Response response = new Response();
+        Response response = new Response(ReturnCode.FAIL);
         try{
-            String returnVal = tradeService.saveTrade(body);
-            if(returnVal.equals(ReturnCode.SUCCESS.getValue())){
-                response.setResponseWhenSuccess(ReturnCode.SUCCESS.getCode(), null);
+            ReturnCode returnVal = tradeConfigService.saveTrade(body);
+            response.setResponse(returnVal);
+            if(returnVal == ReturnCode.SUCCESS){
                 log.info("[SAVE TRADE] Success saving trade : {}", body);
             }else{
-                response.setResponseWhenFail(ReturnCode.FAIL.getCode(), ReturnCode.FAIL.getMsg());
+                log.error("[SAVE TRADE] Fail saving trade : {}", body);
             }
         }catch(Exception e){
             log.error("[SAVE TRADE] Occur error : {}", e.getMessage());

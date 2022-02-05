@@ -11,14 +11,18 @@ public class AsyncCommon extends AsyncConfigurerSupport {
 
     /**
      * Async for thread
-     * @return
      */
     @Override
     public Executor getAsyncExecutor() {
+        /** Thread pool size */
+        int THREAD_MIN      = 10;
+        int THREAD_MAX      = 100;
+        int THREAD_CAPACITY = 200;
+
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(DataCommon.THREAD_MIN);
-        executor.setMaxPoolSize(DataCommon.THREAD_MAX);
-        executor.setQueueCapacity(DataCommon.THREAD_CAPACITY);
+        executor.setCorePoolSize(THREAD_MIN);
+        executor.setMaxPoolSize(THREAD_MAX);
+        executor.setQueueCapacity(THREAD_CAPACITY);
         executor.setThreadNamePrefix("Executor - ");
         executor.initialize();
 

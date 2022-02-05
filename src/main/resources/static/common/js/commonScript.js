@@ -17,9 +17,10 @@ const EXCHANGE_LIST = {
 }
 
 const TRADE_LIST = {
-    AUTOTRADE : "AUTOTRADE",
-    LIQUIDITY : "LIQUIDITY",
-    FISHING   : "FISHING"
+    AUTOTRADE      : "AUTOTRADE",
+    LIQUIDITY      : "LIQUIDITY",
+    FISHING        : "FISHING",
+    REALTIME_SYNC  : "REALTIME_SYNC"
 }
 
 const TRADE_STATUS = {
@@ -30,13 +31,14 @@ const TRADE_STATUS = {
 }
 
 const API = {
-    AUTO_TRADE  :"/v1/trade/auto",
-    LIQUIDITY   :"/v1/trade/liquidity",
-    FISHING     :"/v1/trade/fishing",
-    SAVE_TRADE  :"/v1/trade/save",
-    EXCHANGE    :"/v1/exchanges",
-    COIN        :"/v1/exchanges/coin",
-    ORDER_BOOK  :"/v1/orderbook",
+    AUTO_TRADE    :"/v1/trade/auto",
+    LIQUIDITY     :"/v1/trade/liquidity",
+    FISHING       :"/v1/trade/fishing",
+    REALTIME_SYNC :"/v1/trade/realtime_sync",
+    SAVE_TRADE    :"/v1/trade/save",
+    EXCHANGE      :"/v1/exchanges",
+    COIN          :"/v1/exchanges/coin",
+    ORDER_BOOK    :"/v1/orderbook",
 }
 
 const CODE_ERROR         = -1000;
