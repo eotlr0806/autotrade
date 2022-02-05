@@ -1,7 +1,7 @@
 package com.coin.autotrade.service;
 
-import com.coin.autotrade.common.TradeData;
-import com.coin.autotrade.common.TradeService;
+import com.coin.autotrade.common.UtilsData;
+import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.common.code.ReturnCode;
 import com.coin.autotrade.model.Liquidity;
 import com.coin.autotrade.repository.LiquidityRepository;
@@ -34,7 +34,7 @@ public class LiquidityService {
         Thread thread         = null;
 
         try{
-            if(TradeService.isLiquidityTradeThread(liquidity.getId())){
+            if(Utils.isLiquidityTradeThread(liquidity.getId())){
                 log.error("[POST LIQUIDITY] Thread is already existed id: {}", liquidity.getId());
                 returnCode = ReturnCode.DUPLICATION_DATA;
             }else{
@@ -43,12 +43,12 @@ public class LiquidityService {
                     Liquidity savedLiquidity = optionalLiquidity.get();
                     LiquidityTradeThread liquidityTrade = new LiquidityTradeThread();
                     liquidityTrade.setTrade(savedLiquidity);
-                    savedLiquidity.setStatus(TradeData.STATUS_RUN);
+                    savedLiquidity.setStatus(UtilsData.STATUS_RUN);
 
-                    if(TradeService.setLiquidityThread(liquidity.getId(),liquidityTrade)){   // Thread pool에 넣기 성공
+                    if(Utils.setLiquidityThread(liquidity.getId(),liquidityTrade)){   // Thread pool에 넣기 성공
                         liquidityRepository.save(savedLiquidity);                             // DB에 해당 liquidity 저장
                         thread = new Thread(liquidityTrade);
-                        TradeService.startThread(thread);                                   // thread start by async mode
+                        Utils.startThread(thread);                                   // thread start by async mode
                         returnCode = ReturnCode.SUCCESS;
                         log.info("[POST LIQUIDITY] Start liquidity thread id : {} ", liquidity.getId());
                     }else{
@@ -62,7 +62,7 @@ public class LiquidityService {
             if(thread != null && thread.isAlive()){
                 thread.interrupt();
             }
-            TradeService.popLiquidityThread(liquidity.getId());
+            Utils.popLiquidityThread(liquidity.getId());
         }
         return returnCode;
     }
@@ -74,7 +74,7 @@ public class LiquidityService {
         ReturnCode returnCode = ReturnCode.FAIL;
         try{
             // Thread pool 에서 thread를 가져와 멈춘다.
-            LiquidityTradeThread thread = TradeService.popLiquidityThread(liquidity.getId());
+            LiquidityTradeThread thread = Utils.popLiquidityThread(liquidity.getId());
             if(thread != null){
                 thread.setStop();
             }
@@ -101,7 +101,7 @@ public class LiquidityService {
         try{
 
             // Thread pool 에서 thread를 가져와 멈춘다.
-            LiquidityTradeThread thread = TradeService.popLiquidityThread(liquidity.getId());
+            LiquidityTradeThread thread = Utils.popLiquidityThread(liquidity.getId());
             if(thread != null) {
                 thread.setStop();
             }
@@ -109,7 +109,7 @@ public class LiquidityService {
             Optional<Liquidity> optionalLiquidity = liquidityRepository.findById(liquidity.getId());
             if(optionalLiquidity.isPresent()){
                 Liquidity savedLiquidity = optionalLiquidity.get();
-                savedLiquidity.setStatus(TradeData.STATUS_STOP);
+                savedLiquidity.setStatus(UtilsData.STATUS_STOP);
                 liquidityRepository.save(savedLiquidity);
             }else{
                 log.info("[STOP LIQUIDITY] There is no thread in DB thread id : {}", liquidity.getId());

@@ -1,14 +1,13 @@
 package com.coin.autotrade.service.exchangeimp;
 
-import com.coin.autotrade.common.TradeData;
-import com.coin.autotrade.common.TradeService;
+import com.coin.autotrade.common.UtilsData;
+import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.common.code.ReturnCode;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.collections4.BagUtils;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -18,10 +17,8 @@ import java.io.BufferedWriter;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.math.BigDecimal;
-import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.sql.Timestamp;
 import java.util.*;
 
 @Slf4j
@@ -38,27 +35,27 @@ public class BithumbGlobalImp extends AbstractExchange {
     @Override
     public void initClass(AutoTrade autoTrade) throws Exception{
         super.autoTrade = autoTrade;
-        setCoinToken(TradeService.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
+        setCoinToken(Utils.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
     }
 
     @Override
     public void initClass(Liquidity liquidity) throws Exception{
         super.liquidity = liquidity;
-        setCoinToken(TradeService.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
+        setCoinToken(Utils.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
     }
 
     @Override
     public void initClass(RealtimeSync realtimeSync, CoinService coinService) throws Exception{
         super.realtimeSync = realtimeSync;
         super.coinService  = coinService;
-        setCoinToken(TradeService.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
+        setCoinToken(Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
     }
 
     @Override
     public void initClass(Fishing fishing, CoinService coinService) throws Exception{
         super.fishing     = fishing;
         super.coinService = coinService;
-        setCoinToken(TradeService.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
+        setCoinToken(Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
     }
 
     /** 코인 토큰 정보 셋팅 **/
@@ -86,18 +83,18 @@ public class BithumbGlobalImp extends AbstractExchange {
         int returnCode = ReturnCode.SUCCESS.getCode();
 
         try{
-            String symbol       = getSymbol(TradeService.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
+            String symbol       = getSymbol(Utils.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
             String firstAction  = "";
             String secondAction = "";
             cnt                 = setCutCoinCnt(symbol, cnt);
 
             // mode 처리
             String mode = autoTrade.getMode();
-            if(TradeData.MODE_RANDOM.equals(mode)){
-                mode = (TradeService.getRandomInt(0,1) == 0) ? TradeData.MODE_BUY : TradeData.MODE_SELL;
+            if(UtilsData.MODE_RANDOM.equals(mode)){
+                mode = (Utils.getRandomInt(0,1) == 0) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
             }
 
-            if(TradeData.MODE_BUY.equals(mode)){
+            if(UtilsData.MODE_BUY.equals(mode)){
                 firstAction  = BUY;
                 secondAction = SELL;
             }else{
@@ -133,29 +130,27 @@ public class BithumbGlobalImp extends AbstractExchange {
 
         try{
             log.info("[BITHUMBGLOBAL][LIQUIDITY] START");
-            String symbol     = getSymbol(TradeService.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
-            int minCnt        = liquidity.getMinCnt();
-            int maxCnt        = liquidity.getMaxCnt();
+            String symbol = getSymbol(Utils.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
 
             while(!sellQueue.isEmpty() || !buyQueue.isEmpty()){
-                String mode = (TradeService.getRandomInt(1,2) == 1) ? TradeData.MODE_BUY: TradeData.MODE_SELL;
-                String firstOrderId    = "";
-                String secondsOrderId  = "";
+                String mode = (Utils.getRandomInt(1,2) == 1) ? UtilsData.MODE_BUY: UtilsData.MODE_SELL;
+                String firstOrderId    = ReturnCode.NO_DATA.getValue();
+                String secondsOrderId  = ReturnCode.NO_DATA.getValue();
                 String firstPrice      = "";
                 String secondsPrice    = "";
                 String firstAction     = "";
                 String secondAction    = "";
-                String firstCnt        = String.valueOf(Math.floor(TradeService.getRandomDouble((double)minCnt, (double)maxCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
+                String firstCnt        = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
+                String secondsCnt      = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
                 firstCnt               = setCutCoinCnt(symbol, firstCnt);
-                String secondsCnt      = String.valueOf(Math.floor(TradeService.getRandomDouble((double)minCnt, (double)maxCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
                 secondsCnt             = setCutCoinCnt(symbol, secondsCnt);
 
-                if(!sellQueue.isEmpty() && !buyQueue.isEmpty() && mode.equals(TradeData.MODE_BUY)){
+                if(!sellQueue.isEmpty() && !buyQueue.isEmpty() && mode.equals(UtilsData.MODE_BUY)){
                     firstPrice     = buyQueue.poll();
                     secondsPrice   = sellQueue.poll();
                     firstAction    = BUY;
                     secondAction   = SELL;
-                }else if(!buyQueue.isEmpty() && !sellQueue.isEmpty() && mode.equals(TradeData.MODE_SELL)){
+                }else if(!buyQueue.isEmpty() && !sellQueue.isEmpty() && mode.equals(UtilsData.MODE_SELL)){
                     firstPrice     = sellQueue.poll();
                     secondsPrice   = buyQueue.poll();
                     firstAction    = SELL;
@@ -193,12 +188,12 @@ public class BithumbGlobalImp extends AbstractExchange {
         int returnCode = ReturnCode.SUCCESS.getCode();
 
         try{
-            String symbol = getSymbol(TradeService.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
+            String symbol = getSymbol(Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
 
             // mode 처리
             String mode = fishing.getMode();
-            if(TradeData.MODE_RANDOM.equals(mode)){
-                mode = (TradeService.getRandomInt(0,1) == 0) ? TradeData.MODE_BUY : TradeData.MODE_SELL;
+            if(UtilsData.MODE_RANDOM.equals(mode)){
+                mode = (Utils.getRandomInt(0,1) == 0) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
             }
 
             boolean noIntervalFlag   = true;    // 해당 플래그를 이용해 마지막 매도/매수 후 바로 intervalTime 없이 바로 다음 매수/매도 진행
@@ -211,10 +206,10 @@ public class BithumbGlobalImp extends AbstractExchange {
             /* Start */
             log.info("[BITHUMBGLOBAL][FISHINGTRADE][START BUY OR SELL TARGET ALL COIN]");
             for (int i = 0; i < tickPriceList.size(); i++) {
-                String cnt = String.valueOf(Math.floor(TradeService.getRandomDouble((double) fishing.getMinContractCnt(), (double) fishing.getMaxContractCnt()) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
+                String cnt = Utils.getRandomString(fishing.getMinContractCnt(), fishing.getMaxContractCnt());
                 cnt        = setCutCoinCnt(symbol, cnt);
                 String orderId = ReturnCode.NO_DATA.getValue();
-                if(TradeData.MODE_BUY.equals(mode)) {
+                if(UtilsData.MODE_BUY.equals(mode)) {
                     orderId = createOrder(BUY,  tickPriceList.get(i), cnt, symbol);
                 }else{
                     orderId = createOrder(SELL, tickPriceList.get(i), cnt, symbol);
@@ -231,7 +226,7 @@ public class BithumbGlobalImp extends AbstractExchange {
 
             /* Sell Start */
             for (int i = orderList.size() - 1; i >= 0; i--) {
-                Map<String, String> copiedOrderMap = TradeService.deepCopy(orderList.get(i));
+                Map<String, String> copiedOrderMap = Utils.deepCopy(orderList.get(i));
                 BigDecimal cnt                     = new BigDecimal(copiedOrderMap.get("cnt"));
                 cnt                                = new BigDecimal(setCutCoinCnt(symbol, cnt.toPlainString()));
 
@@ -239,7 +234,7 @@ public class BithumbGlobalImp extends AbstractExchange {
                     if (!noMatchFirstTick) break;                   // 최신 매도/매수 건 값이 다를경우 돌 필요 없음.
                     if (noIntervalFlag) Thread.sleep(intervalTime); // intervalTime 만큼 휴식 후 매수 시작
                     String orderId            = ReturnCode.NO_DATA.getValue();
-                    BigDecimal cntForExcution = new BigDecimal(String.valueOf(Math.floor(TradeService.getRandomDouble((double) fishing.getMinExecuteCnt(), (double) fishing.getMaxExecuteCnt()) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL));
+                    BigDecimal cntForExcution = new BigDecimal(Utils.getRandomString(fishing.getMinExecuteCnt(), fishing.getMaxExecuteCnt()));
                     cntForExcution            = new BigDecimal(setCutCoinCnt(symbol, cntForExcution.toPlainString()));
 
                     // 남은 코인 수와 매도/매수할 코인수를 비교했을 때, 남은 코인 수가 더 적다면.
@@ -251,10 +246,10 @@ public class BithumbGlobalImp extends AbstractExchange {
                     }
                     // 매도/매수 날리기전에 최신 매도/매수값이 내가 건 값이 맞는지 확인
                     String nowFirstTick = "";
-                    if(TradeData.MODE_BUY.equals(mode)) {
-                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(TradeData.MODE_BUY);
+                    if(UtilsData.MODE_BUY.equals(mode)) {
+                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(UtilsData.MODE_BUY);
                     }else{
-                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(TradeData.MODE_SELL);
+                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(UtilsData.MODE_SELL);
                     }
                     String orderPrice = copiedOrderMap.get("price");
                     if (!orderPrice.equals(nowFirstTick)) {
@@ -263,7 +258,7 @@ public class BithumbGlobalImp extends AbstractExchange {
                         break;
                     }
 
-                    if(TradeData.MODE_BUY.equals(mode)) {
+                    if(UtilsData.MODE_BUY.equals(mode)) {
                         orderId = createOrder(SELL, copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol);
                     }else{
                         orderId = createOrder(BUY,  copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol);
@@ -299,28 +294,26 @@ public class BithumbGlobalImp extends AbstractExchange {
         try {
 
             boolean isStart      = false;
-            String symbol        = getSymbol(TradeService.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
+            String symbol        = getSymbol(Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
             String[] currentTick = getTodayTick(symbol);
             String openingPrice  = currentTick[0];
             String currentPrice  = currentTick[1];
-            String orderId       = "";
+            String orderId       = ReturnCode.NO_DATA.getValue();
             String targetPrice   = "";
             String action        = "";
             String mode          = "";
-            double minCnt        = Double.parseDouble(realtimeSync.getMinTradeCnt());
-            double maxCnt        = Double.parseDouble(realtimeSync.getMaxTradeCnt());
-            String cnt           = String.valueOf(Math.floor(TradeService.getRandomDouble(minCnt, maxCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
+            String cnt           = Utils.getRandomString(realtimeSync.getMinTradeCnt(), realtimeSync.getMaxTradeCnt());
             cnt                  = setCutCoinCnt(symbol, cnt);
             int isInRange = isMoreOrLessPrice(currentPrice);
 
             if(isInRange != 0){              // 구간 밖일 경우
                 if(isInRange == -1){         // 지지선보다 낮을 경우
                     action       = BUY;
-                    mode         = TradeData.MODE_BUY;
+                    mode         = UtilsData.MODE_BUY;
                     targetPrice  = realtimeSync.getMinPrice();
                 }else if(isInRange == 1){    // 저항선보다 높을 경우
                     action       = SELL;
-                    mode         = TradeData.MODE_SELL;
+                    mode         = UtilsData.MODE_SELL;
                     targetPrice  = realtimeSync.getMaxPrice();
                 }
                 isStart = true;
@@ -330,7 +323,7 @@ public class BithumbGlobalImp extends AbstractExchange {
                 if(!tradeInfo.isEmpty()){
                     targetPrice = tradeInfo.get("price");
                     mode        = tradeInfo.get("mode");
-                    action      = (mode.equals(TradeData.MODE_BUY)) ? BUY : SELL;
+                    action      = (mode.equals(UtilsData.MODE_BUY)) ? BUY : SELL;
                     isStart     = true;
                 }
             }
@@ -353,9 +346,7 @@ public class BithumbGlobalImp extends AbstractExchange {
                             log.info("[BITHUMBGLOBAL][REALTIME SYNC] Bestoffer is setted. price:{}, cnt:{}", bestofferPrice, bestofferCnt);
                         }
                     }
-
                     cancelOrder(orderId,symbol);
-
                 }
             }
         }catch (Exception e){
@@ -376,7 +367,7 @@ public class BithumbGlobalImp extends AbstractExchange {
     private String[] getTodayTick(String symbol) throws Exception{
 
         String[] returnRes   = new String[2];
-        String request       = TradeData.BITHUMB_GLOBAL_TICK + "?symbol=" + URLEncoder.encode(symbol);
+        String request       = UtilsData.BITHUMB_GLOBAL_TICK + "?symbol=" + URLEncoder.encode(symbol);
         String response      = getHttpMethod(request);
         JsonObject resObject = gson.fromJson(response, JsonObject.class);
         String returnCode    = resObject.get("code").getAsString();
@@ -404,7 +395,7 @@ public class BithumbGlobalImp extends AbstractExchange {
         log.info("[BITHUMBGLOBAL][ORDER BOOK] START");
         try{
             String symbol   = getSymbol(coinWithId,exchange);
-            String request  = TradeData.BITHUMB_GLOBAL_ORDERBOOK + "?symbol=" + symbol;
+            String request  = UtilsData.BITHUMB_GLOBAL_ORDERBOOK + "?symbol=" + symbol;
             returnRes       = getHttpMethod(request);
         }catch (Exception e){
             log.error("[BITHUMBGLOBAL][ORDER BOOK] Error {}", e.getMessage());
@@ -432,7 +423,7 @@ public class BithumbGlobalImp extends AbstractExchange {
             header.addProperty("type",      "limit"); // 지정가
             header.addProperty("signature", setSignature(header));
 
-            JsonObject returnVal = postHttpMethod(TradeData.BITHUMB_GLOBAL_CREATE_ORDER, gson.toJson(header));
+            JsonObject returnVal = postHttpMethod(UtilsData.BITHUMB_GLOBAL_CREATE_ORDER, gson.toJson(header));
             String status        = returnVal.get("code").getAsString();
             if(status.equals(SUCCESS)){
                 JsonObject obj  = returnVal.get("data").getAsJsonObject();
@@ -462,7 +453,7 @@ public class BithumbGlobalImp extends AbstractExchange {
             header.addProperty("timestamp", System.currentTimeMillis());
             header.addProperty("signature", setSignature(header));
 
-            JsonObject json = postHttpMethod(TradeData.BITHUMB_GLOBAL_CANCEL_ORDER, gson.toJson(header));
+            JsonObject json = postHttpMethod(UtilsData.BITHUMB_GLOBAL_CANCEL_ORDER, gson.toJson(header));
             String status   = json.get("code").getAsString();
             if (status.equals(SUCCESS) || status.equals(SUCCESS_CANCEL)) {
                 returnValue = ReturnCode.SUCCESS.getCode();
@@ -486,8 +477,8 @@ public class BithumbGlobalImp extends AbstractExchange {
         HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
         connection.setDoOutput(true);
         connection.setDoInput(true);
-        connection.setConnectTimeout(TradeData.TIMEOUT_VALUE);
-        connection.setReadTimeout(TradeData.TIMEOUT_VALUE);
+        connection.setConnectTimeout(UtilsData.TIMEOUT_VALUE);
+        connection.setReadTimeout(UtilsData.TIMEOUT_VALUE);
         connection.setRequestMethod("POST");
         connection.setRequestProperty("Content-Type", "application/json");
         connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");

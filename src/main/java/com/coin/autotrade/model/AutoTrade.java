@@ -18,7 +18,7 @@ public class AutoTrade {
     private Long id;
     // 최소 자전거래 수량
     @Column(name = "min_cnt")
-    private Double minCnt;
+    private Integer minCnt;
     // 최대 자전거래 수량
     @Column(name = "max_cnt")
     private Integer maxCnt;

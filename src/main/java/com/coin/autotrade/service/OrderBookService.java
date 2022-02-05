@@ -1,7 +1,7 @@
 package com.coin.autotrade.service;
 
-import com.coin.autotrade.common.TradeData;
-import com.coin.autotrade.common.TradeService;
+import com.coin.autotrade.common.UtilsData;
+import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.common.code.ReturnCode;
 import com.coin.autotrade.model.Exchange;
 import com.coin.autotrade.repository.ExchangeRepository;
@@ -12,7 +12,6 @@ import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import javax.swing.text.html.Option;
 import java.util.Optional;
 
 @org.springframework.stereotype.Service
@@ -36,9 +35,9 @@ public class OrderBookService {
             Exchange exchange = null;
             if(exchangeObj.isPresent()){
                 exchange = exchangeObj.get();
-                String[] coinWithId  = TradeService.splitCoinWithId(coinData);
+                String[] coinWithId  = Utils.splitCoinWithId(coinData);
 
-                AbstractExchange abstractExchange = TradeService.getInstance(exchange.getExchangeCode());
+                AbstractExchange abstractExchange = Utils.getInstance(exchange.getExchangeCode());
                 String orderList                  = abstractExchange.getOrderBook(exchange, coinWithId);
                 if(orderList.equals(ReturnCode.FAIL.getValue())){
                     returnVal = ReturnCode.FAIL.getValue();
@@ -60,50 +59,50 @@ public class OrderBookService {
         JsonArray parseAsk   = new JsonArray();
         JsonArray parseBid   = new JsonArray();
 
-        Gson gson = TradeService.getGson();
+        Gson gson = Utils.getGson();
         JsonObject object = gson.fromJson(data, JsonObject.class);
 
-        if(exchange.equals(TradeData.COINONE)){          // Coinone
+        if(exchange.equals(UtilsData.COINONE)){          // Coinone
             returnValue = data;
-        } else if(exchange.equals(TradeData.FOBLGATE)){  // Foblgate
+        } else if(exchange.equals(UtilsData.FOBLGATE)){  // Foblgate
             JsonObject dataObj  = gson.fromJson(object.get("data"), JsonObject.class);
             JsonArray ask       = gson.fromJson(dataObj.get("sellList"), JsonArray.class);
             JsonArray bid       = gson.fromJson(dataObj.get("buyList"), JsonArray.class);
             returnValue = setOrderBookDataByJsonArray(ask, bid, "price","amount");
 
-        } else if(exchange.equals(TradeData.BITHUMB)){   // BITHUMB
+        } else if(exchange.equals(UtilsData.BITHUMB)){   // BITHUMB
             JsonObject dataObj = object.getAsJsonObject("data");
             JsonArray ask       = gson.fromJson(dataObj.get("asks"), JsonArray.class);
             JsonArray bid       = gson.fromJson(dataObj.get("bids"), JsonArray.class);
             returnValue = setOrderBookDataByJsonArray(ask, bid, "price","quantity");
 
-        } else if(exchange.equals(TradeData.FLATA)){  // Flata - 현재 운영X
+        } else if(exchange.equals(UtilsData.FLATA)){  // Flata - 현재 운영X
             JsonArray ask = gson.fromJson(object.get("ask"), JsonArray.class);
             JsonArray bid = gson.fromJson(object.get("bid"), JsonArray.class);
             returnValue = setOrderBookDataByJsonArray(ask,bid, "px","qty");
 
-        } else if(exchange.equals(TradeData.DCOIN)  || exchange.equals(TradeData.BITHUMB_GLOBAL)){
+        } else if(exchange.equals(UtilsData.DCOIN)  || exchange.equals(UtilsData.BITHUMB_GLOBAL)){
             JsonObject dataObj = object.getAsJsonObject("data");
             String[][] ask = null;
             String[][] bid = null;
 
-            if(exchange.equals(TradeData.DCOIN)){
+            if(exchange.equals(UtilsData.DCOIN)){
                 ask = gson.fromJson(dataObj.get("asks"),String[][].class);
                 bid = gson.fromJson(dataObj.get("bids"),String[][].class);
-            }else if(exchange.equals(TradeData.BITHUMB_GLOBAL)){
+            }else if(exchange.equals(UtilsData.BITHUMB_GLOBAL)){
                 ask = gson.fromJson(dataObj.get("s"),String[][].class);
                 bid = gson.fromJson(dataObj.get("b"),String[][].class);
             }
             returnValue = setOrderBookDataByArray(ask,bid,"price","qty");
 
-        } else if(exchange.equals(TradeData.KUCOIN) || exchange.equals(TradeData.OKEX) || exchange.equals(TradeData.GATEIO)){
+        } else if(exchange.equals(UtilsData.KUCOIN) || exchange.equals(UtilsData.OKEX) || exchange.equals(UtilsData.GATEIO)){
 
             JsonObject dataObj = null;
-            if(exchange.equals(TradeData.KUCOIN)){
+            if(exchange.equals(UtilsData.KUCOIN)){
                 dataObj = object.getAsJsonObject("data");
-            }else if(exchange.equals(TradeData.OKEX)){
+            }else if(exchange.equals(UtilsData.OKEX)){
                 dataObj = object.getAsJsonArray("data").get(0).getAsJsonObject();
-            }else if(exchange.equals(TradeData.GATEIO)){
+            }else if(exchange.equals(UtilsData.GATEIO)){
                 dataObj = object;
             }
 
@@ -121,7 +120,7 @@ public class OrderBookService {
 
         JsonArray parseAsk   = new JsonArray();
         JsonArray parseBid   = new JsonArray();
-        Gson gson            = TradeService.getGson();
+        Gson gson            = Utils.getGson();
 
         for(int i=0; i < asks.size(); i++){
             JsonObject askObj = (JsonObject) asks.get(i);
@@ -148,7 +147,7 @@ public class OrderBookService {
 
         JsonArray parseAsk   = new JsonArray();
         JsonArray parseBid   = new JsonArray();
-        Gson gson            = TradeService.getGson();
+        Gson gson            = Utils.getGson();
 
         for(int i=0; i < asks.length; i++){
             JsonObject askObj = new JsonObject();

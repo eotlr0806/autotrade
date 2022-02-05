@@ -1,7 +1,7 @@
 package com.coin.autotrade.service;
 
-import com.coin.autotrade.common.TradeData;
-import com.coin.autotrade.common.TradeService;
+import com.coin.autotrade.common.UtilsData;
+import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.repository.ExchangeRepository;
 import com.coin.autotrade.service.exchangeimp.*;
@@ -52,7 +52,7 @@ public class CoinService {
         String list       = "";
 
         try{
-            String[] coinData = TradeService.splitCoinWithId(autoTrade.getCoin());
+            String[] coinData = Utils.splitCoinWithId(autoTrade.getCoin());
             Exchange findedEx = autoTrade.getExchange();
 
             for(ExchangeCoin coin : findedEx.getExchangeCoin()){
@@ -116,11 +116,11 @@ public class CoinService {
         if(coinPrice.compareTo(new BigDecimal("1.0")) < 0){
             BigDecimal floorFix      = new BigDecimal( String.valueOf( Math.pow(10, length - (dotInx + 1)) ) ); // 0.001 -> 1000
             BigDecimal standardPrice = coinPrice.multiply(floorFix);                                            // 1.0
-            BigDecimal randomVal     = TradeService.getRandomDecimal(bidValue, askValue).multiply(floorFix);
+            BigDecimal randomVal     = Utils.getRandomDecimal(bidValue, askValue).multiply(floorFix);
             BigDecimal parseVal      = randomVal.subtract(randomVal.remainder(standardPrice));
             value                    = parseVal.divide(floorFix);
         }else{
-            BigDecimal randomVal     = TradeService.getRandomDecimal(bidValue, askValue);
+            BigDecimal randomVal     = Utils.getRandomDecimal(bidValue, askValue);
             BigDecimal parseVal      = randomVal.subtract(randomVal.remainder(coinPrice));
             value                    = parseVal;
         }
@@ -137,7 +137,7 @@ public class CoinService {
         returnMap.put("buy", buyList);
 
         try{
-            String[] coinData = TradeService.splitCoinWithId(liquidity.getCoin());
+            String[] coinData = Utils.splitCoinWithId(liquidity.getCoin());
 
             // Code 값으로 거래소 데이터 조회
             Exchange findedEx = liquidity.getExchange();
@@ -156,7 +156,7 @@ public class CoinService {
                     BigDecimal tickRange     = new BigDecimal(liquidity.getRangeTick()); // 해당 코인 저장 시 등록한 틱 간격
 
                     // 수동 모드
-                    if(TradeData.MODE_SELF_L.equals(liquidity.getMode())){
+                    if(UtilsData.MODE_SELF_L.equals(liquidity.getMode())){
                         String[] selfTicks = liquidity.getSelfTick().split(",");
                         Arrays.sort(selfTicks);
                         for(int i = 0; i < selfTicks.length; i++){
@@ -170,7 +170,7 @@ public class CoinService {
                     }
                     // 자동 모드
                     else{
-                        BigDecimal randomInx       = new BigDecimal(TradeService.getRandomInt(0,4)) ;  // 호가 0~4 까지(5개) 중 한개를 무작위로 뽑음
+                        BigDecimal randomInx       = new BigDecimal(Utils.getRandomInt(0,4)) ;  // 호가 0~4 까지(5개) 중 한개를 무작위로 뽑음
                         BigDecimal inputRandomTick = tickRange.multiply(randomInx);                  // 현재 호가창에서 최소매도/최대매수의 랜덤 시작 값을 구하기 위한 수
                         int randomTick             = Integer.parseInt(liquidity.getRandomTick());      // Liquidity 실행 시, 저장한 랜덤 Tick 값
                         for(int i=0; i < randomTick; i ++){
@@ -202,7 +202,7 @@ public class CoinService {
         Map<String, List>  returnMap    = new HashMap();
         log.info("[COIN SERVICE][GET FISHING LIST] START");
         try{
-            String[] coinData = TradeService.splitCoinWithId(fishing.getCoin());
+            String[] coinData = Utils.splitCoinWithId(fishing.getCoin());
             Exchange findedEx = fishing.getExchange();
             for(ExchangeCoin coin : findedEx.getExchangeCoin()){
                 if(coin.getCoinCode().equals(coinData[0]) && coin.getId() == Long.parseLong(coinData[1])){
@@ -222,8 +222,8 @@ public class CoinService {
 
                     // 랜덤일 경우, 1이면 sell / 0이면 buy로 변환
                     String mode = fishing.getMode();
-                    if(TradeData.MODE_RANDOM.equals(mode)){
-                        mode = (TradeService.getRandomInt(0,1) == 1) ? TradeData.MODE_SELL : TradeData.MODE_BUY;
+                    if(UtilsData.MODE_RANDOM.equals(mode)){
+                        mode = (Utils.getRandomInt(0,1) == 1) ? UtilsData.MODE_SELL : UtilsData.MODE_BUY;
                     }
 
                     // 매도 최소값 - 매수 최대값 > 최대 더하거나 빼야하는 코인 값
@@ -246,7 +246,7 @@ public class CoinService {
     /** Fishing 거래 시 매도/매수에 대한 틱 간격에 맞춰 값 리턴을 하는 함수 */
     public List makeFishingValue(int cnt, BigDecimal price, BigDecimal ask, BigDecimal bid, String type){
         List returnList = new ArrayList();
-        if(type.equals(TradeData.MODE_BUY)){
+        if(type.equals(UtilsData.MODE_BUY)){
             BigDecimal tempBid = bid;
             for (int i = 0; i < cnt; i++) {
                 tempBid = tempBid.add(price).stripTrailingZeros();
@@ -275,7 +275,7 @@ public class CoinService {
 
         try{
             Thread.sleep(1200); // 매도/매수 후 바로 조회 시, 반영이 안됨. 1.2초 정도 대기해보자..
-            String[] coinData = TradeService.splitCoinWithId(coinBeforeSplit);
+            String[] coinData = Utils.splitCoinWithId(coinBeforeSplit);
 
             for(ExchangeCoin coin : exchange.getExchangeCoin()){
                 if(coin.getCoinCode().equals(coinData[0]) && coin.getId() == Long.parseLong(coinData[1])){
@@ -290,8 +290,8 @@ public class CoinService {
                     BigDecimal bidValue  = new BigDecimal( firstBid.get("price").getAsString() ).stripTrailingZeros();
                     BigDecimal askValue  = new BigDecimal( firstAsk.get("price").getAsString() ).stripTrailingZeros();
 
-                    returnMap.put(TradeData.MODE_BUY, bidValue.toPlainString());
-                    returnMap.put(TradeData.MODE_SELL, askValue.toPlainString());
+                    returnMap.put(UtilsData.MODE_BUY, bidValue.toPlainString());
+                    returnMap.put(UtilsData.MODE_SELL, askValue.toPlainString());
                     break;
                 }
             }
@@ -315,7 +315,7 @@ public class CoinService {
 
         try{
             Thread.sleep(1200); // 매도/매수 후 바로 조회 시, 반영이 안됨. 1.2초 정도 대기해보자..
-            String[] coinData = TradeService.splitCoinWithId(coinBeforeSplit);
+            String[] coinData = Utils.splitCoinWithId(coinBeforeSplit);
 
             for(ExchangeCoin coin : exchange.getExchangeCoin()){
                 if(coin.getCoinCode().equals(coinData[0]) && coin.getId() == Long.parseLong(coinData[1])){
@@ -325,8 +325,8 @@ public class CoinService {
                     JsonArray bid       = json.getAsJsonArray("bid");
                     JsonArray ask       = json.getAsJsonArray("ask");
 
-                    returnMap.put(TradeData.MODE_BUY, bid);
-                    returnMap.put(TradeData.MODE_SELL, ask);
+                    returnMap.put(UtilsData.MODE_BUY, bid);
+                    returnMap.put(UtilsData.MODE_SELL, ask);
                     break;
                 }
             }
@@ -342,47 +342,47 @@ public class CoinService {
 
         String exchange = findedEx.getExchangeCode();
         String rowList = null;
-        if(exchange.equals(TradeData.BITHUMB)){
+        if(exchange.equals(UtilsData.BITHUMB)){
             if(bithumbImp == null) {
                 bithumbImp = new BithumbImp();
             }
             rowList = bithumbImp.getOrderBook(findedEx, coinData);
-        }else if(exchange.equals(TradeData.BITHUMB_GLOBAL)){
+        }else if(exchange.equals(UtilsData.BITHUMB_GLOBAL)){
             if(bithumbGlobalImp == null) {
                 bithumbGlobalImp = new BithumbGlobalImp();
             }
             rowList = bithumbGlobalImp.getOrderBook(findedEx, coinData);
-        }else if(exchange.equals(TradeData.COINONE)){
+        }else if(exchange.equals(UtilsData.COINONE)){
             if(coinOneImp == null) {
                 coinOneImp = new CoinOneImp();
             }
             rowList = coinOneImp.getOrderBook(findedEx, coinData);
-        }else if(exchange.equals(TradeData.DCOIN)){
+        }else if(exchange.equals(UtilsData.DCOIN)){
             if(dcoinImp == null) {
                 dcoinImp = new DcoinImp();
             }
             rowList = dcoinImp.getOrderBook(findedEx, coinData);
-        }else if(exchange.equals(TradeData.FLATA)){
+        }else if(exchange.equals(UtilsData.FLATA)){
             if(flataImp == null) {
                 flataImp = new FlataImp();
             }
             rowList = flataImp.getOrderBook(findedEx, coinData);
-        }else if(exchange.equals(TradeData.FOBLGATE)){
+        }else if(exchange.equals(UtilsData.FOBLGATE)){
             if(foblGateImp == null) {
                 foblGateImp = new FoblGateImp();
             }
             rowList = foblGateImp.getOrderBook(findedEx, coinData);
-        }else if(exchange.equals(TradeData.KUCOIN)){
+        }else if(exchange.equals(UtilsData.KUCOIN)){
             if(kucoinImp == null) {
                 kucoinImp = new KucoinImp();
             }
             rowList = kucoinImp.getOrderBook(findedEx, coinData);
-        }else if(exchange.equals(TradeData.OKEX)){
+        }else if(exchange.equals(UtilsData.OKEX)){
             if(okexImp == null){
                 okexImp = new OkexImp();
             }
             rowList = okexImp.getOrderBook(findedEx, coinData);
-        }else if(exchange.equals(TradeData.GATEIO)){
+        }else if(exchange.equals(UtilsData.GATEIO)){
             if(gateIoImp == null){
                 gateIoImp = new GateIoImp();
             }

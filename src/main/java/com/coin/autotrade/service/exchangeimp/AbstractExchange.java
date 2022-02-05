@@ -1,7 +1,7 @@
 package com.coin.autotrade.service.exchangeimp;
 
-import com.coin.autotrade.common.TradeData;
-import com.coin.autotrade.common.TradeService;
+import com.coin.autotrade.common.UtilsData;
+import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.common.code.ReturnCode;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
@@ -116,9 +116,9 @@ public abstract class AbstractExchange {
         BigDecimal differencePercentFloor     = differencePercent.setScale(4, BigDecimal.ROUND_FLOOR);
         if(realtimeTargetPercentFloor.compareTo(differencePercentFloor) != 0){  // 두개의 차이가 같은 구간이 아닐 경우
             if(realtimeTargetPercent.compareTo(differencePercent) < 0){         // 동기화 코인 %가 기준 코인 상승률보다 적으면 true
-                returnMap.put("mode", TradeData.MODE_SELL);
+                returnMap.put("mode", UtilsData.MODE_SELL);
             }else if(realtimeTargetPercent.compareTo(differencePercent) > 0){
-                returnMap.put("mode",TradeData.MODE_BUY);
+                returnMap.put("mode", UtilsData.MODE_BUY);
             }
         }
 
@@ -149,7 +149,7 @@ public abstract class AbstractExchange {
      */
     protected BigDecimal makeTargetPrice(BigDecimal openingPrice, BigDecimal targetPercent) throws Exception{
         String coinPriceStr   = "";
-        String[] coinArr      = TradeService.splitCoinWithId(realtimeSync.getCoin());
+        String[] coinArr      = Utils.splitCoinWithId(realtimeSync.getCoin());
         for(ExchangeCoin coin : realtimeSync.getExchange().getExchangeCoin()){
             if(coin.getCoinCode().equals(coinArr[0]) && coin.getId() == Long.parseLong(coinArr[1])){
                 coinPriceStr = coin.getCoinPrice();
@@ -183,7 +183,7 @@ public abstract class AbstractExchange {
             List<String> tradePriceList      = new ArrayList<>();
             for (int i = 1; i <= limitCheckTick; i++) {
                 BigDecimal bestofferForTrade = null;
-                if(mode.equals(TradeData.MODE_BUY)){    // 매수 시
+                if(mode.equals(UtilsData.MODE_BUY)){    // 매수 시
                     bestofferForTrade = targetPriceBigDecimal.subtract(new BigDecimal(i).multiply(tickRangeDecimal));
                 }else{                                  // 매도 시
                     bestofferForTrade = targetPriceBigDecimal.add(new BigDecimal(i).multiply(tickRangeDecimal));
@@ -200,11 +200,9 @@ public abstract class AbstractExchange {
 
                 // 호가에 없을 경우 거래를 날려야 함
                 if(isTrade){
-                    double minCnt = Double.parseDouble(realtimeSync.getMinBestofferCnt());
-                    double maxCnt = Double.parseDouble(realtimeSync.getMaxBestofferCnt());
-                    String bestofferCnt = String.valueOf(Math.floor(TradeService.getRandomDouble(minCnt, maxCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
+                    String bestofferCnt = Utils.getRandomString(realtimeSync.getMinBestofferCnt(), realtimeSync.getMaxBestofferCnt());
+                    JsonObject object   = new JsonObject();
 
-                    JsonObject object = new JsonObject();
                     object.add("price", gson.fromJson(bestofferForTrade.toPlainString(),JsonElement.class));
                     object.add("cnt",   gson.fromJson(bestofferCnt, JsonElement.class));
                     list.add(object);
@@ -249,8 +247,8 @@ public abstract class AbstractExchange {
         HttpURLConnection connection = (HttpURLConnection) urlObject.openConnection();
         connection.setRequestMethod("GET");
         connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
-        connection.setConnectTimeout(TradeData.TIMEOUT_VALUE);
-        connection.setReadTimeout(TradeData.TIMEOUT_VALUE);
+        connection.setConnectTimeout(UtilsData.TIMEOUT_VALUE);
+        connection.setReadTimeout(UtilsData.TIMEOUT_VALUE);
 
         int returnCode    = connection.getResponseCode();
         String returnMsg  = connection.getResponseMessage();

@@ -1,7 +1,7 @@
 package com.coin.autotrade.controller.restcontroller;
 
 import com.coin.autotrade.common.Response;
-import com.coin.autotrade.common.TradeService;
+import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.common.code.ReturnCode;
 import com.coin.autotrade.common.code.SessionKey;
 import com.coin.autotrade.model.RealtimeSync;
@@ -38,7 +38,7 @@ public class RealtimeSyncRestController {
             }else{
                 response.setResponseWithObject(ReturnCode.SUCCESS, realtimeSyncList);
             }
-            log.info("[GET REALTIME SYNC] Get realtime sync success :{}", TradeService.getMapper().writeValueAsString(realtimeSyncList));
+            log.info("[GET REALTIME SYNC] Get realtime sync success :{}", Utils.getMapper().writeValueAsString(realtimeSyncList));
         }catch(Exception e){
             log.error("[GET REALTIME SYNC] {}", e.getMessage());
             e.printStackTrace();
@@ -55,7 +55,7 @@ public class RealtimeSyncRestController {
 
         ReturnCode returnVal  = ReturnCode.FAIL;
         Response response     = new Response(ReturnCode.FAIL);
-        Gson gson             = TradeService.getGson();
+        Gson gson             = Utils.getGson();
 
         try{
             RealtimeSync realtimeSync = gson.fromJson(body, RealtimeSync.class);

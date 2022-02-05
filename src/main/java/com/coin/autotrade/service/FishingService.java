@@ -1,7 +1,7 @@
 package com.coin.autotrade.service;
 
-import com.coin.autotrade.common.TradeData;
-import com.coin.autotrade.common.TradeService;
+import com.coin.autotrade.common.UtilsData;
+import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.common.code.ReturnCode;
 import com.coin.autotrade.model.Fishing;
 import com.coin.autotrade.repository.FishingRepository;
@@ -37,7 +37,7 @@ public class FishingService {
 
         try{
 
-            if(TradeService.isFishingTradeThread(fishing.getId())){
+            if(Utils.isFishingTradeThread(fishing.getId())){
                 log.error("[POST FISHING] Thread is already existed id: {}", fishing.getId());
                 returnCode = ReturnCode.DUPLICATION_DATA;
             }else{
@@ -46,12 +46,12 @@ public class FishingService {
                     Fishing savedFishing = optionalFishing.get();
                     FishingTradeThread fishingTrade = new FishingTradeThread();
                     fishingTrade.setTrade(savedFishing);
-                    savedFishing.setStatus(TradeData.STATUS_RUN);
+                    savedFishing.setStatus(UtilsData.STATUS_RUN);
 
-                    if(TradeService.setFishingThread(fishing.getId(), fishingTrade)){   // Thread pool에 넣기
+                    if(Utils.setFishingThread(fishing.getId(), fishingTrade)){   // Thread pool에 넣기
                         fishingRepository.save(savedFishing);
                         thread = new Thread(fishingTrade);
-                        TradeService.startThread(thread);  // thread start by async mode
+                        Utils.startThread(thread);  // thread start by async mode
                         returnCode = ReturnCode.SUCCESS;
                         log.info("[POST FISHING] Start fishing trade thread id : {} ", fishing.getId());
                     }else{
@@ -66,7 +66,7 @@ public class FishingService {
             if(thread != null && thread.isAlive()){
                 thread.interrupt();
             }
-            TradeService.popFishingThread(fishing.getId());
+            Utils.popFishingThread(fishing.getId());
         }
         return returnCode;
     }
@@ -81,7 +81,7 @@ public class FishingService {
 
         try{
             // Thread pool 에서 thread를 가져와 멈춘다.
-            FishingTradeThread thread = TradeService.popFishingThread(fishing.getId());
+            FishingTradeThread thread = Utils.popFishingThread(fishing.getId());
             if(thread != null){
                 thread.setStop();
             }
@@ -111,7 +111,7 @@ public class FishingService {
         try{
 
             // Thread pool 에서 thread를 가져와 멈춘다.
-            FishingTradeThread thread = TradeService.popFishingThread(fishing.getId());
+            FishingTradeThread thread = Utils.popFishingThread(fishing.getId());
             if(thread != null) {
                 thread.setStop();
             }
@@ -120,7 +120,7 @@ public class FishingService {
             Optional<Fishing> optionalFishing = fishingRepository.findById(fishing.getId());
             if(optionalFishing.isPresent()){
                 Fishing savedFishing = optionalFishing.get();
-                savedFishing.setStatus(TradeData.STATUS_STOP);
+                savedFishing.setStatus(UtilsData.STATUS_STOP);
                 fishingRepository.save(savedFishing);
             }else{
                 log.info("[STOP FISHING] There is no thread in DB thread id : {}", fishing.getId());

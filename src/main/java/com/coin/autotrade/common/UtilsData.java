@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /*** 공통으로 쓰이는 데이터를 담은 클래스 */
-public class TradeData {
+public class UtilsData {
     /** Common value **/
     public static Map<String, String> FLATA_SESSION_KEY = new HashMap<String, String>();    // api user , Key
 
@@ -52,6 +52,10 @@ public class TradeData {
     public static String BITHUMB_GLOBAL_TICK      = "https://global-openapi.bithumb.pro/openapi/v1/spot/ticker";
     public static String COINONE_TICK             = "https://api.coinone.co.kr/ticker_utc";
     public static String BITHUMB_TICK             = "https://api.bithumb.com/public/ticker";
+    public static String GATEIO_TICK              = "https://api.gateio.ws/api/v4/spot/tickers";
+    public static String OKEX_TICK                = "https://www.okex.com/api/v5/market/tickers";
+    public static String KUCOIN_TICK              = "https://api.kucoin.com/api/v1/market/allTickers";
+    public static String FLATA_TICK               = "https://www.flata.exchange/out/api/getTicker";
 
     /** Define Private Api URL */
     public static String COINONE_LIMIT_BUY           = "https://api.coinone.co.kr/v2/order/limit_buy/";
@@ -90,8 +94,4 @@ public class TradeData {
     public static ConcurrentHashMap<Long, LiquidityTradeThread> liquidityThreadMap   = new ConcurrentHashMap<>();
     public static ConcurrentHashMap<Long, FishingTradeThread> fishingTradeThreadMap  = new ConcurrentHashMap<>();
     public static ConcurrentHashMap<Long, RealtimeSyncThread> realtimeSyncThreadMap  = new ConcurrentHashMap<>();
-
-    /** ERROR CODE */
-    public static Integer CODE_ERROR       = 400;
-    public static Integer CODE_SUCCESS     = 200;
 }

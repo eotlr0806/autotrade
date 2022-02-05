@@ -1,7 +1,7 @@
 package com.coin.autotrade.service;
 
-import com.coin.autotrade.common.TradeData;
-import com.coin.autotrade.common.TradeService;
+import com.coin.autotrade.common.UtilsData;
+import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.common.code.ReturnCode;
 import com.coin.autotrade.model.AutoTrade;
 import com.coin.autotrade.repository.AutoTradeRepository;
@@ -36,7 +36,7 @@ public class AutoTradeService {
 
         try{
             // 중복 체크
-            if(TradeService.isAutoTradeThread(autoTrade.getId())){
+            if(Utils.isAutoTradeThread(autoTrade.getId())){
                 log.error("[POST AUTOTRADE] Thread is already existed id: {}", autoTrade.getId());
                 returnCode = ReturnCode.DUPLICATION_DATA;
             }else{
@@ -46,14 +46,14 @@ public class AutoTradeService {
                     AutoTrade savedAutotrade = optionalAutoTrade.get();
                     AutoTradeThread autoTradeThread = new AutoTradeThread();
                     autoTradeThread.setTrade(savedAutotrade);
-                    savedAutotrade.setStatus(TradeData.STATUS_RUN);
+                    savedAutotrade.setStatus(UtilsData.STATUS_RUN);
 
                     // Input Thread to pool
-                    if(TradeService.setAutoTradeThread(autoTrade.getId(), autoTradeThread)){
+                    if(Utils.setAutoTradeThread(autoTrade.getId(), autoTradeThread)){
                         autotradeRepository.save(savedAutotrade);
 
                         thread = new Thread(autoTradeThread);
-                        TradeService.startThread(thread);      // Thread Start
+                        Utils.startThread(thread);      // Thread Start
                         log.info("[POST AUTOTRADE] Start autotrade thread id : {} ", autoTrade.getId());
                         returnCode = ReturnCode.SUCCESS;
                     }else{
@@ -67,7 +67,7 @@ public class AutoTradeService {
             if(thread != null && thread.isAlive()){
                 thread.interrupt();
             }
-            TradeService.popAutoTradeThread(autoTrade.getId());
+            Utils.popAutoTradeThread(autoTrade.getId());
 
         }
         return returnCode;
@@ -82,7 +82,7 @@ public class AutoTradeService {
 
         try{
             // Thread pool 에서 thread를 가져와 멈춘다.
-            AutoTradeThread thread = TradeService.popAutoTradeThread(autoTrade.getId());
+            AutoTradeThread thread = Utils.popAutoTradeThread(autoTrade.getId());
             if(thread != null){
                 thread.setStop();
             }
@@ -108,7 +108,7 @@ public class AutoTradeService {
 
         try{
             // Thread pool 에서 thread를 가져와 멈춘다.
-            AutoTradeThread thread = TradeService.popAutoTradeThread(autoTrade.getId());
+            AutoTradeThread thread = Utils.popAutoTradeThread(autoTrade.getId());
             if(thread != null){
                 thread.setStop();
             }
@@ -116,7 +116,7 @@ public class AutoTradeService {
             Optional<AutoTrade> optionalAutoTrade = autotradeRepository.findById(autoTrade.getId());
             if(optionalAutoTrade.isPresent()){
                 AutoTrade savedAutoTrade = optionalAutoTrade.get();
-                savedAutoTrade.setStatus(TradeData.STATUS_STOP);
+                savedAutoTrade.setStatus(UtilsData.STATUS_STOP);
                 autotradeRepository.save(savedAutoTrade);
             }else{
                 log.info("[STOP AUTOTRADE] There is no thread in DB thread id : {} ", autoTrade.getId());

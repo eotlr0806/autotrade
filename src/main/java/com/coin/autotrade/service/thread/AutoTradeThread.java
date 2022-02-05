@@ -1,10 +1,9 @@
 package com.coin.autotrade.service.thread;
 
 import com.coin.autotrade.common.BeanUtils;
-import com.coin.autotrade.common.TradeData;
-import com.coin.autotrade.common.TradeService;
+import com.coin.autotrade.common.UtilsData;
+import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.model.AutoTrade;
-import com.coin.autotrade.model.User;
 import com.coin.autotrade.repository.AutoTradeRepository;
 import com.coin.autotrade.service.CoinService;
 import com.coin.autotrade.service.exchangeimp.AbstractExchange;
@@ -34,7 +33,7 @@ public class AutoTradeThread implements Runnable{
         autotradeRepository = (AutoTradeRepository) BeanUtils.getBean(AutoTradeRepository.class);
 
         autoTrade           = inputAutoTrade;
-        abstractExchange    = TradeService.getInstance(autoTrade.getExchange().getExchangeCode());
+        abstractExchange    = Utils.getInstance(autoTrade.getExchange().getExchangeCode());
         abstractExchange.initClass(autoTrade);
     }
 
@@ -56,12 +55,12 @@ public class AutoTradeThread implements Runnable{
                         autotradeRepository.save(autoTrade);
                     }
                     /** make cnt random value */
-                    String cnt   = String.valueOf(Math.floor(TradeService.getRandomDouble((double) autoTrade.getMinCnt(), (double) autoTrade.getMaxCnt()) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
+                    String cnt   = Utils.getRandomString(autoTrade.getMinCnt(), autoTrade.getMaxCnt());
                     /** Auto Trade start **/
                     abstractExchange.startAutoTrade(price, cnt);
                 }
 
-                intervalTime = TradeService.getRandomInt(autoTrade.getMinSeconds(), autoTrade.getMaxSeconds()) * 1000;
+                intervalTime = Utils.getRandomInt(autoTrade.getMinSeconds(), autoTrade.getMaxSeconds()) * 1000;
                 log.info("[AUTOTRADE THREAD] Run thread , intervalTime : {} seconds", intervalTime/1000);
                 Thread.sleep(intervalTime);
             }

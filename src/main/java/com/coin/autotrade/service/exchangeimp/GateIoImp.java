@@ -1,10 +1,11 @@
 package com.coin.autotrade.service.exchangeimp;
 
-import com.coin.autotrade.common.TradeData;
-import com.coin.autotrade.common.TradeService;
+import com.coin.autotrade.common.UtilsData;
+import com.coin.autotrade.common.Utils;
+import com.coin.autotrade.common.code.ReturnCode;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
-import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import io.gate.gateapi.ApiClient;
 import io.gate.gateapi.ApiException;
@@ -17,6 +18,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.util.*;
 
 @Slf4j
@@ -34,49 +36,49 @@ public class GateIoImp extends AbstractExchange {
     private SpotApi spotApi             = null;
 
     @Override
-    public void initClass(AutoTrade autoTrade){
+    public void initClass(AutoTrade autoTrade) throws Exception{
         super.autoTrade = autoTrade;
-        setCoinToken(TradeService.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
+        setCoinToken(Utils.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
     }
 
     @Override
-    public void initClass(Liquidity liquidity){
+    public void initClass(Liquidity liquidity) throws Exception{
         super.liquidity = liquidity;
-        setCoinToken(TradeService.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
+        setCoinToken(Utils.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
     }
 
     @Override
-    public void initClass(RealtimeSync realtimeSync, CoinService coinService){
+    public void initClass(RealtimeSync realtimeSync, CoinService coinService) throws Exception{
         super.realtimeSync = realtimeSync;
         super.coinService  = coinService;
-        setCoinToken(TradeService.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
+        setCoinToken(Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
     }
 
     @Override
-    public void initClass(Fishing fishing, CoinService coinService){
+    public void initClass(Fishing fishing, CoinService coinService) throws Exception{
         super.fishing     = fishing;
         super.coinService = coinService;
-        setCoinToken(TradeService.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
+        setCoinToken(Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
     }
 
     /** 코인 토큰 정보 셋팅 **/
-    private void setCoinToken(String[] coinData, Exchange exchange){
+    private void setCoinToken(String[] coinData, Exchange exchange) throws Exception{
         // Set token key
-        try{
-            for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
-                if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1])){
-                    keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
-                    keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
-                    keyList.put(API_PASSWORD, exCoin.getApiPassword());
-
-                    // Init Gateio API SDK
-                    apiClient.setApiKeySecret(exCoin.getPublicKey(), exCoin.getPrivateKey());
-                    apiClient.setBasePath(TradeData.GATEIO_URL);
-                    spotApi = new SpotApi(apiClient);
-                }
+        for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
+            if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1])){
+                keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
+                keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
+                keyList.put(API_PASSWORD, exCoin.getApiPassword());
+                // Init Gateio API SDK
+                apiClient.setApiKeySecret(exCoin.getPublicKey(), exCoin.getPrivateKey());
+                apiClient.setBasePath(UtilsData.GATEIO_URL);
+                spotApi = new SpotApi(apiClient);
             }
-        }catch (Exception e){
-            log.error("[GATEIO][ERROR][SET COIN TOKEN] {}", e.getMessage());
+        }
+        log.info("[GATEIO][SET API KEY] First Key setting in instance API:{}, secret:{}",keyList.get(ACCESS_TOKEN), keyList.get(SECRET_KEY));
+        if(keyList.isEmpty()){
+            String msg = "There is no match coin. " + Arrays.toString(coinData) + " " + exchange.getExchangeCode();
+            throw new Exception(msg);
         }
     }
 
@@ -86,152 +88,136 @@ public class GateIoImp extends AbstractExchange {
      */
     @Override
     public int startAutoTrade(String price, String cnt){
-        log.info("[GATEIO][AUTOTRADE START]");
-        int returnCode    = TradeData.CODE_SUCCESS;
+        log.info("[GATEIO][AUTOTRADE] START");
+        int returnCode = ReturnCode.SUCCESS.getCode();
 
         try{
-
-            String[] coinData = TradeService.splitCoinWithId(autoTrade.getCoin());
-            String symbol     = coinData[0] + "_" + getCurrency(autoTrade.getExchange(), coinData[0], coinData[1]);
+            String symbol       = getSymbol(Utils.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
+            String firstAction  = "";
+            String secondAction = "";
 
             // mode 처리
             String mode = autoTrade.getMode();
-            if(TradeData.MODE_RANDOM.equals(mode)){
-                mode = (TradeService.getRandomInt(0,1) == 0) ? TradeData.MODE_BUY : TradeData.MODE_SELL;
+            if(UtilsData.MODE_RANDOM.equals(mode)){
+                mode = (Utils.getRandomInt(0,1) == 0) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
             }
-
-            // 1 : 매수 , 2 : 매도
-            String firstOrderId  = "";
-            String secondOrderId = "";
-            if(TradeData.MODE_BUY.equals(mode)){
-                if( !(firstOrderId = createOrder(BUY, price, cnt, symbol)).equals("")){   // 매수
-                    if((secondOrderId = createOrder(SELL,price, cnt, symbol)).equals("")){               // 매도
-                        Thread.sleep(3000);
-                        cancelOrder(firstOrderId, symbol);                      // 매도 실패 시, 매수 취소
-                    }
-                }
-            }else if(TradeData.MODE_SELL.equals(mode)){
-                if( !(firstOrderId = createOrder(SELL,price, cnt, symbol)).equals("")){
-                    if((secondOrderId = createOrder(BUY,price, cnt, symbol)).equals("")){
-                        Thread.sleep(3000);
-                        cancelOrder(firstOrderId, symbol);
-                    }
-                }
+            // Trade 모드에 맞춰 순서에 맞게 거래 타입 생성
+            if(UtilsData.MODE_BUY.equals(mode)){
+                firstAction  = BUY;
+                secondAction = SELL;
+            }else if(UtilsData.MODE_SELL.equals(mode)){
+                firstAction  = SELL;
+                secondAction = BUY;
             }
-            // 최초던진 값이 거래가 될 수 있기에 2번째 값은 무조건 취소진행
-            if(!firstOrderId.equals("") || !secondOrderId.equals("")){
-                Thread.sleep(3000);
-                if(!firstOrderId.equals("")){
-                    cancelOrder(firstOrderId, symbol);
-                }
-                if(!secondOrderId.equals("")){
-                    cancelOrder(secondOrderId, symbol);
+            String orderId = ReturnCode.NO_DATA.getValue();
+            if(!(orderId = createOrder(firstAction,price, cnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){
+                if(createOrder(secondAction,price, cnt, symbol).equals(ReturnCode.NO_DATA.getValue())){          // SELL 모드가 실패 시,
+                    cancelOrder(orderId, symbol);
                 }
             }
         }catch (Exception e){
-            returnCode = TradeData.CODE_ERROR;
-            log.error("[GATEIO][ERROR][AUTOTRADE] {}", e.getMessage());
+            returnCode = ReturnCode.FAIL.getCode();
+            log.error("[GATEIO][AUTOTRADE] Error : {}", e.getMessage());
+            e.printStackTrace();
         }
-
-        log.info("[GATEIO][AUTOTRADE End]");
+        log.info("[GATEIO][AUTOTRADE] END");
         return returnCode;
     }
 
     /** 호가유동성 function */
     @Override
     public int startLiquidity(Map list){
-        int returnCode = TradeData.CODE_SUCCESS;
+        int returnCode = ReturnCode.SUCCESS.getCode();
 
         Queue<String> sellQueue = (LinkedList) list.get("sell");
         Queue<String> buyQueue  = (LinkedList) list.get("buy");
         List<Map<String,String>> CancelList = new ArrayList();
 
         try{
-            log.info("[GATEIO][LIQUIDITY] Start");
-            String[] coinData = TradeService.splitCoinWithId(liquidity.getCoin());
-            String symbol     = coinData[0] + "_" + getCurrency(liquidity.getExchange(), coinData[0], coinData[1]);
-            int minCnt        = liquidity.getMinCnt();
-            int maxCnt        = liquidity.getMaxCnt();
+            log.info("[GATEIO][LIQUIDITY] START");
+            String symbol = getSymbol(Utils.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
 
-            while(sellQueue.size() > 0 || buyQueue.size() > 0){
-                String randomMode = (TradeService.getRandomInt(1,2) == 1) ? BUY : SELL;
+            while(!sellQueue.isEmpty() || !buyQueue.isEmpty()){
+                String mode            = (Utils.getRandomInt(1,2) == 1) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
                 String firstOrderId    = "";
                 String secondsOrderId  = "";
                 String firstPrice      = "";
                 String secondsPrice    = "";
-                String firstCnt        = String.valueOf(Math.floor(TradeService.getRandomDouble((double)minCnt, (double)maxCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
-                String secondsCnt      = String.valueOf(Math.floor(TradeService.getRandomDouble((double)minCnt, (double)maxCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
+                String firstAction     = "";
+                String secondAction    = "";
+                String firstCnt        = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
+                String secondsCnt      = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
 
-
-                if(sellQueue.size() > 0 && buyQueue.size() > 0 && randomMode.equals(BUY)){
+                if(!sellQueue.isEmpty() && !buyQueue.isEmpty() && mode.equals(UtilsData.MODE_BUY)){
                     firstPrice   = buyQueue.poll();
-                    firstOrderId = createOrder(BUY, firstPrice, firstCnt, symbol);
-
-                    Thread.sleep(300);
-                    secondsPrice   = sellQueue.poll();
-                    secondsOrderId = createOrder(SELL, secondsPrice, secondsCnt, symbol);
-                }else if(buyQueue.size() > 0 && sellQueue.size() > 0 && randomMode.equals(SELL)){
+                    secondsPrice = sellQueue.poll();
+                    firstAction  = BUY;
+                    secondAction = SELL;
+                }else if(!buyQueue.isEmpty() && !sellQueue.isEmpty() && mode.equals(UtilsData.MODE_SELL)){
                     firstPrice   = sellQueue.poll();
-                    firstOrderId = createOrder(SELL, firstPrice, firstCnt, symbol);
-
-                    Thread.sleep(300);
-                    secondsPrice   = buyQueue.poll();
-                    secondsOrderId = createOrder(BUY, secondsPrice, secondsCnt, symbol);
+                    secondsPrice = buyQueue.poll();
+                    firstAction  = SELL;
+                    secondAction = BUY;
                 }
+                firstOrderId = createOrder(firstAction, firstPrice, firstCnt, symbol);
+                Thread.sleep(300);
+                secondsOrderId = createOrder(secondAction, secondsPrice, secondsCnt, symbol);
 
-                if(!firstOrderId.equals("") || !secondsOrderId.equals("")){
+                // first / second 둘 중 하나라도 거래가 성사 되었을 경우
+                if(!firstOrderId.equals(ReturnCode.NO_DATA.getValue())  || !secondsOrderId.equals(ReturnCode.NO_DATA.getValue())){
                     Thread.sleep(2000);
-                    if(!firstOrderId.equals("")){
+                    if(!firstOrderId.equals(ReturnCode.NO_DATA.getValue())){
                         cancelOrder(firstOrderId, symbol);
                     }
-                    if(!secondsOrderId.equals("")){
+                    if(!secondsOrderId.equals(ReturnCode.NO_DATA.getValue())){
                         Thread.sleep(500);
                         cancelOrder(secondsOrderId, symbol);
                     }
                 }
             }
         }catch (Exception e){
-            returnCode = TradeData.CODE_ERROR;
-            log.error("[GATEIO][ERROR][LIQUIDITY] {}", e.getMessage());
+            returnCode = ReturnCode.SUCCESS.getCode();
+            log.error("[GATEIO][LIQUIDITY] Error {}", e.getMessage());
+            e.printStackTrace();
         }
-        log.info("[GATEIO][LIQUIDITY] End");
+        log.info("[GATEIO][LIQUIDITY] END");
         return returnCode;
     }
 
     @Override
     public int startFishingTrade(Map<String,List> list, int intervalTime){
-        log.info("[GATEIO][FISHINGTRADE START]");
+        log.info("[GATEIO][FISHINGTRADE] START");
 
-        int returnCode    = TradeData.CODE_SUCCESS;
+        int returnCode = ReturnCode.SUCCESS.getCode();
 
         try{
-            String[] coinData = TradeService.splitCoinWithId(fishing.getCoin());
-            String symbol     = coinData[0] + "_" + getCurrency(fishing.getExchange(), coinData[0], coinData[1]);
+            String symbol = getSymbol(Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
 
             // mode 처리
             String mode = fishing.getMode();
-            if(TradeData.MODE_RANDOM.equals(mode)){
-                mode = (TradeService.getRandomInt(0,1) == 0) ? TradeData.MODE_BUY : TradeData.MODE_SELL;
+            if(UtilsData.MODE_RANDOM.equals(mode)){
+                mode = (Utils.getRandomInt(0,1) == 0) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
             }
 
             boolean noIntervalFlag   = true;    // 해당 플래그를 이용해 마지막 매도/매수 후 바로 intervalTime 없이 바로 다음 매수/매도 진행
             boolean noMatchFirstTick = true;    // 해당 플래그를 이용해 매수/매도를 올린 가격이 현재 최상위 값이 맞는지 다른 사람의 코인을 사지 않게 방지
 
             for(String temp : list.keySet()){  mode = temp; }
-            ArrayList<String> tickPriceList = (ArrayList) list.get(mode);
+            ArrayList<String> tickPriceList          = (ArrayList) list.get(mode);
             ArrayList<Map<String, String>> orderList = new ArrayList<>();
 
             /* Start */
+            log.info("[GATEIO][FISHINGTRADE][START BUY OR SELL TARGET ALL COIN]");
             for (int i = 0; i < tickPriceList.size(); i++) {
-                String cnt = String.valueOf(Math.floor(TradeService.getRandomDouble((double) fishing.getMinContractCnt(), (double) fishing.getMaxContractCnt()) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
+                String cnt = Utils.getRandomString(fishing.getMinContractCnt(), fishing.getMaxContractCnt());
 
-                String orderId = "";
-                if(TradeData.MODE_BUY.equals(mode)) {
+                String orderId = ReturnCode.NO_DATA.getValue();
+                if(UtilsData.MODE_BUY.equals(mode)) {
                     orderId = createOrder(BUY,  tickPriceList.get(i), cnt, symbol);
                 }else{
                     orderId = createOrder(SELL, tickPriceList.get(i), cnt, symbol);
                 }
-                if(!orderId.equals("")){                                                // 매수/매도가 정상적으로 이뤄졌을 경우 데이터를 list에 담는다
+                if(!orderId.equals(ReturnCode.NO_DATA.getValue())){     // 매수/매도가 정상적으로 이뤄졌을 경우 데이터를 list에 담는다
                     Map<String, String> orderMap = new HashMap<>();
                     orderMap.put("price" ,tickPriceList.get(i));
                     orderMap.put("cnt" ,cnt);
@@ -239,17 +225,19 @@ public class GateIoImp extends AbstractExchange {
                     orderList.add(orderMap);
                 }
             }
+            log.info("[GATEIO][FISHINGTRADE][END BUY OR SELL TARGET ALL COIN]");
 
             /* Sell Start */
+            log.info("[GATEIO][FISHINGTRADE][START BUY OR SELL TARGET PIECE COIN ]");
             for (int i = orderList.size() - 1; i >= 0; i--) {
-                Map<String, String> copiedOrderMap = TradeService.deepCopy(orderList.get(i));
+                Map<String, String> copiedOrderMap = Utils.deepCopy(orderList.get(i));
                 BigDecimal cnt                     = new BigDecimal(copiedOrderMap.get("cnt"));
 
                 while (cnt.compareTo(new BigDecimal("0")) > 0) {
                     if (!noMatchFirstTick) break;                   // 최신 매도/매수 건 값이 다를경우 돌 필요 없음.
                     if (noIntervalFlag) Thread.sleep(intervalTime); // intervalTime 만큼 휴식 후 매수 시작
-                    String orderId            = "";
-                    BigDecimal cntForExcution = new BigDecimal(String.valueOf(Math.floor(TradeService.getRandomDouble((double) fishing.getMinExecuteCnt(), (double) fishing.getMaxExecuteCnt()) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL));
+                    String orderId            = ReturnCode.NO_DATA.getValue();
+                    BigDecimal cntForExcution = new BigDecimal(Utils.getRandomString(fishing.getMinExecuteCnt(), fishing.getMaxExecuteCnt()));
 
                     // 남은 코인 수와 매도/매수할 코인수를 비교했을 때, 남은 코인 수가 더 적다면.
                     if (cnt.compareTo(cntForExcution) < 0) {
@@ -260,10 +248,10 @@ public class GateIoImp extends AbstractExchange {
                     }
                     // 매도/매수 날리기전에 최신 매도/매수값이 내가 건 값이 맞는지 확인
                     String nowFirstTick = "";
-                    if(TradeData.MODE_BUY.equals(mode)) {
-                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(TradeData.MODE_BUY);
+                    if(UtilsData.MODE_BUY.equals(mode)) {
+                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(UtilsData.MODE_BUY);
                     }else{
-                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(TradeData.MODE_SELL);
+                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(UtilsData.MODE_SELL);
                     }
                     String orderPrice = copiedOrderMap.get("price");
                     if (!orderPrice.equals(nowFirstTick)) {
@@ -272,13 +260,13 @@ public class GateIoImp extends AbstractExchange {
                         break;
                     }
 
-                    if(TradeData.MODE_BUY.equals(mode)) {
+                    if(UtilsData.MODE_BUY.equals(mode)) {
                         orderId = createOrder(SELL, copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol);
                     }else{
                         orderId = createOrder(BUY,  copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol);
                     }
 
-                    if(!orderId.equals("")){
+                    if(!orderId.equals(ReturnCode.NO_DATA.getValue())){
                         cnt = cnt.subtract(cntForExcution);
                     }else{
                         log.error("[GATEIO][FISHINGTRADE] While loop is broken, Because create order is failed");
@@ -289,52 +277,139 @@ public class GateIoImp extends AbstractExchange {
                 Thread.sleep(1000);
                 cancelOrder(orderList.get(i).get("order_id"), symbol);
             }
+            log.info("[GATEIO][FISHINGTRADE][END BUY OR SELL TARGET PIECE COIN ]");
         }catch (Exception e){
-            returnCode = TradeData.CODE_ERROR;
-            log.error("[GATEIO][ERROR][FISHINGTRADE] {}", e.getMessage());
+            returnCode = ReturnCode.FAIL.getCode();
+            log.error("[GATEIO][FISHINGTRADE] Error {}", e.getMessage());
+            e.printStackTrace();
         }
-
-        log.info("[GATEIO][FISHINGTRADE END]");
+        log.info("[GATEIO][FISHINGTRADE] END");
         return returnCode;
     }
 
-    @Override
+    /**
+     * Realtime Sync 거래
+     * @param realtime
+     * @return
+     */
     public int startRealtimeTrade(JsonObject realtime) {
-        return 0;
+        log.info("[GATEIO][REALTIME SYNC TRADE] START");
+        int returnCode   = ReturnCode.SUCCESS.getCode();
+        String realtimeChangeRate = "signed_change_rate";
+
+        try {
+            boolean isStart      = false;
+            String symbol        = getSymbol(Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
+            String[] currentTick = getTodayTick(realtimeSync.getExchange(), Utils.splitCoinWithId(realtimeSync.getCoin()));
+            String openingPrice  = currentTick[0];
+            String currentPrice  = currentTick[1];
+            String orderId       = ReturnCode.NO_DATA.getValue();
+            String targetPrice   = "";
+            String action        = "";
+            String mode          = "";
+            String cnt           = Utils.getRandomString(realtimeSync.getMinTradeCnt(), realtimeSync.getMaxTradeCnt());
+
+            // 1. 최소/최대 매수 구간에 있는지 확인
+            int isInRange        = isMoreOrLessPrice(currentPrice);
+            if(isInRange != 0){              // 구간 밖일 경우
+                if(isInRange == -1){         // 지지선보다 낮을 경우
+                    mode         = UtilsData.MODE_BUY;
+                    action       = BUY;
+                    targetPrice  = realtimeSync.getMinPrice();
+                }else if(isInRange == 1){    // 저항선보다 높을 경우
+                    mode         = UtilsData.MODE_SELL;
+                    action       = SELL;
+                    targetPrice  = realtimeSync.getMaxPrice();
+                }
+                isStart = true;
+            }else{
+                // 지정한 범위 안에 없을 경우 매수 혹은 매도로 맞춰준다.
+                Map<String,String> tradeInfo = getTargetTick(openingPrice, currentPrice, realtime.get(realtimeChangeRate).getAsString());
+                if(!tradeInfo.isEmpty()){
+                    targetPrice = tradeInfo.get("price");
+                    mode        = tradeInfo.get("mode");
+                    action      = (mode.equals(UtilsData.MODE_BUY)) ? BUY : SELL;
+                    isStart     = true;
+                }
+            }
+
+            // 2. %를 맞추기 위한 매수/매도 로직
+            if(isStart){
+                if( !(orderId = createOrder(action, targetPrice, cnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){    // 매수/OrderId가 있으면 성공
+                    Thread.sleep(300);
+
+                    // 3. bestoffer set 로직
+                    JsonArray array = makeBestofferAfterRealtimeSync(targetPrice, mode);
+                    for (int i = 0; i < array.size(); i++) {
+                        JsonObject object       = array.get(i).getAsJsonObject();
+                        String bestofferPrice   = object.get("price").getAsString();
+                        String bestofferCnt     = object.get("cnt").getAsString();
+                        String bestofferOrderId = ReturnCode.NO_DATA.getValue();
+
+                        if( !(bestofferOrderId = createOrder(action, bestofferPrice, bestofferCnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){
+                            log.info("[GATEIO][REALTIME SYNC] Bestoffer is setted. price:{}, cnt:{}", bestofferPrice, bestofferCnt);
+                        }
+                    }
+
+                    // 베스트 오퍼 체크 작업 이후 기존에 걸었던 매수에 대해 캔슬
+                    cancelOrder(orderId, symbol);
+                }
+            }
+
+        }catch (Exception e){
+            log.error("[GATEIO][REALTIME SYNC TRADE] ERROR :{} ", e.getMessage());
+            e.printStackTrace();
+        }
+        log.info("[GATEIO][REALTIME SYNC TRADE] END");
+        return returnCode;
+    }
+
+
+    /**
+     * 현재 Tick 가져오기
+     * @param exchange
+     * @param coinWithId
+     * @return [ 시가 , 종가 ] String Array
+     */
+    private String[] getTodayTick(Exchange exchange, String[] coinWithId) throws Exception{
+
+        String[] returnRes   = new String[2];
+        String coin          = coinWithId[0];
+        String coinId        = coinWithId[1];
+        String symbol        = getCurrency(exchange, coin, coinId);
+
+        String request       = UtilsData.GATEIO_TICK + "?currency_pair=" + coin + "_" + symbol;
+        String response      = getHttpMethod(request);
+        JsonArray resArr     = gson.fromJson(response, JsonArray.class);
+        JsonObject resObj    = resArr.get(0).getAsJsonObject();
+
+        BigDecimal current   = resObj.get("last").getAsBigDecimal();    // 현재 값
+        BigDecimal percent   = resObj.get("change_percentage").getAsBigDecimal().divide(new BigDecimal(100),10, BigDecimal.ROUND_UP);
+        BigDecimal open      = current.divide(new BigDecimal(1).add(percent),10, BigDecimal.ROUND_UP);  // 소수점 11번째에서 반올림
+
+        returnRes[0] = open.toPlainString();
+        returnRes[1] = current.toPlainString();
+        log.info("[GATEIO][GET TODAY TICK] response : {}", Arrays.toString(returnRes));
+
+        return returnRes;
     }
 
     @Override
     public String getOrderBook(Exchange exchange, String[] coinWithId) {
         String returnRes = "";
         try{
-            log.info("[GATEIO][ORDER BOOK START]");
+            log.info("[GATEIO][ORDER BOOK] START");
             String coin   = coinWithId[0];
             String coinId = coinWithId[1];
-            String inputLine;
-            String symbol   = getCurrency(exchange, coin, coinId);
+            String symbol = getCurrency(exchange, coin, coinId);
 
-            String request  = TradeData.GATEIO_ORDERBOOK + "?currency_pair=" + coin + "_" + symbol + "&limit=" + ORDERBOOK_SIZE;
-            URL url = new URL(request);
-
-            HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
-            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
-            connection.setRequestMethod("GET");
-
-            log.info("[GATEIO][ORDER BOOK - REQUEST] symbol:{}" ,  coin);
-
-            int returnCode = connection.getResponseCode();
-            BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            StringBuffer response = new StringBuffer();
-            while ((inputLine = br.readLine()) != null) {
-                response.append(inputLine);
-            }
-            br.close();
-            returnRes = response.toString();
-
-            log.info("[GATEIO][ORDER BOOK END]");
+            String request = UtilsData.GATEIO_ORDERBOOK + "?currency_pair=" + coin + "_" + symbol + "&limit=" + ORDERBOOK_SIZE;
+            returnRes = getHttpMethod(request);
+            log.info("[GATEIO][ORDER BOOK] END");
 
         }catch (Exception e){
-            log.error("[GATEIO][ERROR][ORDER BOOK] {}",e.getMessage());
+            log.error("[GATEIO][ORDER BOOK] Error {}",e.getMessage());
+            e.printStackTrace();
         }
 
         return returnRes;
@@ -342,21 +417,16 @@ public class GateIoImp extends AbstractExchange {
 
 
     /** Biyhumb global 매수/매도 로직 */
-    public String createOrder(String type, String price, String cnt, String symbol){
-
-        String orderId = "";
-
+    private String createOrder(String type, String price, String cnt, String symbol){
+        String orderId = ReturnCode.NO_DATA.getValue();
         try{
-
             Order order = new Order();
-
             order.setAccount(Order.AccountEnum.SPOT);
             order.setAutoBorrow(false);
             order.setTimeInForce(Order.TimeInForceEnum.GTC);
             order.setType(Order.TypeEnum.LIMIT);
             order.setAmount(cnt);
             order.setPrice(price);
-
             if(type.equals(BUY)){
                 order.setSide(Order.SideEnum.BUY);
             }else{
@@ -364,40 +434,47 @@ public class GateIoImp extends AbstractExchange {
             }
             order.setCurrencyPair(symbol);
 
-            log.info("[GATEIO][CREATE ORDER - request] mode:{}, currency:{}, cnt:{}, price:{}",  order.getSide(), order.getCurrencyPair(), order.getAmount(), order.getPrice());
-            Order created = spotApi.createOrder(order);
+            log.info("[GATEIO][CREATE ORDER] Request mode:{}, currency:{}, cnt:{}, price:{}",  order.getSide(), order.getCurrencyPair(), order.getAmount(), order.getPrice());
+            Order created     = spotApi.createOrder(order);
             Order orderResult = spotApi.getOrder(created.getId(), symbol, String.valueOf(Order.AccountEnum.SPOT));
-            orderId = orderResult.getId();
+            orderId           = orderResult.getId();
 
-            log.info("[GATEIO][SUCCESS][CREATE ORDER - response] orderId:{}",  orderId);
+            log.info("[GATEIO][CREATE ORDER] Response Success orderId : {}",  orderId);
         }catch (ApiException e){
-            log.error("[GATEIO][ERROR][CREATE ORDER] {}",e.getMessage());
+            log.error("[GATEIO][CREATE ORDER] Error : {}",e.getMessage());
+            e.printStackTrace();
         }catch (Exception e){
-            log.error("[GATEIO][ERROR][CREATE ORDER] {}",e.getMessage());
+            log.error("[GATEIO][CREATE ORDER] Error : {}",e.getMessage());
+            e.printStackTrace();
         }
         return orderId;
     }
 
     /* gateio global 거래 취소 */
-    public int cancelOrder(String orderId, String symbol) {
-
-        int returnValue = TradeData.CODE_ERROR;
-
+    private int cancelOrder(String orderId, String symbol) {
+        int returnValue = ReturnCode.FAIL.getCode();
         try {
             Order result = spotApi.cancelOrder(orderId, symbol, Order.AccountEnum.SPOT.toString());
-            log.info("[GATEIO][SCUESS][CANCEL ORDER - response] orderId:{}", orderId);
+            log.info("[GATEIO][CANCEL ORDER] Response orderId:{}", orderId);
         }catch(ApiException e){
             JsonObject object = gson.fromJson(e.getResponseBody(), JsonObject.class);
-            String label      = gson.fromJson(object.get("label"),String.class);
+            String label      = object.get("label").getAsString();
             if(ALREADY_TRADED.equals(label)){
-                log.info("[GATEIO][SCUESS][CANCEL ORDER - response] Already traded orderId:{}", orderId);
+                log.info("[GATEIO][CANCEL ORDER] Response Already traded orderId:{}", orderId);
+            }else{
+                log.info("[GATEIO][CANCEL ORDER] Error :{}", e.getMessage());
+                e.printStackTrace();
             }
         }catch (Exception e){
-            log.error("[GATEIO][ERROR][CANCEL ORDER] orderId:{}, response:{}",orderId, e.getMessage());
+            log.error("[GATEIO][CANCEL ORDER] Error orderId:{}, response:{}",orderId, e.getMessage());
+            e.printStackTrace();
         }
         return returnValue;
     }
 
-
+    // 거래소에 맞춰 심볼 반환
+    private String getSymbol(String[] coinData, Exchange exchange) throws Exception {
+        return coinData[0] + "_" + getCurrency(exchange, coinData[0], coinData[1]);
+    }
 
 }

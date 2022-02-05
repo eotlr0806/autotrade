@@ -1,7 +1,7 @@
 package com.coin.autotrade.service;
 
-import com.coin.autotrade.common.TradeData;
-import com.coin.autotrade.common.TradeService;
+import com.coin.autotrade.common.UtilsData;
+import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.common.code.ReturnCode;
 import com.coin.autotrade.model.RealtimeSync;
 import com.coin.autotrade.repository.RealtimeSyncRepository;
@@ -35,7 +35,7 @@ public class RealtimeSyncService {
 
         try{
             // 중복 체크
-            if(TradeService.isRealtimeSyncThread(realtimeSync.getId())){
+            if(Utils.isRealtimeSyncThread(realtimeSync.getId())){
                 log.error("[POST REALTIME SYNC] Thread is already existed id: {}", realtimeSync.getId());
                 returnCode = ReturnCode.DUPLICATION_DATA;
             }else{
@@ -45,14 +45,14 @@ public class RealtimeSyncService {
                     RealtimeSync savedRealtimeSync = optionalRealtimeSync.get();
                     RealtimeSyncThread realTimeSyncThread = new RealtimeSyncThread();
                     realTimeSyncThread.setTrade(savedRealtimeSync);
-                    savedRealtimeSync.setStatus(TradeData.STATUS_RUN);
+                    savedRealtimeSync.setStatus(UtilsData.STATUS_RUN);
 
                     // Input Thread to pool
-                    if(TradeService.setRealtimeSyncThread(realtimeSync.getId(), realTimeSyncThread)){
+                    if(Utils.setRealtimeSyncThread(realtimeSync.getId(), realTimeSyncThread)){
                         realtimeSyncRepository.save(savedRealtimeSync);
 
                         thread = new Thread(realTimeSyncThread);
-                        TradeService.startThread(thread);      // Thread Start
+                        Utils.startThread(thread);      // Thread Start
                         log.info("[POST REALTIME SYNC] Start realtime sync thread id : {} ", realtimeSync.getId());
                         returnCode = ReturnCode.SUCCESS;
                     }else{
@@ -67,7 +67,7 @@ public class RealtimeSyncService {
             if(thread != null && thread.isAlive()){
                 thread.interrupt();
             }
-            TradeService.popRealtimeSyncThread(realtimeSync.getId());
+            Utils.popRealtimeSyncThread(realtimeSync.getId());
         }
         return returnCode;
     }
@@ -81,7 +81,7 @@ public class RealtimeSyncService {
 
         try{
             // Thread pool 에서 thread를 가져와 멈춘다.
-            RealtimeSyncThread thread = TradeService.popRealtimeSyncThread(realtimeSync.getId());
+            RealtimeSyncThread thread = Utils.popRealtimeSyncThread(realtimeSync.getId());
             if(thread != null){
                 thread.setStop();
             }
@@ -107,7 +107,7 @@ public class RealtimeSyncService {
 
         try{
             // Thread pool 에서 thread를 가져와 멈춘다.
-            RealtimeSyncThread thread = TradeService.popRealtimeSyncThread(realtimeSync.getId());
+            RealtimeSyncThread thread = Utils.popRealtimeSyncThread(realtimeSync.getId());
             if(thread != null){
                 thread.setStop();
             }
@@ -115,7 +115,7 @@ public class RealtimeSyncService {
             Optional<RealtimeSync> optionalRealtimeSync = realtimeSyncRepository.findById(realtimeSync.getId());
             if(optionalRealtimeSync.isPresent()){
                 RealtimeSync savedRealtimeSync = optionalRealtimeSync.get();
-                savedRealtimeSync.setStatus(TradeData.STATUS_STOP);
+                savedRealtimeSync.setStatus(UtilsData.STATUS_STOP);
                 realtimeSyncRepository.save(savedRealtimeSync);
             }else{
                 log.info("[STOP REALTIME SYNC] There is no thread in DB thread id : {} ", realtimeSync.getId());

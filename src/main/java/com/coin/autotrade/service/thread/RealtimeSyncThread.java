@@ -1,12 +1,9 @@
 package com.coin.autotrade.service.thread;
 
 import com.coin.autotrade.common.BeanUtils;
-import com.coin.autotrade.common.TradeData;
-import com.coin.autotrade.common.TradeService;
-import com.coin.autotrade.model.Exchange;
+import com.coin.autotrade.common.UtilsData;
+import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.model.RealtimeSync;
-import com.coin.autotrade.model.User;
-import com.coin.autotrade.repository.ExchangeRepository;
 import com.coin.autotrade.repository.RealtimeSyncRepository;
 import com.coin.autotrade.service.CoinService;
 import com.coin.autotrade.service.exchangeimp.AbstractExchange;
@@ -43,7 +40,7 @@ public class RealtimeSyncThread implements Runnable{
         realtimeSyncRepository = (RealtimeSyncRepository) BeanUtils.getBean(RealtimeSyncRepository.class);
 
         realtimeSync           = inputRealtimeSync;
-        abstractExchange       = TradeService.getInstance(realtimeSync.getExchange().getExchangeCode());
+        abstractExchange       = Utils.getInstance(realtimeSync.getExchange().getExchangeCode());
         abstractExchange.initClass(realtimeSync, coinService);
     }
 
@@ -76,7 +73,7 @@ public class RealtimeSyncThread implements Runnable{
 
     // 업비트쪽으로 Get 을 날려 실시간 데이터를 받아 옴.
     private JsonObject getRealtimeData(String coin) throws Exception{
-        String url = TradeData.UPBIT_REALTIME + "?markets=" + coin;
+        String url = UtilsData.UPBIT_REALTIME + "?markets=" + coin;
         log.info("[REALTIME SYNC THREAD] Get realtime data on this url : {}" , url);
 
         URL urlWithParam = new URL(url);
@@ -103,7 +100,7 @@ public class RealtimeSyncThread implements Runnable{
             throw new MalformedURLException(response.toString());
         }
 
-        JsonArray returnArr = TradeService.getGson().fromJson(response.toString(), JsonArray.class);
+        JsonArray returnArr = Utils.getGson().fromJson(response.toString(), JsonArray.class);
         return returnArr.get(0).getAsJsonObject();  // [{ ... }] 형식으로, Arr 안에 1개의 Json만있음.
     }
 

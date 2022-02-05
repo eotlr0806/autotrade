@@ -1,11 +1,12 @@
 package com.coin.autotrade.service.exchangeimp;
 
-import com.coin.autotrade.common.TradeData;
-import com.coin.autotrade.common.TradeService;
+import com.coin.autotrade.common.UtilsData;
+import com.coin.autotrade.common.Utils;
+import com.coin.autotrade.common.code.ReturnCode;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
-import com.google.gson.Gson;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 
@@ -28,48 +29,52 @@ public class OkexImp extends AbstractExchange {
     final private String BUY            = "buy";
     final private String SELL           = "sell";
     final private String ORDERBOOK_SIZE = "100";
+    final private String SUCCESS        = "0";
     final private String ALREADY_TRADED = "51402";
     Map<String, String> keyList         = new HashMap<>();
 
     @Override
-    public void initClass(AutoTrade autoTrade){
+    public void initClass(AutoTrade autoTrade) throws Exception{
         super.autoTrade = autoTrade;
-        setCoinToken(TradeService.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
+        setCoinToken(Utils.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
     }
 
     @Override
-    public void initClass(Liquidity liquidity){
+    public void initClass(Liquidity liquidity) throws Exception{
         super.liquidity = liquidity;
-        setCoinToken(TradeService.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
+        setCoinToken(Utils.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
     }
 
     @Override
-    public void initClass(RealtimeSync realtimeSync, CoinService coinService){
+    public void initClass(RealtimeSync realtimeSync, CoinService coinService) throws Exception{
         super.realtimeSync = realtimeSync;
         super.coinService  = coinService;
-        setCoinToken(TradeService.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
+        setCoinToken(Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
     }
 
     @Override
-    public void initClass(Fishing fishing,  CoinService coinService){
+    public void initClass(Fishing fishing,  CoinService coinService) throws Exception{
         super.fishing     = fishing;
         super.coinService = coinService;
-        setCoinToken(TradeService.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
+        setCoinToken(Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
     }
 
     /** 코인 토큰 정보 셋팅 **/
-    private void setCoinToken(String[] coinData, Exchange exchange){
+    private void setCoinToken(String[] coinData, Exchange exchange)  throws Exception{
         // Set token key
-        try{
-            for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
-                if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1])){
-                    keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
-                    keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
-                    keyList.put(API_PASSWORD, exCoin.getApiPassword());
-                }
+
+        for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
+            if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1])){
+                keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
+                keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
+                keyList.put(API_PASSWORD, exCoin.getApiPassword());
             }
-        }catch (Exception e){
-            log.error("[OKEX][ERROR][SET COIN TOKEN] {}", e.getMessage());
+        }
+
+        log.info("[OKEX][SET API KEY] First Key setting in instance API:{}, secret:{}, password:{}",keyList.get(ACCESS_TOKEN), keyList.get(SECRET_KEY), keyList.get(API_PASSWORD));
+        if(keyList.isEmpty()){
+            String msg = "There is no match coin. " + Arrays.toString(coinData) + " " + exchange.getExchangeCode();
+            throw new Exception(msg);
         }
     }
 
@@ -79,132 +84,116 @@ public class OkexImp extends AbstractExchange {
      */
     @Override
     public int startAutoTrade(String price, String cnt){
-        log.info("[OKEX][AUTOTRADE START]");
-        int returnCode    = TradeData.CODE_SUCCESS;
+        log.info("[OKEX][AUTOTRADE] START");
+        int returnCode = ReturnCode.SUCCESS.getCode();
 
         try{
-
-            String[] coinData = TradeService.splitCoinWithId(autoTrade.getCoin());
-            String symbol     = coinData[0] + "-" + getCurrency(autoTrade.getExchange(), coinData[0], coinData[1]);
-
+            String symbol        = getSymbol(Utils.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
+            String firstAction   = "";
+            String secondAction  = "";
             // mode 처리
             String mode = autoTrade.getMode();
-            if(TradeData.MODE_RANDOM.equals(mode)){
-                mode = (TradeService.getRandomInt(0,1) == 0) ? TradeData.MODE_BUY : TradeData.MODE_SELL;
+            if(UtilsData.MODE_RANDOM.equals(mode)){
+                mode = (Utils.getRandomInt(0,1) == 0) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
             }
-
-            // 1 : 매수 , 2 : 매도
-            String firstOrderId  = "";
-            String secondOrderId = "";
-            if(TradeData.MODE_BUY.equals(mode)){
-                if( !(firstOrderId = createOrder(BUY, price, cnt, symbol)).equals("")){   // 매수
-                    if((secondOrderId = createOrder(SELL,price, cnt, symbol)).equals("")){               // 매도
-                        Thread.sleep(3000);
-                        cancelOrder(firstOrderId, symbol);                      // 매도 실패 시, 매수 취소
-                    }
-                }
-            }else if(TradeData.MODE_SELL.equals(mode)){
-                if( !(firstOrderId = createOrder(SELL,price, cnt, symbol)).equals("")){
-                    if((secondOrderId = createOrder(BUY,price, cnt, symbol)).equals("")){
-                        Thread.sleep(3000);
-                        cancelOrder(firstOrderId, symbol);
-                    }
-                }
+            // Trade 모드에 맞춰 순서에 맞게 거래 타입 생성
+            if(UtilsData.MODE_BUY.equals(mode)){
+                firstAction  = BUY;
+                secondAction = SELL;
+            }else if(UtilsData.MODE_SELL.equals(mode)){
+                firstAction  = SELL;
+                secondAction = BUY;
             }
-            // 최초던진 값이 거래가 될 수 있기에 2번째 값은 무조건 취소진행
-            if(!firstOrderId.equals("") || !secondOrderId.equals("")){
-                Thread.sleep(3000);
-                if(!firstOrderId.equals("")){
-                    cancelOrder(firstOrderId, symbol);
-                }
-                if(!secondOrderId.equals("")){
-                    cancelOrder(secondOrderId, symbol);
+            String orderId = ReturnCode.NO_DATA.getValue();
+            if(!(orderId = createOrder(firstAction,price, cnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){
+                if(createOrder(secondAction,price, cnt, symbol).equals(ReturnCode.NO_DATA.getValue())){          // SELL 모드가 실패 시,
+                    Thread.sleep(3000);
+                    cancelOrder(orderId, symbol);
                 }
             }
         }catch (Exception e){
-            returnCode = TradeData.CODE_ERROR;
-            log.error("[OKEX][ERROR][AUTOTRADE] {}", e.getMessage());
+            returnCode = ReturnCode.FAIL.getCode();
+            log.error("[OKEX][AUTOTRADE] {}", e.getMessage());
+            e.printStackTrace();
         }
 
-        log.info("[OKEX][AUTOTRADE End]");
+        log.info("[OKEX][AUTOTRADE] END");
         return returnCode;
     }
 
     /** 호가유동성 function */
     @Override
     public int startLiquidity(Map list){
-        int returnCode = TradeData.CODE_SUCCESS;
+        int returnCode = ReturnCode.SUCCESS.getCode();
 
         Queue<String> sellQueue = (LinkedList) list.get("sell");
         Queue<String> buyQueue  = (LinkedList) list.get("buy");
         List<Map<String,String>> CancelList = new ArrayList();
 
         try{
-            log.info("[OKEX][LIQUIDITY] Start");
-            String[] coinData = TradeService.splitCoinWithId(liquidity.getCoin());
-            String symbol     = coinData[0] + "-" + getCurrency(liquidity.getExchange(), coinData[0], coinData[1]);
-            int minCnt        = liquidity.getMinCnt();
-            int maxCnt        = liquidity.getMaxCnt();
+            log.info("[OKEX][LIQUIDITY] START");
+            String symbol     = getSymbol(Utils.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
 
-            while(sellQueue.size() > 0 || buyQueue.size() > 0){
-                String randomMode = (TradeService.getRandomInt(1,2) == 1) ? BUY : SELL;
-                String firstOrderId    = "";
-                String secondsOrderId  = "";
+            while(!sellQueue.isEmpty() || !buyQueue.isEmpty()){
+                String randomMode = (Utils.getRandomInt(1,2) == 1) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
+                String firstOrderId    = ReturnCode.NO_DATA.getValue();
+                String secondsOrderId  = ReturnCode.NO_DATA.getValue();
                 String firstPrice      = "";
                 String secondsPrice    = "";
-                String firstCnt        = String.valueOf(Math.floor(TradeService.getRandomDouble((double)minCnt, (double)maxCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
-                String secondsCnt      = String.valueOf(Math.floor(TradeService.getRandomDouble((double)minCnt, (double)maxCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
+                String firstAction     = "";
+                String secondAction    = "";
+                String firstCnt        = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
+                String secondsCnt      = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
 
-
-                if(sellQueue.size() > 0 && buyQueue.size() > 0 && randomMode.equals(BUY)){
+                if(!sellQueue.isEmpty() && !buyQueue.isEmpty() && randomMode.equals(UtilsData.MODE_BUY)){
                     firstPrice   = buyQueue.poll();
-                    firstOrderId = createOrder(BUY, firstPrice, firstCnt, symbol);
-
-                    Thread.sleep(300);
-                    secondsPrice   = sellQueue.poll();
-                    secondsOrderId = createOrder(SELL, secondsPrice, secondsCnt, symbol);
-                }else if(buyQueue.size() > 0 && sellQueue.size() > 0 && randomMode.equals(SELL)){
+                    secondsPrice = sellQueue.poll();
+                    firstAction  = BUY;
+                    secondAction = SELL;
+                }else if(!buyQueue.isEmpty() && !sellQueue.isEmpty() && randomMode.equals(UtilsData.MODE_SELL)){
                     firstPrice   = sellQueue.poll();
-                    firstOrderId = createOrder(SELL, firstPrice, firstCnt, symbol);
-
-                    Thread.sleep(300);
-                    secondsPrice   = buyQueue.poll();
-                    secondsOrderId = createOrder(BUY, secondsPrice, secondsCnt, symbol);
+                    secondsPrice = buyQueue.poll();
+                    firstAction  = SELL;
+                    secondAction = BUY;
                 }
+                firstOrderId   = createOrder(firstAction, firstPrice, firstCnt, symbol);
+                Thread.sleep(300);
+                secondsOrderId = createOrder(secondAction, secondsPrice, secondsCnt, symbol);
 
-                if(!firstOrderId.equals("") || !secondsOrderId.equals("")){
+                // first / second 둘 중 하나라도 거래가 성사 되었을 경우
+                if(!firstOrderId.equals(ReturnCode.NO_DATA.getValue())  || !secondsOrderId.equals(ReturnCode.NO_DATA.getValue())){
                     Thread.sleep(1000);
-                    if(!firstOrderId.equals("")){
+                    if(!firstOrderId.equals(ReturnCode.NO_DATA.getValue())){
                         cancelOrder(firstOrderId, symbol);
                     }
-                    if(!secondsOrderId.equals("")){
+                    if(!secondsOrderId.equals(ReturnCode.NO_DATA.getValue())){
                         Thread.sleep(300);
                         cancelOrder(secondsOrderId, symbol);
                     }
                 }
             }
         }catch (Exception e){
-            returnCode = TradeData.CODE_ERROR;
-            log.error("[OKEX][ERROR][LIQUIDITY] {}", e.getMessage());
+            returnCode = ReturnCode.FAIL.getCode();
+            log.error("[OKEX][LIQUIDITY] ERROR : {}", e.getMessage());
+            e.printStackTrace();
         }
-        log.info("[OKEX][LIQUIDITY] End");
+        log.info("[OKEX][LIQUIDITY] END");
         return returnCode;
     }
 
     @Override
     public int startFishingTrade(Map<String,List> list, int intervalTime){
-        log.info("[OKEX][FISHINGTRADE START]");
+        log.info("[OKEX][FISHINGTRADE] START");
 
-        int returnCode    = TradeData.CODE_SUCCESS;
+        int returnCode = ReturnCode.SUCCESS.getCode();
 
         try{
-            String[] coinData = TradeService.splitCoinWithId(fishing.getCoin());
-            String symbol     = coinData[0] + "-" + getCurrency(fishing.getExchange(), coinData[0], coinData[1]);
+            String symbol = getSymbol(Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
 
             // mode 처리
             String mode = fishing.getMode();
-            if(TradeData.MODE_RANDOM.equals(mode)){
-                mode = (TradeService.getRandomInt(0,1) == 0) ? TradeData.MODE_BUY : TradeData.MODE_SELL;
+            if(UtilsData.MODE_RANDOM.equals(mode)){
+                mode = (Utils.getRandomInt(0,1) == 0) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
             }
 
             boolean noIntervalFlag   = true;    // 해당 플래그를 이용해 마지막 매도/매수 후 바로 intervalTime 없이 바로 다음 매수/매도 진행
@@ -215,16 +204,16 @@ public class OkexImp extends AbstractExchange {
             ArrayList<Map<String, String>> orderList = new ArrayList<>();
 
             /* Start */
+            log.info("[OKEX][FISHINGTRADE][START BUY OR SELL TARGET ALL COIN]");
             for (int i = 0; i < tickPriceList.size(); i++) {
-                String cnt = String.valueOf(Math.floor(TradeService.getRandomDouble((double) fishing.getMinContractCnt(), (double) fishing.getMaxContractCnt()) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
-
-                String orderId = "";
-                if(TradeData.MODE_BUY.equals(mode)) {
+                String cnt     = Utils.getRandomString(fishing.getMinContractCnt(), fishing.getMaxContractCnt());
+                String orderId = ReturnCode.NO_DATA.getValue();
+                if(UtilsData.MODE_BUY.equals(mode)) {
                     orderId = createOrder(BUY,  tickPriceList.get(i), cnt, symbol);
                 }else{
                     orderId = createOrder(SELL, tickPriceList.get(i), cnt, symbol);
                 }
-                if(!orderId.equals("")){                                                // 매수/매도가 정상적으로 이뤄졌을 경우 데이터를 list에 담는다
+                if(!orderId.equals(ReturnCode.NO_DATA.getValue())){          // 매수/매도가 정상적으로 이뤄졌을 경우 데이터를 list에 담는다
                     Map<String, String> orderMap = new HashMap<>();
                     orderMap.put("price" ,tickPriceList.get(i));
                     orderMap.put("cnt" ,cnt);
@@ -232,17 +221,19 @@ public class OkexImp extends AbstractExchange {
                     orderList.add(orderMap);
                 }
             }
+            log.info("[OKEX][FISHINGTRADE][END BUY OR SELL TARGET ALL COIN]");
 
             /* Sell Start */
+            log.info("[OKEX][FISHINGTRADE][START BUY OR SELL TARGET PIECE COIN ]");
             for (int i = orderList.size() - 1; i >= 0; i--) {
-                Map<String, String> copiedOrderMap = TradeService.deepCopy(orderList.get(i));
+                Map<String, String> copiedOrderMap = Utils.deepCopy(orderList.get(i));
                 BigDecimal cnt                     = new BigDecimal(copiedOrderMap.get("cnt"));
 
                 while (cnt.compareTo(new BigDecimal("0")) > 0) {
                     if (!noMatchFirstTick) break;                   // 최신 매도/매수 건 값이 다를경우 돌 필요 없음.
                     if (noIntervalFlag) Thread.sleep(intervalTime); // intervalTime 만큼 휴식 후 매수 시작
-                    String orderId            = "";
-                    BigDecimal cntForExcution = new BigDecimal(String.valueOf(Math.floor(TradeService.getRandomDouble((double) fishing.getMinExecuteCnt(), (double) fishing.getMaxExecuteCnt()) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL));
+                    String orderId            = ReturnCode.NO_DATA.getValue();
+                    BigDecimal cntForExcution = new BigDecimal(Utils.getRandomString(fishing.getMinExecuteCnt(), fishing.getMaxExecuteCnt()));
 
                     // 남은 코인 수와 매도/매수할 코인수를 비교했을 때, 남은 코인 수가 더 적다면.
                     if (cnt.compareTo(cntForExcution) < 0) {
@@ -253,10 +244,10 @@ public class OkexImp extends AbstractExchange {
                     }
                     // 매도/매수 날리기전에 최신 매도/매수값이 내가 건 값이 맞는지 확인
                     String nowFirstTick = "";
-                    if(TradeData.MODE_BUY.equals(mode)) {
-                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(TradeData.MODE_BUY);
+                    if(UtilsData.MODE_BUY.equals(mode)) {
+                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(UtilsData.MODE_BUY);
                     }else{
-                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(TradeData.MODE_SELL);
+                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(UtilsData.MODE_SELL);
                     }
                     String orderPrice = copiedOrderMap.get("price");
                     if (!orderPrice.equals(nowFirstTick)) {
@@ -265,13 +256,13 @@ public class OkexImp extends AbstractExchange {
                         break;
                     }
 
-                    if(TradeData.MODE_BUY.equals(mode)) {
+                    if(UtilsData.MODE_BUY.equals(mode)) {
                         orderId = createOrder(SELL, copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol);
                     }else{
                         orderId = createOrder(BUY,  copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol);
                     }
 
-                    if(!orderId.equals("")){
+                    if(!orderId.equals(ReturnCode.NO_DATA.getValue())){
                         cnt = cnt.subtract(cntForExcution);
                     }else{
                         log.error("[OKEX][FISHINGTRADE] While loop is broken, Because create order is failed");
@@ -282,52 +273,135 @@ public class OkexImp extends AbstractExchange {
                 Thread.sleep(1000);
                 cancelOrder(orderList.get(i).get("order_id"), symbol);
             }
+            log.info("[OKEX][FISHINGTRADE][END BUY OR SELL TARGET PIECE COIN ]");
         }catch (Exception e){
-            returnCode = TradeData.CODE_ERROR;
-            log.error("[OKEX][ERROR][FISHINGTRADE] {}", e.getMessage());
+            returnCode = ReturnCode.FAIL.getCode();
+            log.error("[OKEX][FISHINGTRADE] ERROR {}", e.getMessage());
+            e.printStackTrace();
         }
 
-        log.info("[OKEX][FISHINGTRADE END]");
+        log.info("[OKEX][FISHINGTRADE] END");
         return returnCode;
     }
 
     @Override
     public int startRealtimeTrade(JsonObject realtime) {
-        return 0;
+        log.info("[BITHUMB][REALTIME SYNC TRADE] START");
+        int returnCode   = ReturnCode.SUCCESS.getCode();
+        String realtimeChangeRate = "signed_change_rate";
+
+        try {
+
+            boolean isStart      = false;
+            String symbol        = getSymbol(Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
+            String[] currentTick = getTodayTick(symbol);
+            String openingPrice  = currentTick[0];
+            String currentPrice  = currentTick[1];
+            String orderId       = ReturnCode.NO_DATA.getValue();
+            String targetPrice   = "";
+            String action        = "";
+            String mode          = "";
+            String cnt           = Utils.getRandomString(realtimeSync.getMinTradeCnt(), realtimeSync.getMaxTradeCnt());
+
+            int isInRange = isMoreOrLessPrice(currentPrice);
+
+            if(isInRange != 0){              // 구간 밖일 경우
+                if(isInRange == -1){         // 지지선보다 낮을 경우
+                    action       = BUY;
+                    mode         = UtilsData.MODE_BUY;
+                    targetPrice  = realtimeSync.getMinPrice();
+                }else if(isInRange == 1){    // 저항선보다 높을 경우
+                    action       = SELL;
+                    mode         = UtilsData.MODE_SELL;
+                    targetPrice  = realtimeSync.getMaxPrice();
+                }
+                isStart = true;
+            }else{
+                // 지정한 범위 안에 없을 경우 매수 혹은 매도로 맞춰준다.
+                Map<String,String> tradeInfo = getTargetTick(openingPrice, currentPrice, realtime.get(realtimeChangeRate).getAsString());
+                if(!tradeInfo.isEmpty()){
+                    targetPrice = tradeInfo.get("price");
+                    mode        = tradeInfo.get("mode");
+                    action      = (mode.equals(UtilsData.MODE_BUY)) ? BUY : SELL;
+                    isStart     = true;
+                }
+            }
+
+            if(isStart){
+                if( !(orderId = createOrder(action, targetPrice, cnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){    // 매수/OrderId가 있으면 성공
+
+                    Thread.sleep(300);
+
+                    // 3. bestoffer set 로직
+                    JsonArray array = makeBestofferAfterRealtimeSync(targetPrice, mode);
+                    for (int i = 0; i < array.size(); i++) {
+                        JsonObject object       = array.get(i).getAsJsonObject();
+                        String bestofferPrice   = object.get("price").getAsString();
+                        String bestofferCnt     = object.get("cnt").getAsString();
+                        String bestofferOrderId = ReturnCode.NO_DATA.getValue();
+
+                        if( !(bestofferOrderId = createOrder(action, bestofferPrice, bestofferCnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){
+                            log.info("[BITHUMB][REALTIME SYNC] Bestoffer is setted. price:{}, cnt:{}", bestofferPrice, bestofferCnt);
+                        }
+                    }
+                    cancelOrder(orderId, symbol);
+                }
+            }
+        }catch (Exception e){
+            log.error("[BITHUMB][REALTIME SYNC TRADE] Error :{} ", e.getMessage());
+            e.printStackTrace();
+        }
+        log.info("[BITHUMB][REALTIME SYNC TRADE] END");
+        return returnCode;
+    }
+
+
+
+    /**
+     * 현재 Tick 가져오기
+     * @param exchange
+     * @param coinWithId
+     * @return [ 시가 , 종가 ] String Array
+     */
+    private String[] getTodayTick(String symbol) throws Exception{
+
+        String[] returnRes   = new String[2];
+        String request       = UtilsData.OKEX_TICK + "?instType=SPOT";
+        String response      = getHttpMethod(request);
+        JsonObject resObject = gson.fromJson(response, JsonObject.class);
+        JsonArray resArr     = resObject.get("data").getAsJsonArray();
+        for (JsonElement jsonElement : resArr){
+            JsonObject object = jsonElement.getAsJsonObject();
+            String symbolId   = object.get("instId").getAsString();
+            if(symbol.equals(symbolId)){
+                returnRes[0]    = object.get("sodUtc0").getAsString();
+                returnRes[1]    = object.get("last").getAsString();
+                log.info("[OKEX][GET TODAY TICK] response : {}", Arrays.toString(returnRes));
+                break;
+            }
+        }
+
+        if(returnRes[0] == null && returnRes[1] == null){
+            log.error("[BITHUMB][GET TODAY TICK] response : {}", response);
+            throw new Exception(response);
+        }
+
+        return returnRes;
     }
 
     @Override
     public String getOrderBook(Exchange exchange, String[] coinWithId) {
         String returnRes = "";
         try{
-            log.info("[OKEX][ORDER BOOK START]");
-            String coin   = coinWithId[0];
-            String coinId = coinWithId[1];
-            String inputLine;
-            String symbol   = getCurrency(exchange, coin, coinId);
-            // instId=BTC-USDT&sz=100
-            String request  = TradeData.OKEX_ORDERBOOK + "?instId=" + coin + "-" + symbol + "&sz=" + ORDERBOOK_SIZE;
-            URL url = new URL(request);
-
-            HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
-            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
-            connection.setRequestMethod("GET");
-
-            log.info("[OKEX][ORDER BOOK - REQUEST] symbol:{}" ,  coin);
-
-            int returnCode = connection.getResponseCode();
-            BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            StringBuffer response = new StringBuffer();
-            while ((inputLine = br.readLine()) != null) {
-                response.append(inputLine);
-            }
-            br.close();
-            returnRes = response.toString();
-
-            log.info("[OKEX][ORDER BOOK END]");
+            log.info("[OKEX][ORDER BOOK] START");
+            String instId  = getSymbol(coinWithId, exchange);
+            String request = UtilsData.OKEX_ORDERBOOK + "?instId=" + instId + "&sz=" + ORDERBOOK_SIZE;
+            returnRes      = getHttpMethod(request);
+            log.info("[OKEX][ORDER BOOK] END");
 
         }catch (Exception e){
-            log.error("[OKEX][ERROR][ORDER BOOK] {}",e.getMessage());
+            log.error("[OKEX][ORDER BOOK] ERROR {}",e.getMessage());
+            e.printStackTrace();
         }
 
         return returnRes;
@@ -336,11 +410,9 @@ public class OkexImp extends AbstractExchange {
 
     /** Biyhumb global 매수/매도 로직 */
     public String createOrder(String type, String price, String cnt, String symbol){
-
-        String orderId = "";
+        String orderId = ReturnCode.NO_DATA.getValue();
 
         try{
-
             JsonObject header = new JsonObject();
             header.addProperty("instId",    symbol);
             header.addProperty("tdMode",    "cash");  // 지정가
@@ -350,19 +422,19 @@ public class OkexImp extends AbstractExchange {
             header.addProperty("sz",        cnt);
 
 
-            JsonObject returnVal = postHttpMethod(TradeData.OKEX_ENDPOINT_CREATE_ORDER, gson.toJson(header));
-            String status        = gson.fromJson(returnVal.get("code"), String.class);
-            if(status.equals("0")){
-                JsonArray objArr = gson.fromJson(returnVal.get("data"), JsonArray.class);
-                JsonObject obj  = gson.fromJson(objArr.get(0), JsonObject.class);
-                orderId         = gson.fromJson(obj.get("ordId"), String.class);
-                log.info("[OKEX][SUCCESS][CREATE ORDER - response] response : {}", gson.toJson(returnVal));
+            JsonObject returnVal = postHttpMethod(UtilsData.OKEX_ENDPOINT_CREATE_ORDER, gson.toJson(header));
+            String status        = returnVal.get("code").getAsString();
+            if(status.equals(SUCCESS)){
+                JsonArray objArr = returnVal.get("data").getAsJsonArray();
+                JsonObject obj   = objArr.get(0).getAsJsonObject();
+                orderId          = obj.get("ordId").getAsString();
+                log.info("[OKEX][CREATE ORDER] Response : {}", gson.toJson(returnVal));
             }else{
-                log.error("[OKEX][ERROR][CREATE ORDER - response] response :{}", gson.toJson(returnVal));
+                log.error("[OKEX][CREATE ORDER] Response :{}", gson.toJson(returnVal));
             }
-
         }catch (Exception e){
-            log.error("[OKEX][ERROR][CREATE ORDER] {}",e.getMessage());
+            log.error("[OKEX][CREATE ORDER] Error {}",e.getMessage());
+            e.printStackTrace();
         }
         return orderId;
     }
@@ -370,27 +442,28 @@ public class OkexImp extends AbstractExchange {
     /* okex global 거래 취소 */
     public int cancelOrder(String orderId, String symbol) {
 
-        int returnValue = TradeData.CODE_ERROR;
+        int returnValue = ReturnCode.FAIL.getCode();
 
         try {
             JsonObject header = new JsonObject();
             header.addProperty("instId",    symbol);
             header.addProperty("ordId",   orderId);
 
-            JsonObject returnVal = postHttpMethod(TradeData.OKEX_ENDPOINT_CANCEL_ORDER, gson.toJson(header));
-            String status       = gson.fromJson(returnVal.get("code"), String.class);
-            JsonArray objArr    = gson.fromJson(returnVal.get("data"), JsonArray.class);
-            JsonObject obj      = gson.fromJson(objArr.get(0), JsonObject.class);
+            JsonObject returnVal = postHttpMethod(UtilsData.OKEX_ENDPOINT_CANCEL_ORDER, gson.toJson(header));
+            String status        = returnVal.get("code").getAsString();
+            JsonArray objArr     = returnVal.get("data").getAsJsonArray();
+            JsonObject obj       = objArr.get(0).getAsJsonObject();
 
-            if (status.equals("0") || ALREADY_TRADED.equals(gson.fromJson(obj.get("sCode"), String.class))) {
-                returnValue = TradeData.CODE_SUCCESS;
-                orderId         = gson.fromJson(obj.get("ordId"), String.class);
-                log.info("[OKEX][SUCCESS][CANCEL ORDER - response] response : {}", gson.toJson(returnVal));
+            if (SUCCESS.equals(status) || ALREADY_TRADED.equals(obj.get("sCode").getAsString())) {
+                returnValue = ReturnCode.SUCCESS.getCode();
+                orderId     = obj.get("ordId").getAsString();
+                log.info("[OKEX][CANCEL ORDER] response : {}", gson.toJson(returnVal));
             } else {
-                log.error("[OKEX][ERROR][CANCEL ORDER - response] response:{}", gson.toJson(returnVal));
+                log.error("[OKEX][CANCEL ORDER] response:{}", gson.toJson(returnVal));
             }
         }catch(Exception e){
-            log.error("[OKEX][ERROR][CANCEL ORDER] {}", e.getMessage());
+            log.error("[OKEX][CANCEL ORDER] ERROR : {}", e.getMessage());
+            e.printStackTrace();
         }
         return returnValue;
     }
@@ -398,9 +471,7 @@ public class OkexImp extends AbstractExchange {
 
     /* Http post method */
     public JsonObject postHttpMethod(String endPoint, String body) {
-        URL url;
-        String inputLine;
-        String encodingPayload;
+
         JsonObject returnObj = null;
 
         try{
@@ -409,12 +480,12 @@ public class OkexImp extends AbstractExchange {
             String currentTime = getCurrentTime();
             String sign = makeSignature(currentTime, "POST", endPoint, body);
 
-            url = new URL(TradeData.OKEX_URL + endPoint);
+            URL url = new URL(UtilsData.OKEX_URL + endPoint);
             HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
             connection.setDoOutput(true);
             connection.setDoInput(true);
-            connection.setConnectTimeout(TradeData.TIMEOUT_VALUE);
-            connection.setReadTimeout(TradeData.TIMEOUT_VALUE);
+            connection.setConnectTimeout(UtilsData.TIMEOUT_VALUE);
+            connection.setReadTimeout(UtilsData.TIMEOUT_VALUE);
             connection.setRequestMethod("POST");
             connection.setRequestProperty("accept", "application/json");
             connection.setRequestProperty("Content-Type", "application/json");
@@ -436,14 +507,15 @@ public class OkexImp extends AbstractExchange {
             returnObj = gson.fromJson(response, JsonObject.class);
 
         } catch(Exception e){
-            log.error("[OKEX][ERROR][POST HTTP] {}", e.getMessage());
+            log.error("[OKEX][POST HTTP] {}", e.getMessage());
+            e.printStackTrace();
         }
 
         return returnObj;
     }
 
     // Get Input response message
-    public String getResponseMsg(InputStream stream) throws Exception{
+    private String getResponseMsg(InputStream stream) throws Exception{
         BufferedReader br = new BufferedReader(new InputStreamReader(stream));
         StringBuffer response = new StringBuffer();
         String inputLine;
@@ -456,12 +528,12 @@ public class OkexImp extends AbstractExchange {
     }
 
     // 2021-10-27T22:59:11.222Z 형식으로 Return
-    public String getCurrentTime(){
+    private String getCurrentTime() throws Exception{
         StringBuilder nowStr = new StringBuilder(Instant.now().toString());
         return nowStr.toString();
     }
 
-    public String makeSignature(String timestamp, String method, String endPoint, String body){
+    private String makeSignature(String timestamp, String method, String endPoint, String body) throws Exception{
         StringBuilder builder = new StringBuilder();
         builder.append(timestamp);
         builder.append(method);
@@ -472,19 +544,22 @@ public class OkexImp extends AbstractExchange {
     }
 
     /* Hmac sha 256 start **/
-    public String getHmacSha256(String message){
+    private String getHmacSha256(String message) throws Exception{
         String returnVal = "";
-        try{
-            String secretKey         = keyList.get(SECRET_KEY);
-            SecretKeySpec secret_key = new SecretKeySpec(secretKey.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
 
-            Mac sha256_HMAC = Mac.getInstance("HmacSHA256");
-            sha256_HMAC.init(secret_key);
-            byte[] bytes = sha256_HMAC.doFinal(message.getBytes(StandardCharsets.UTF_8));
-            returnVal = Base64.getEncoder().encodeToString(bytes);
-        } catch (Exception e){
-            log.error("[OKEX][ERROR][GET JMACSHA256] {}",e.getMessage());
-        }
+        String secretKey         = keyList.get(SECRET_KEY);
+        SecretKeySpec secret_key = new SecretKeySpec(secretKey.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+        Mac sha256_HMAC          = Mac.getInstance("HmacSHA256");
+        sha256_HMAC.init(secret_key);
+        byte[] bytes = sha256_HMAC.doFinal(message.getBytes(StandardCharsets.UTF_8));
+        returnVal    = Base64.getEncoder().encodeToString(bytes);
+
         return returnVal;
     }
+
+    // 거래소에 맞춰 심볼 반환
+    private String getSymbol(String[] coinData, Exchange exchange) throws Exception {
+        return coinData[0] + "-" + getCurrency(exchange, coinData[0], coinData[1]);
+    }
+
 }

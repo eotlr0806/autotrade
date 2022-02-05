@@ -1,5 +1,6 @@
 package com.coin.autotrade.common;
 
+import com.coin.autotrade.common.code.ReturnCode;
 import com.coin.autotrade.service.exchangeimp.*;
 import com.coin.autotrade.service.thread.AutoTradeThread;
 import com.coin.autotrade.service.thread.FishingTradeThread;
@@ -17,11 +18,12 @@ import java.util.*;
 
 /*** 공통으로 쓰이는 서비스 로직을 담은 클래스 */
 @Slf4j
-public class TradeService {
+public class Utils {
 
     private static Random random     = null;
     private static Gson gson         = null;
     private static JsonMapper mapper = null;
+    final static int TICK_DECIMAL    = 1000;
 
     /**
      * 공통으로 사용하는 Gson 객체 반환
@@ -63,6 +65,20 @@ public class TradeService {
         return value;
     }
 
+    public static String getRandomString (Integer min, Integer max) throws Exception{
+        double doubleMin = (double) min;
+        double doubleMax = (double) max;
+
+        return String.valueOf(Math.floor(Utils.getRandomDouble(doubleMin, doubleMax) * TICK_DECIMAL) / TICK_DECIMAL);
+    }
+
+    public static String getRandomString (String min, String max) throws Exception{
+        double doubleMin = Double.parseDouble(min);
+        double doubleMax = Double.parseDouble(max);
+
+        return String.valueOf(Math.floor(Utils.getRandomDouble(doubleMin, doubleMax) * TICK_DECIMAL) / TICK_DECIMAL);
+    }
+
     /**
      * min 과 max 사이의 값 반환
      * @Param min - minial value
@@ -97,7 +113,7 @@ public class TradeService {
     @Async
     public static int startThread (Thread thread) throws Exception {
         thread.start();
-        return TradeData.CODE_SUCCESS;
+        return ReturnCode.SUCCESS.getCode();
     }
 
     /**
@@ -107,7 +123,7 @@ public class TradeService {
      */
     public static boolean setAutoTradeThread (Long id, AutoTradeThread thread){
         try{
-            TradeData.autoTradeThreadMap.put(id, thread);
+            UtilsData.autoTradeThreadMap.put(id, thread);
             return true;
         }catch (Exception e){
             log.error("[SET AUTOTRADE THREAD] Fail saving thread Thread id: {}", id);
@@ -122,8 +138,8 @@ public class TradeService {
      * @return
      */
     public static AutoTradeThread popAutoTradeThread (long id){
-        AutoTradeThread thread = TradeData.autoTradeThreadMap.get(id);
-        TradeData.autoTradeThreadMap.remove(id);
+        AutoTradeThread thread = UtilsData.autoTradeThreadMap.get(id);
+        UtilsData.autoTradeThreadMap.remove(id);
         return thread;
     }
 
@@ -131,7 +147,7 @@ public class TradeService {
      * @return id 가 있을 경우 true, 없을 경우 false
      * */
     public static boolean isAutoTradeThread(long id){
-        if(TradeData.autoTradeThreadMap.containsKey(id)){
+        if(UtilsData.autoTradeThreadMap.containsKey(id)){
             return true;
         }else{
             return false;
@@ -146,7 +162,7 @@ public class TradeService {
      */
     public static boolean setLiquidityThread (Long id, LiquidityTradeThread thread){
         try{
-            TradeData.liquidityThreadMap.put(id, thread);
+            UtilsData.liquidityThreadMap.put(id, thread);
             return true;
         }catch (Exception e){
             log.error("[SET LIQUIDITY THREAD] Fail saving thread Thread id: {}", id);
@@ -161,8 +177,8 @@ public class TradeService {
      * @return
      */
     public static LiquidityTradeThread popLiquidityThread (long id){
-        LiquidityTradeThread thread = TradeData.liquidityThreadMap.get(id);
-        TradeData.liquidityThreadMap.remove(id);
+        LiquidityTradeThread thread = UtilsData.liquidityThreadMap.get(id);
+        UtilsData.liquidityThreadMap.remove(id);
         return thread;
     }
 
@@ -170,7 +186,7 @@ public class TradeService {
      * @return id 가 있을 경우 true, 없을 경우 false
      * */
     public static boolean isLiquidityTradeThread(long id){
-        if(TradeData.liquidityThreadMap.containsKey(id)){
+        if(UtilsData.liquidityThreadMap.containsKey(id)){
             return true;
         }else{
             return false;
@@ -184,7 +200,7 @@ public class TradeService {
      */
     public static boolean setFishingThread (Long id, FishingTradeThread thread){
         try{
-            TradeData.fishingTradeThreadMap.put(id, thread);
+            UtilsData.fishingTradeThreadMap.put(id, thread);
             return true;
         }catch (Exception e){
             log.error("[SET FISHING THREAD] Fail saving thread Thread id: {}", id);
@@ -199,8 +215,8 @@ public class TradeService {
      * @return
      */
     public static FishingTradeThread popFishingThread (long id){
-        FishingTradeThread thread = TradeData.fishingTradeThreadMap.get(id);
-        TradeData.fishingTradeThreadMap.remove(id);
+        FishingTradeThread thread = UtilsData.fishingTradeThreadMap.get(id);
+        UtilsData.fishingTradeThreadMap.remove(id);
         return thread;
     }
 
@@ -208,7 +224,7 @@ public class TradeService {
      * @return id 가 있을 경우 true, 없을 경우 false
      * */
     public static boolean isFishingTradeThread(long id){
-        if(TradeData.fishingTradeThreadMap.containsKey(id)){
+        if(UtilsData.fishingTradeThreadMap.containsKey(id)){
             return true;
         }else{
             return false;
@@ -223,7 +239,7 @@ public class TradeService {
      */
     public static boolean setRealtimeSyncThread (Long id, RealtimeSyncThread thread){
         try{
-            TradeData.realtimeSyncThreadMap.put(id, thread);
+            UtilsData.realtimeSyncThreadMap.put(id, thread);
             return true;
         }catch (Exception e){
             log.error("[SET REALTIMESYNC THREAD] Fail saving thread Thread id: {}", id);
@@ -238,8 +254,8 @@ public class TradeService {
      * @return
      */
     public static RealtimeSyncThread popRealtimeSyncThread (long id){
-        RealtimeSyncThread thread = TradeData.realtimeSyncThreadMap.get(id);
-        TradeData.realtimeSyncThreadMap.remove(id);
+        RealtimeSyncThread thread = UtilsData.realtimeSyncThreadMap.get(id);
+        UtilsData.realtimeSyncThreadMap.remove(id);
         return thread;
     }
 
@@ -247,7 +263,7 @@ public class TradeService {
      * @return id 가 있을 경우 true, 없을 경우 false
      * */
     public static boolean isRealtimeSyncThread(long id){
-        if(TradeData.realtimeSyncThreadMap.containsKey(id)){
+        if(UtilsData.realtimeSyncThreadMap.containsKey(id)){
             return true;
         }else{
             return false;
@@ -300,23 +316,23 @@ public class TradeService {
 
         AbstractExchange abstractExchange = null;
 
-        if(TradeData.COINONE.equals(exchange)){
+        if(UtilsData.COINONE.equals(exchange)){
             abstractExchange = new CoinOneImp();
-        } else if(TradeData.FOBLGATE.equals(exchange)){
+        } else if(UtilsData.FOBLGATE.equals(exchange)){
             abstractExchange = new FoblGateImp();
-        } else if(TradeData.FLATA.equals(exchange)){
+        } else if(UtilsData.FLATA.equals(exchange)){
             abstractExchange = new FlataImp();
-        } else if(TradeData.DCOIN.equals(exchange)){
+        } else if(UtilsData.DCOIN.equals(exchange)){
             abstractExchange = new DcoinImp();
-        } else if(TradeData.BITHUMB_GLOBAL.equals(exchange)){
+        } else if(UtilsData.BITHUMB_GLOBAL.equals(exchange)){
             abstractExchange = new BithumbGlobalImp();
-        } else if(TradeData.BITHUMB.equals(exchange)){
+        } else if(UtilsData.BITHUMB.equals(exchange)){
             abstractExchange = new BithumbImp();
-        } else if(TradeData.KUCOIN.equals(exchange)){
+        } else if(UtilsData.KUCOIN.equals(exchange)){
             abstractExchange = new KucoinImp();
-        } else if(TradeData.OKEX.equals(exchange)){
+        } else if(UtilsData.OKEX.equals(exchange)){
             abstractExchange = new OkexImp();
-        } else if(TradeData.GATEIO.equals(exchange)){
+        } else if(UtilsData.GATEIO.equals(exchange)){
             abstractExchange = new GateIoImp();
         }
 

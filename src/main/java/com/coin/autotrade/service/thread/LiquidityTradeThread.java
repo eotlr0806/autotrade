@@ -1,10 +1,8 @@
 package com.coin.autotrade.service.thread;
 
 import com.coin.autotrade.common.BeanUtils;
-import com.coin.autotrade.common.TradeService;
+import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.model.Liquidity;
-import com.coin.autotrade.model.User;
-import com.coin.autotrade.repository.ExchangeRepository;
 import com.coin.autotrade.repository.LiquidityRepository;
 import com.coin.autotrade.service.CoinService;
 import com.coin.autotrade.service.exchangeimp.AbstractExchange;
@@ -37,7 +35,7 @@ public class LiquidityTradeThread implements Runnable{
         liquidityRepository = (LiquidityRepository) BeanUtils.getBean(LiquidityRepository.class);
 
         liquidity           = inputLiquidity;
-        abstractExchange    = TradeService.getInstance(liquidity.getExchange().getExchangeCode());
+        abstractExchange    = Utils.getInstance(liquidity.getExchange().getExchangeCode());
         abstractExchange.initClass(liquidity);
     }
 
@@ -56,7 +54,7 @@ public class LiquidityTradeThread implements Runnable{
                 /** Start Liquidity Thread **/
                 abstractExchange.startLiquidity(list);
 
-                intervalTime = TradeService.getRandomInt(liquidity.getMinSeconds(), liquidity.getMaxSeconds()) * 1000;
+                intervalTime = Utils.getRandomInt(liquidity.getMinSeconds(), liquidity.getMaxSeconds()) * 1000;
                 log.info("[LIQUIDITY THREAD] Run thread , intervalTime : {} seconds", intervalTime/1000);
                 Thread.sleep(intervalTime);
             }

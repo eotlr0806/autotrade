@@ -1,9 +1,12 @@
 package com.coin.autotrade.service.exchangeimp;
 
-import com.coin.autotrade.common.TradeData;
-import com.coin.autotrade.common.TradeService;
+import com.coin.autotrade.common.Utils;
+import com.coin.autotrade.common.UtilsData;
+import com.coin.autotrade.common.code.ReturnCode;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.kucoin.sdk.KucoinClientBuilder;
 import com.kucoin.sdk.KucoinRestClient;
@@ -14,11 +17,7 @@ import com.kucoin.sdk.rest.response.OrderCancelResponse;
 import com.kucoin.sdk.rest.response.OrderCreateResponse;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.math.BigDecimal;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.*;
 
 @Slf4j
@@ -36,53 +35,54 @@ public class KucoinImp extends AbstractExchange {
     private static KucoinRestClient kucoinRestClient;
 
     @Override
-    public void initClass(AutoTrade autoTrade){
+    public void initClass(AutoTrade autoTrade) throws Exception {
         super.autoTrade = autoTrade;
-        setCoinToken(TradeService.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
-        setKucoinRestClient();
+        setCoinToken(Utils.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
     }
 
     @Override
-    public void initClass(Liquidity liquidity){
+    public void initClass(Liquidity liquidity) throws Exception {
         super.liquidity = liquidity;
-        setCoinToken(TradeService.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
-        setKucoinRestClient();
+        setCoinToken(Utils.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
     }
 
     @Override
-    public void initClass(RealtimeSync realtimeSync, CoinService coinService){
+    public void initClass(RealtimeSync realtimeSync, CoinService coinService) throws Exception {
         super.realtimeSync = realtimeSync;
         super.coinService  = coinService;
-        setCoinToken(TradeService.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
-        setKucoinRestClient();
+        setCoinToken(Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
     }
 
     @Override
-    public void initClass(Fishing fishing, CoinService coinService){
+    public void initClass(Fishing fishing, CoinService coinService)throws Exception {
         super.fishing     = fishing;
         super.coinService = coinService;
-        setCoinToken(TradeService.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
-        setKucoinRestClient();
+        setCoinToken(Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
     }
 
-    private void setCoinToken(String[] coinData, Exchange exchange){
+    private void setCoinToken(String[] coinData, Exchange exchange) throws Exception {
+
         // Set token key
-        try{
-            for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
-                if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1]) ){
-                    keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
-                    keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
-                    keyList.put(API_PASSWORD, exCoin.getApiPassword());
-                }
+        for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
+            if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1]) ){
+                keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
+                keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
+                keyList.put(API_PASSWORD, exCoin.getApiPassword());
             }
-        }catch (Exception e){
-            log.error("[KUCOIN][ERROR][SET COIN TOKEN] error : {} ", e.getMessage());
         }
+        log.info("[GATEIO][SET API KEY] First Key setting in instance API:{}, secret:{}, password:{}",keyList.get(ACCESS_TOKEN), keyList.get(SECRET_KEY), keyList.get(API_PASSWORD));
+        if(keyList.isEmpty()){
+            String msg = "There is no match coin. " + Arrays.toString(coinData) + " " + exchange.getExchangeCode();
+            throw new Exception(msg);
+        }else{
+            setKucoinRestClient();
+        }
+
     }
 
-    private void setKucoinRestClient() {
+    private void setKucoinRestClient() throws Exception{
         kucoinRestClient = new KucoinClientBuilder()
-                .withBaseUrl(TradeData.KUCOIN_URL)
+                .withBaseUrl(UtilsData.KUCOIN_URL)
                 .withApiKey(keyList.get(ACCESS_TOKEN), keyList.get(SECRET_KEY), keyList.get(API_PASSWORD))
                 .withApiKeyVersion(ApiKeyVersionEnum.V2.getVersion())
                 .buildRestClient();
@@ -95,52 +95,41 @@ public class KucoinImp extends AbstractExchange {
     @Override
     public int startAutoTrade(String price, String cnt){
 
-        log.info("[KUCOIN][AUTOTRADE] Start");
+        log.info("[KUCOIN][AUTOTRADE] START");
 
-        int returnCode = TradeData.CODE_SUCCESS;
+        int returnCode = ReturnCode.SUCCESS.getCode();
         try{
-            String[] coinData = TradeService.splitCoinWithId(autoTrade.getCoin());
-            String     symbol = coinData[0] + "-" + getCurrency(autoTrade.getExchange(), coinData[0], coinData[1]); // ex) ADA-USDT
 
-            // mode 처리
-            String mode = autoTrade.getMode();
-            if(TradeData.MODE_RANDOM.equals(mode)){
-                mode = (TradeService.getRandomInt(0,1) == 0) ? TradeData.MODE_BUY : TradeData.MODE_SELL;
+            String symbol = getSymbol(Utils.splitCoinWithId(autoTrade.getCoin()) ,autoTrade.getExchange());
+            String mode   = autoTrade.getMode();
+            if(UtilsData.MODE_RANDOM.equals(mode)){
+                mode = (Utils.getRandomInt(0,1) == 0) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
             }
 
-            String firstOrderId  = "";
-            String secondOrderId = "";
-            if(TradeData.MODE_BUY.equals(mode)){
-                if(!(firstOrderId = createOrder(BUY,price, cnt, symbol)).equals("")){
-                    if((secondOrderId = createOrder(SELL,price, cnt, symbol)).equals("")){          // SELL 모드가 실패 시,
-                        Thread.sleep(3000);
-                        cancelOrder(firstOrderId);
-                    }
-                }
-            }else if(TradeData.MODE_SELL.equals(mode)){
-                if(!(firstOrderId = createOrder(SELL,price, cnt, symbol)).equals("")){
-                    if((secondOrderId = createOrder(BUY,price, cnt, symbol)).equals("")){           // BUY 모드가 실패 시,
-                        Thread.sleep(3000);
-                        cancelOrder(firstOrderId);
-                    }
-                }
+            // Trade 모드에 맞춰 순서에 맞게 거래 타입 생성
+            String firstAction  = "";
+            String secondAction = "";
+            if(UtilsData.MODE_BUY.equals(mode)){
+                firstAction  = BUY;
+                secondAction = SELL;
+            }else if(UtilsData.MODE_SELL.equals(mode)){
+                firstAction  = SELL;
+                secondAction = BUY;
             }
-            // 최초 거래 시, 다른 값을 샀을 수 있기에, 2번째 값은 무조건 취소를 날린다.
-            if(!firstOrderId.equals("") || !secondOrderId.equals("")){
-                Thread.sleep(3000);
-                if(!firstOrderId.equals("")){
-                    cancelOrder(firstOrderId);
-                }
-                if(!secondOrderId.equals("")){
-                    cancelOrder(secondOrderId);
+            String orderId = ReturnCode.NO_DATA.getValue();
+            if( !(orderId  = createOrder(firstAction, price, cnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){    // 매수/OrderId가 있으면 성공
+                Thread.sleep(300);
+                if(createOrder(secondAction, price, cnt, symbol).equals(ReturnCode.NO_DATA.getValue())){                   // 매도/OrderId가 없으면 실패
+                    Thread.sleep(3000);
+                    cancelOrder(orderId);                      // 매도 실패 시, 매수 취소
                 }
             }
         }catch (Exception e){
-            returnCode = TradeData.CODE_ERROR;
-            log.error("[KUCOIN][ERROR][AUTOTRADE] {}", e.getMessage());
+            returnCode = ReturnCode.FAIL.getCode();
+            log.error("[KUCOIN][AUTOTRADE] ERROR : {}", e.getMessage());
+            e.printStackTrace();
         }
-
-        log.info("[KUCOIN][AUTOTRADE] End");
+        log.info("[KUCOIN][AUTOTRADE] END");
 
         return returnCode;
     }
@@ -148,79 +137,75 @@ public class KucoinImp extends AbstractExchange {
     /* 호가유동성 메서드 */
     @Override
     public int startLiquidity(Map list){
-        int returnCode = TradeData.CODE_SUCCESS;
+        int returnCode = ReturnCode.SUCCESS.getCode();
 
         Queue<String> sellQueue = (LinkedList) list.get("sell");
         Queue<String> buyQueue  = (LinkedList) list.get("buy");
         List<Map<String,String>> CancelList = new ArrayList();
 
         try{
-            log.info("[KUCOIN][LIQUIDITY] Start");
-            String[] coinData = TradeService.splitCoinWithId(liquidity.getCoin());
-            String symbol     = coinData[0] + "-" + getCurrency(liquidity.getExchange(),coinData[0], coinData[1]);
-            int minCnt        = liquidity.getMinCnt();
-            int maxCnt        = liquidity.getMaxCnt();
+            log.info("[KUCOIN][LIQUIDITY] START");
+            String symbol = getSymbol(Utils.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
 
-
-
-            while(sellQueue.size() > 0 || buyQueue.size() > 0){
-                String randomMode = (TradeService.getRandomInt(1,2) == 1) ? BUY : SELL;
-                String firstOrderId    = "";
-                String secondsOrderId  = "";
+            while(!sellQueue.isEmpty() || !buyQueue.isEmpty()){
+                String mode            = (Utils.getRandomInt(1,2) == 1) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
+                String firstOrderId    = ReturnCode.NO_DATA.getValue();
+                String secondsOrderId  = ReturnCode.NO_DATA.getValue();
                 String firstPrice      = "";
                 String secondsPrice    = "";
-                String firstCnt        = String.valueOf(Math.floor(TradeService.getRandomDouble((double)minCnt, (double)maxCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
-                String secondsCnt      = String.valueOf(Math.floor(TradeService.getRandomDouble((double)minCnt, (double)maxCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
+                String firstAction     = "";
+                String secondAction    = "";
+                String firstCnt        = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
+                String secondsCnt      = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
 
-                if(sellQueue.size() > 0 && buyQueue.size() > 0 && randomMode.equals(BUY)){
+                if(!sellQueue.isEmpty() && !buyQueue.isEmpty() && mode.equals(UtilsData.MODE_BUY)){
                     firstPrice   = buyQueue.poll();
-                    firstOrderId = createOrder(BUY, firstPrice, firstCnt, symbol);
-
-                    Thread.sleep(300);
-                    secondsPrice   = sellQueue.poll();
-                    secondsOrderId = createOrder(SELL, secondsPrice, secondsCnt, symbol);
-                }else if(buyQueue.size() > 0 && sellQueue.size() > 0 && randomMode.equals(SELL)){
+                    secondsPrice = sellQueue.poll();
+                    firstAction  = BUY;
+                    secondAction = SELL;
+                }else if(!buyQueue.isEmpty() && !sellQueue.isEmpty() && mode.equals(UtilsData.MODE_SELL)){
                     firstPrice   = sellQueue.poll();
-                    firstOrderId = createOrder(SELL, firstPrice, firstCnt, symbol);
-
-                    Thread.sleep(300);
-                    secondsPrice   = buyQueue.poll();
-                    secondsOrderId = createOrder(BUY, secondsPrice, secondsCnt, symbol);
+                    secondsPrice = buyQueue.poll();
+                    firstAction  = SELL;
+                    secondAction = BUY;
                 }
+                firstOrderId = createOrder(firstAction, firstPrice, firstCnt, symbol);
+                Thread.sleep(300);
+                secondsOrderId = createOrder(secondAction, secondsPrice, secondsCnt, symbol);
 
-                if(!firstOrderId.equals("") || !secondsOrderId.equals("")){
-                    Thread.sleep(1000);
-                    if(!firstOrderId.equals("")){
+                // first / second 둘 중 하나라도 거래가 성사 되었을 경우
+                Thread.sleep(1000);
+                if(!firstOrderId.equals(ReturnCode.NO_DATA.getValue())  || !secondsOrderId.equals(ReturnCode.NO_DATA.getValue())){
+                    if(!firstOrderId.equals(ReturnCode.NO_DATA.getValue())){
                         cancelOrder(firstOrderId);
                     }
-                    if(!secondsOrderId.equals("")){
-                        Thread.sleep(300);
+                    Thread.sleep(300);
+                    if(!secondsOrderId.equals(ReturnCode.NO_DATA.getValue())){
                         cancelOrder(secondsOrderId);
                     }
                 }
             }
         }catch (Exception e){
-            returnCode = TradeData.CODE_ERROR;
-            log.error("[KUCOIN][ERROR][LIQUIDITY] {}", e.getMessage());
+            returnCode = ReturnCode.FAIL.getCode();
+            log.error("[KUCOIN][LIQUIDITY] ERROR {}", e.getMessage());
+            e.printStackTrace();
         }
-        log.info("[KUCOIN][LIQUIDITY] End");
+        log.info("[KUCOIN][LIQUIDITY] END");
         return returnCode;
     }
 
     @Override
     public int startFishingTrade(Map<String,List> list, int intervalTime){
-        log.info("[KUCOIN][FISHINGTRADE START]");
+        log.info("[KUCOIN][FISHINGTRADE] START");
 
-        int returnCode    = TradeData.CODE_SUCCESS;
+        int returnCode = ReturnCode.SUCCESS.getCode();
 
         try{
-            String[] coinData = TradeService.splitCoinWithId(fishing.getCoin());
-            String     symbol = coinData[0] + "-" + getCurrency(fishing.getExchange(), coinData[0], coinData[1]);
 
-            // mode 처리
-            String mode = fishing.getMode();
-            if(TradeData.MODE_RANDOM.equals(mode)){
-                mode = (TradeService.getRandomInt(0,1) == 0) ? TradeData.MODE_BUY : TradeData.MODE_SELL;
+            String symbol = getSymbol(Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
+            String mode   = fishing.getMode();
+            if(UtilsData.MODE_RANDOM.equals(mode)){
+                mode = (Utils.getRandomInt(0,1) == 0) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
             }
 
             boolean noIntervalFlag   = true;    // 해당 플래그를 이용해 마지막 매도/매수 후 바로 intervalTime 없이 바로 다음 매수/매도 진행
@@ -231,33 +216,38 @@ public class KucoinImp extends AbstractExchange {
             ArrayList<Map<String, String>> orderList = new ArrayList<>();
 
             /* Start */
+            log.info("[KUCOIN][FISHINGTRADE][START BUY OR SELL TARGET ALL COIN]");
             for (int i = 0; i < tickPriceList.size(); i++) {
-                String cnt = String.valueOf(Math.floor(TradeService.getRandomDouble((double) fishing.getMinContractCnt(), (double) fishing.getMaxContractCnt()) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
-                String orderId = "";
-                if(TradeData.MODE_BUY.equals(mode)) {
-                    orderId = createOrder(BUY, tickPriceList.get(i), cnt, symbol);
+                String cnt     = Utils.getRandomString(fishing.getMinContractCnt(), fishing.getMaxContractCnt());
+                String orderId = ReturnCode.NO_DATA.getValue();
+                if(UtilsData.MODE_BUY.equals(mode)) {
+                    orderId = createOrder(BUY,  tickPriceList.get(i), cnt, symbol);
                 }else{
                     orderId = createOrder(SELL, tickPriceList.get(i), cnt, symbol);
                 }
-                if(!orderId.equals("")){                                                // 매수/매도가 정상적으로 이뤄졌을 경우 데이터를 list에 담는다
+                if(!orderId.equals(ReturnCode.NO_DATA.getValue())){      // 매수/매도가 정상적으로 이뤄졌을 경우 데이터를 list에 담는다
                     Map<String, String> orderMap = new HashMap<>();
-                    orderMap.put("price" ,tickPriceList.get(i));
-                    orderMap.put("cnt" ,cnt);
+                    orderMap.put("price" , tickPriceList.get(i));
+                    orderMap.put("cnt"   , cnt);
                     orderMap.put("order_id" ,orderId);
                     orderList.add(orderMap);
                 }
             }
+            log.info("[KUCOIN][FISHINGTRADE][END BUY OR SELL TARGET ALL COIN]");
+
 
             /* Sell Start */
+            log.info("[KUCOIN][FISHINGTRADE][START BUY OR SELL TARGET PIECE COIN ]");
             for (int i = orderList.size() - 1; i >= 0; i--) {
-                Map<String, String> copiedOrderMap = TradeService.deepCopy(orderList.get(i));
+                Map<String, String> copiedOrderMap = Utils.deepCopy(orderList.get(i));
                 BigDecimal cnt                     = new BigDecimal(copiedOrderMap.get("cnt"));
 
                 while (cnt.compareTo(new BigDecimal("0")) > 0) {
                     if (!noMatchFirstTick) break;                   // 최신 매도/매수 건 값이 다를경우 돌 필요 없음.
                     if (noIntervalFlag) Thread.sleep(intervalTime); // intervalTime 만큼 휴식 후 매수 시작
-                    String orderId            = "";
-                    BigDecimal cntForExcution = new BigDecimal(String.valueOf(Math.floor(TradeService.getRandomDouble((double) fishing.getMinExecuteCnt(), (double) fishing.getMaxExecuteCnt()) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL));
+                    String orderId            = ReturnCode.NO_DATA.getValue();
+                    BigDecimal cntForExcution = new BigDecimal(Utils.getRandomString(fishing.getMinExecuteCnt(), fishing.getMaxExecuteCnt()));
+
                     // 남은 코인 수와 매도/매수할 코인수를 비교했을 때, 남은 코인 수가 더 적다면.
                     if (cnt.compareTo(cntForExcution) < 0) {
                         cntForExcution = cnt;
@@ -267,10 +257,10 @@ public class KucoinImp extends AbstractExchange {
                     }
                     // 매도/매수 날리기전에 최신 매도/매수값이 내가 건 값이 맞는지 확인
                     String nowFirstTick = "";
-                    if(TradeData.MODE_BUY.equals(mode)) {
-                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(TradeData.MODE_BUY);
+                    if(UtilsData.MODE_BUY.equals(mode)) {
+                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(UtilsData.MODE_BUY);
                     }else{
-                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(TradeData.MODE_SELL);
+                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(UtilsData.MODE_SELL);
                     }
                     String orderPrice = copiedOrderMap.get("price");
                     if (!orderPrice.equals(nowFirstTick)) {
@@ -279,13 +269,13 @@ public class KucoinImp extends AbstractExchange {
                         break;
                     }
 
-                    if(TradeData.MODE_BUY.equals(mode)) {
+                    if(UtilsData.MODE_BUY.equals(mode)) {
                         orderId = createOrder(SELL, copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol);
                     }else{
                         orderId = createOrder(BUY, copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol);
                     }
 
-                    if(!orderId.equals("")){
+                    if(!orderId.equals(ReturnCode.NO_DATA.getValue())){
                         cnt = cnt.subtract(cntForExcution);
                     }else{
                         break;
@@ -296,58 +286,152 @@ public class KucoinImp extends AbstractExchange {
                 cancelOrder(orderList.get(i).get("order_id"));
                 Thread.sleep(2000);
             }
+            log.info("[KUCOIN][FISHINGTRADE][END BUY OR SELL TARGET PIECE COIN ]");
         }catch (Exception e){
-            returnCode = TradeData.CODE_ERROR;
-            log.error("[KUCOIN][ERROR][FISHINGTRADE] {}", e.getMessage());
+            returnCode = ReturnCode.FAIL.getCode();
+            log.error("[KUCOIN][FISHINGTRADE] {}", e.getMessage());
+            e.printStackTrace();
         }
 
-        log.info("[KUCOIN][FISHINGTRADE END]");
+        log.info("[KUCOIN][FISHINGTRADE] END");
         return returnCode;
     }
 
-    @Override
+    /**
+     * Realtime Sync 거래
+     * @param realtime
+     * @return
+     */
     public int startRealtimeTrade(JsonObject realtime) {
-        return 0;
+        log.info("[KUCOIN][REALTIME SYNC TRADE] START");
+        int returnCode   = ReturnCode.SUCCESS.getCode();
+        String realtimeChangeRate = "signed_change_rate";
+
+        try {
+            boolean isStart      = false;
+            String symbol        = getSymbol(Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
+            String[] currentTick = getTodayTick(realtimeSync.getExchange(), Utils.splitCoinWithId(realtimeSync.getCoin()));
+            String openingPrice  = currentTick[0];
+            String currentPrice  = currentTick[1];
+            String orderId       = ReturnCode.NO_DATA.getValue();
+            String targetPrice   = "";
+            String action        = "";
+            String mode          = "";
+            String cnt           = Utils.getRandomString(realtimeSync.getMinTradeCnt(), realtimeSync.getMaxTradeCnt());
+
+            // 1. 최소/최대 매수 구간에 있는지 확인
+            int isInRange        = isMoreOrLessPrice(currentPrice);
+            if(isInRange != 0){              // 구간 밖일 경우
+                if(isInRange == -1){         // 지지선보다 낮을 경우
+                    mode         = UtilsData.MODE_BUY;
+                    action       = BUY;
+                    targetPrice  = realtimeSync.getMinPrice();
+                }else if(isInRange == 1){    // 저항선보다 높을 경우
+                    mode         = UtilsData.MODE_SELL;
+                    action       = SELL;
+                    targetPrice  = realtimeSync.getMaxPrice();
+                }
+                isStart = true;
+            }else{
+                // 지정한 범위 안에 없을 경우 매수 혹은 매도로 맞춰준다.
+                Map<String,String> tradeInfo = getTargetTick(openingPrice, currentPrice, realtime.get(realtimeChangeRate).getAsString());
+                if(!tradeInfo.isEmpty()){
+                    targetPrice = tradeInfo.get("price");
+                    mode        = tradeInfo.get("mode");
+                    action      = (mode.equals(UtilsData.MODE_BUY)) ? BUY : SELL;
+                    isStart     = true;
+                }
+            }
+
+            // 2. %를 맞추기 위한 매수/매도 로직
+            if(isStart){
+                if( !(orderId = createOrder(action, targetPrice, cnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){    // 매수/OrderId가 있으면 성공
+                    Thread.sleep(300);
+
+                    // 3. bestoffer set 로직
+                    JsonArray array = makeBestofferAfterRealtimeSync(targetPrice, mode);
+                    for (int i = 0; i < array.size(); i++) {
+                        JsonObject object       = array.get(i).getAsJsonObject();
+                        String bestofferPrice   = object.get("price").getAsString();
+                        String bestofferCnt     = object.get("cnt").getAsString();
+                        String bestofferOrderId = ReturnCode.NO_DATA.getValue();
+
+                        if( !(bestofferOrderId = createOrder(action, bestofferPrice, bestofferCnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){
+                            log.info("[KUCOIN][REALTIME SYNC] Bestoffer is setted. price:{}, cnt:{}", bestofferPrice, bestofferCnt);
+                        }
+                    }
+
+                    // 베스트 오퍼 체크 작업 이후 기존에 걸었던 매수에 대해 캔슬
+                    cancelOrder(orderId);
+                }
+            }
+
+        }catch (Exception e){
+            log.error("[KUCOIN][REALTIME SYNC TRADE] ERROR :{} ", e.getMessage());
+            e.printStackTrace();
+        }
+        log.info("[KUCOIN][REALTIME SYNC TRADE] END");
+        return returnCode;
+    }
+
+
+    /**
+     * 현재 Tick 가져오기
+     * @param exchange
+     * @param coinWithId
+     * @return [ 시가 , 종가 ] String Array
+     */
+    private String[] getTodayTick(Exchange exchange, String[] coinWithId) throws Exception{
+
+        String[] returnRes   = new String[2];
+        String symbol        = getSymbol(coinWithId, exchange);
+
+        String request       = UtilsData.KUCOIN_TICK;
+        String response      = getHttpMethod(request);
+        JsonObject lowData   = gson.fromJson(response, JsonObject.class);
+        JsonArray jsonArray  = lowData.get("data").getAsJsonObject().get("ticker").getAsJsonArray();
+
+        JsonObject resObj    = getJsonObjectBySymbol(jsonArray,symbol);
+
+        BigDecimal current   = resObj.get("last").getAsBigDecimal();    // 현재 값
+        BigDecimal percent   = resObj.get("changeRate").getAsBigDecimal().divide(new BigDecimal(100),10, BigDecimal.ROUND_UP);
+        BigDecimal open      = current.divide(new BigDecimal(1).add(percent),10, BigDecimal.ROUND_UP);  // 소수점 11번째에서 반올림
+
+        returnRes[0] = open.toPlainString();
+        returnRes[1] = current.toPlainString();
+        log.info("[KUCOIN][GET TODAY TICK] response : {}", Arrays.toString(returnRes));
+
+        return returnRes;
+    }
+
+    private JsonObject getJsonObjectBySymbol(JsonArray jsonArray, String symbol) throws NullPointerException{
+        JsonObject returnObj = null;
+        for(JsonElement element : jsonArray){
+            JsonObject object = element.getAsJsonObject();
+            if(object.get("symbol").getAsString().equals(symbol)){
+                returnObj = object;
+                break;
+            }
+        }
+
+        if(returnObj == null){
+            log.error("[KUCOIN][ORDER BOOK] Symbol is not matched. request symbol : {}", symbol);
+            throw new NullPointerException();
+        }
+
+        return returnObj;
     }
 
     @Override
     public String getOrderBook(Exchange exchange, String[] coinWithId) {
         String returnRes = "";
         try{
-            String inputLine;
-            String coin   = coinWithId[0];
-            String coinId = coinWithId[1];
-            String currency = getCurrency(exchange, coin, coinId);
-            if(currency.equals("")){
-                log.error("[KUCOIN][ERROR][ORDER BOOK] There is no coin");
-                return "";
-            }
-
-            String params = "symbol=" + coin + "-" + currency;
-            String request = TradeData.KUCOIN_ORDERBOOK + "?" + params;
-            URL url = new URL(request);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestProperty("Context-Type", "application/x-www-form-urlencoded");
-            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
-            connection.setConnectTimeout(TradeData.TIMEOUT_VALUE);
-            connection.setReadTimeout(TradeData.TIMEOUT_VALUE);
-
-            log.info("[KUCOIN][ORDER BOOK - Request]  request : {}", request);
-
-            int returnCode = connection.getResponseCode();
-            BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            StringBuffer response = new StringBuffer();
-            while ((inputLine = br.readLine()) != null) {
-                response.append(inputLine);
-            }
-            br.close();
-
-            returnRes = response.toString();
-
+            String request = UtilsData.KUCOIN_ORDERBOOK + "?symbol=" + getSymbol(coinWithId, exchange);
+            returnRes      = getHttpMethod(request);
         }catch (Exception e){
-            log.error("[KUCOIN][ERROR][ORDER BOOK] {}",e.getMessage());
+            log.error("[KUCOIN][ORDER BOOK] ERROR : {}",e.getMessage());
+            e.printStackTrace();
         }
-
         return returnRes;
     }
 
@@ -358,7 +442,7 @@ public class KucoinImp extends AbstractExchange {
      */
     public String createOrder(String side, String price, String cnt, String symbol) {
 
-        String orderId   = "";
+        String orderId = ReturnCode.NO_DATA.getValue();
         try {
             log.info("[KUCOIN][CREATE ORDER] mode:{},price:{},cnt:{},symbol:{}", side,price,cnt,symbol);
             OrderCreateApiRequest request = OrderCreateApiRequest.builder()
@@ -367,33 +451,41 @@ public class KucoinImp extends AbstractExchange {
 
             OrderCreateResponse order = kucoinRestClient.orderAPI().createOrder(request);
             orderId = order.getOrderId();
-            log.info("[KUCOIN][SUCCESS][CREATE ORDER] orderId:{}", orderId);
-
+            log.info("[KUCOIN][CREATE ORDER] Response success orderId:{}", orderId);
         }catch(Exception e){
-            orderId = "";
-            log.error("[KUCOIN][ERROR][CREATE ORDER] {}", e.getMessage());
+            orderId = ReturnCode.NO_DATA.getValue();
+            log.error("[KUCOIN][CREATE ORDER] ERROR : {}", e.getMessage());
         }
         return orderId;
     }
 
     /** 매도/매수 거래 취소 로직 **/
     public int cancelOrder(String orderId) {
-        int returnValue = TradeData.CODE_ERROR;
+        int returnValue = ReturnCode.FAIL.getCode();
         try {
             log.info("[KUCOIN][CANCEL ORDER] orderId:{}", orderId);
             OrderCancelResponse orderCancelResponse = kucoinRestClient.orderAPI().cancelOrder(orderId);
-            if(orderCancelResponse.getCancelledOrderIds().size() > 0) returnValue = TradeData.CODE_SUCCESS;
-            log.info("[KUCOIN][SUCCESS][CANCEL ORDER] orderId:{}", orderId);
+            if(orderCancelResponse.getCancelledOrderIds().size() > 0){
+                returnValue = ReturnCode.SUCCESS.getCode();
+            }
+            log.info("[KUCOIN][CANCEL ORDER] Success Response orderId:{}", orderId);
         }catch(KucoinApiException e){
             if(ALREADY_TRADE.equals(e.getCode())){
-                log.info("[KUCOIN][SUCCESS][CANCEL ORDER] Already trade orderId:{}", orderId);
+                log.info("[KUCOIN][CANCEL ORDER] Already trade orderId:{}", orderId);
             }else{
-                log.error("[KUCOIN][ERROR][CANCEL ORDER] {}", e.getMessage());
+                log.error("[KUCOIN][CANCEL ORDER] {}", e.getMessage());
+                e.printStackTrace();
             }
         }catch (Exception e){
-            log.error("[KUCOIN][ERROR][CANCEL ORDER] {}", e.getMessage());
+            log.error("[KUCOIN][CANCEL ORDER] {}", e.getMessage());
+            e.printStackTrace();
         }
         return returnValue;
+    }
+
+    // 거래소에 맞춰 심볼 반환
+    private String getSymbol(String[] coinData, Exchange exchange) throws Exception {
+        return coinData[0] + "-" + getCurrency(exchange, coinData[0], coinData[1]); // ex) ADA-USDT
     }
 
 }

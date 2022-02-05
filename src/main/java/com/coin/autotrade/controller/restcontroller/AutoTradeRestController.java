@@ -1,7 +1,7 @@
 package com.coin.autotrade.controller.restcontroller;
 
 import com.coin.autotrade.common.Response;
-import com.coin.autotrade.common.TradeService;
+import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.common.code.ReturnCode;
 import com.coin.autotrade.common.code.SessionKey;
 import com.coin.autotrade.model.AutoTrade;
@@ -38,7 +38,7 @@ public class AutoTradeRestController {
             }else{
                 response.setResponseWithObject(ReturnCode.SUCCESS, autoList);
             }
-            log.info("[GET AUTOTRADE] Get autotrade success :{}", TradeService.getMapper().writeValueAsString(autoList));
+            log.info("[GET AUTOTRADE] Get autotrade success :{}", Utils.getMapper().writeValueAsString(autoList));
         }catch(Exception e){
             log.error("[GET AUTOTRADE] {}", e.getMessage());
             e.printStackTrace();
@@ -58,7 +58,7 @@ public class AutoTradeRestController {
 
         ReturnCode returnVal  = ReturnCode.FAIL;
         Response response     = new Response(ReturnCode.FAIL);
-        Gson gson             = TradeService.getGson();
+        Gson gson             = Utils.getGson();
 
         try{
             AutoTrade autoTrade = gson.fromJson(body, AutoTrade.class);

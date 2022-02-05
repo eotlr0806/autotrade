@@ -1,6 +1,6 @@
 package com.coin.autotrade.service;
 
-import com.coin.autotrade.common.TradeService;
+import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.common.code.ReturnCode;
 import com.coin.autotrade.model.AutoTrade;
 import com.coin.autotrade.model.Fishing;
@@ -39,7 +39,7 @@ public class TradeConfigService {
     // Start autoTrade
     public ReturnCode saveTrade(String trade){
         ReturnCode returnValue = ReturnCode.SUCCESS;
-        Gson gson              = TradeService.getGson();
+        Gson gson              = Utils.getGson();
 
 
         try{
@@ -49,22 +49,22 @@ public class TradeConfigService {
             if(type.equals(AUTOTRADE)){
                 AutoTrade autoTrade = gson.fromJson(trade, AutoTrade.class);
                 autoTrade.setId(autotradeRepository.selectMaxId());
-                autoTrade.setDate(TradeService.getNowData());
+                autoTrade.setDate(Utils.getNowData());
                 autotradeRepository.save(autoTrade);                // DB에 해당 autotrade 저장
             }else if(type.equals(LIQUIDITY)){
                 Liquidity liquidity = gson.fromJson(trade, Liquidity.class);
                 liquidity.setId(liquidityRepository.selectMaxId());
-                liquidity.setDate(TradeService.getNowData());
+                liquidity.setDate(Utils.getNowData());
                 liquidityRepository.save(liquidity);                // DB에 해당 liquiditiy 저장
             }else if(type.equals(FISHING)){
                 Fishing fishing = gson.fromJson(trade, Fishing.class);
                 fishing.setId(fishingRepository.selectMaxId());
-                fishing.setDate(TradeService.getNowData());
+                fishing.setDate(Utils.getNowData());
                 fishingRepository.save(fishing);                    // DB에 해당 liquiditiy 저장
             }else if(type.equals(REALTIME_SYMC)){
                 RealtimeSync realtimeSync = gson.fromJson(trade, RealtimeSync.class);
                 realtimeSync.setId(realtimeSyncRepository.selectMaxId());
-                realtimeSync.setDate(TradeService.getNowData());
+                realtimeSync.setDate(Utils.getNowData());
                 realtimeSyncRepository.save(realtimeSync);
             }
 

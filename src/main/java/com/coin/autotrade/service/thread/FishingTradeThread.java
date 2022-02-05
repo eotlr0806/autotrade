@@ -1,9 +1,8 @@
 package com.coin.autotrade.service.thread;
 
 import com.coin.autotrade.common.BeanUtils;
-import com.coin.autotrade.common.TradeService;
+import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.model.Fishing;
-import com.coin.autotrade.model.User;
 import com.coin.autotrade.repository.FishingRepository;
 import com.coin.autotrade.service.CoinService;
 import com.coin.autotrade.service.exchangeimp.AbstractExchange;
@@ -39,7 +38,7 @@ public class FishingTradeThread implements Runnable{
         fishingRepository   = (FishingRepository) BeanUtils.getBean(FishingRepository.class);
 
         fishing             = inputFishing;
-        abstractExchange    = TradeService.getInstance(fishing.getExchange().getExchangeCode());
+        abstractExchange    = Utils.getInstance(fishing.getExchange().getExchangeCode());
         abstractExchange.initClass(fishing, coinService);
     }
 
@@ -57,7 +56,7 @@ public class FishingTradeThread implements Runnable{
                 /** Check is there best offer */
                 Map<String, List> list = coinService.getFishingList(fishing);
                 if(!list.isEmpty()){    // 아무런 key도 없을 경우.
-                    intervalTime = TradeService.getRandomInt(fishing.getMinSeconds(), fishing.getMaxSeconds()) * 1000;
+                    intervalTime = Utils.getRandomInt(fishing.getMinSeconds(), fishing.getMaxSeconds()) * 1000;
 
                     ArrayList<String> tickList = new ArrayList<>();
                     for(String mode : list.keySet()){   // sell or buy 1개만 들어가 있음.

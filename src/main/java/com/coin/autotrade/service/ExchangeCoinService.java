@@ -1,6 +1,6 @@
 package com.coin.autotrade.service;
 
-import com.coin.autotrade.common.TradeService;
+import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.common.code.ReturnCode;
 import com.coin.autotrade.model.ExchangeCoin;
 import com.coin.autotrade.repository.ExchangeCoinRepository;
@@ -22,7 +22,7 @@ public class ExchangeCoinService {
      */
     public ReturnCode insertUpdateCoin(ExchangeCoin coin){
         ReturnCode returnCode = ReturnCode.FAIL;
-        Gson gson             = TradeService.getGson();
+        Gson gson             = Utils.getGson();
         try{
             // coin id 가 넘어오면 Update로 변경
             if(coin.getId() == null){

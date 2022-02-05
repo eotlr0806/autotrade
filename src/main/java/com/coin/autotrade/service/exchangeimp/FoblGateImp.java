@@ -1,7 +1,7 @@
 package com.coin.autotrade.service.exchangeimp;
 
-import com.coin.autotrade.common.TradeData;
-import com.coin.autotrade.common.TradeService;
+import com.coin.autotrade.common.UtilsData;
+import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.common.code.ReturnCode;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
@@ -37,21 +37,21 @@ public class FoblGateImp extends AbstractExchange {
     @Override
     public void initClass(AutoTrade autoTrade) throws Exception{
         super.autoTrade = autoTrade;
-        setApiKey(TradeService.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
+        setApiKey(Utils.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
     }
 
     /* Foblgate Function initialize for liquidity */
     @Override
     public void initClass(Liquidity liquidity) throws Exception{
         super.liquidity = liquidity;
-        setApiKey(TradeService.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
+        setApiKey(Utils.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
     }
 
     @Override
     public void initClass(RealtimeSync realtimeSync, CoinService coinService) throws Exception{
         super.realtimeSync = realtimeSync;
         super.coinService  = coinService;
-        setApiKey(TradeService.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
+        setApiKey(Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
     }
 
     /* Foblgate Function initialize for fishing */
@@ -59,7 +59,7 @@ public class FoblGateImp extends AbstractExchange {
     public void initClass(Fishing fishing, CoinService coinService) throws Exception{
         super.fishing     = fishing;
         super.coinService = coinService;
-        setApiKey(TradeService.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
+        setApiKey(Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
     }
 
     /** 해당 정보를 이용해 API 키를 셋팅한다 */
@@ -87,19 +87,19 @@ public class FoblGateImp extends AbstractExchange {
         int returnCode = ReturnCode.SUCCESS.getCode();
 
         try{
-            String symbol = getSymbol(TradeService.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
+            String symbol = getSymbol(Utils.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
             // mode 처리
             String firstAction  = "";
             String secondAction = "";
             String mode         = autoTrade.getMode();
-            if(TradeData.MODE_RANDOM.equals(mode)){    // Trade Mode 가 랜덤일 경우 생성
-                mode = (TradeService.getRandomInt(0,1) == 0) ? TradeData.MODE_BUY : TradeData.MODE_SELL;
+            if(UtilsData.MODE_RANDOM.equals(mode)){    // Trade Mode 가 랜덤일 경우 생성
+                mode = (Utils.getRandomInt(0,1) == 0) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
             }
             // Trade 모드에 맞춰 순서에 맞게 거래 타입 생성
-            if(TradeData.MODE_BUY.equals(mode)){
+            if(UtilsData.MODE_BUY.equals(mode)){
                 firstAction  = BUY;
                 secondAction = SELL;
-            }else if(TradeData.MODE_SELL.equals(mode)){
+            }else if(UtilsData.MODE_SELL.equals(mode)){
                 firstAction  = SELL;
                 secondAction = BUY;
             }
@@ -130,28 +130,26 @@ public class FoblGateImp extends AbstractExchange {
         List<Map<String,String>> CancelList = new ArrayList();
 
         try{
-            log.info("[FOBLGATE][LIQUIDITY] Start");
-            String symbol = getSymbol(TradeService.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
-            int minCnt    = liquidity.getMinCnt();
-            int maxCnt    = liquidity.getMaxCnt();
+            log.info("[FOBLGATE][LIQUIDITY] START");
+            String symbol = getSymbol(Utils.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
 
             while(!sellQueue.isEmpty() || !buyQueue.isEmpty()){
-                String mode = (TradeService.getRandomInt(1,2) == 1) ? TradeData.MODE_BUY : TradeData.MODE_SELL;
-                String firstOrderId    = "";
-                String secondsOrderId  = "";
+                String mode = (Utils.getRandomInt(1,2) == 1) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
+                String firstOrderId    = ReturnCode.NO_DATA.getValue();
+                String secondsOrderId  = ReturnCode.NO_DATA.getValue();
                 String firstPrice      = "";
                 String secondsPrice    = "";
                 String firstAction     = "";
                 String secondAction    = "";
-                String firstCnt        = String.valueOf(Math.floor(TradeService.getRandomDouble((double)minCnt, (double)maxCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
-                String secondsCnt      = String.valueOf(Math.floor(TradeService.getRandomDouble((double)minCnt, (double)maxCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
+                String firstCnt        = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
+                String secondsCnt      = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
 
-                if(!sellQueue.isEmpty() && !buyQueue.isEmpty() && mode.equals(TradeData.MODE_BUY)){
+                if(!sellQueue.isEmpty() && !buyQueue.isEmpty() && mode.equals(UtilsData.MODE_BUY)){
                     firstPrice   = buyQueue.poll();
                     secondsPrice = sellQueue.poll();
                     firstAction  = BUY;
                     secondAction = SELL;
-                }else if(!buyQueue.isEmpty() && !sellQueue.isEmpty() && mode.equals(TradeData.MODE_SELL)){
+                }else if(!buyQueue.isEmpty() && !sellQueue.isEmpty() && mode.equals(UtilsData.MODE_SELL)){
                     firstPrice   = sellQueue.poll();
                     secondsPrice = buyQueue.poll();
                     firstAction  = SELL;
@@ -178,19 +176,19 @@ public class FoblGateImp extends AbstractExchange {
             log.error("[FOBLGATE][LIQUIDITY] Error {}", e.getMessage());
             e.printStackTrace();
         }
-        log.info("[FOBLGATE][LIQUIDITY] End");
+        log.info("[FOBLGATE][LIQUIDITY] END");
         return returnCode;
     }
 
     /* 매매 긁기 */
     @Override
     public int startFishingTrade(Map<String,List> list, int intervalTime){
-        log.info("[FOBLGATE][FISHINGTRADE START]");
+        log.info("[FOBLGATE][FISHINGTRADE] START");
         int returnCode = ReturnCode.SUCCESS.getCode();
 
         try{
             String mode   = "";
-            String symbol = getSymbol(TradeService.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
+            String symbol = getSymbol(Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
 
             boolean noIntervalFlag   = true;    // 해당 플래그를 이용해 마지막 매도/매수 후 바로 intervalTime 없이 바로 다음 매수/매도 진행
             boolean noMatchFirstTick = true;    // 해당 플래그를 이용해 매수/매도를 올린 가격이 현재 최상위 값이 맞는지 다른 사람의 코인을 사지 않게 방지
@@ -202,9 +200,9 @@ public class FoblGateImp extends AbstractExchange {
             /* Buy Start */
             log.info("[FOBLGATE][FISHINGTRADE][START BUY OR SELL TARGET ALL COIN]");
             for (int i = 0; i < tickPriceList.size(); i++) {
-                String cnt = String.valueOf(Math.floor(TradeService.getRandomDouble((double) fishing.getMinContractCnt(), (double) fishing.getMaxContractCnt()) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
-                String orderId = "";
-                if(TradeData.MODE_BUY.equals(mode)) {
+                String cnt     = Utils.getRandomString(fishing.getMinContractCnt(), fishing.getMaxContractCnt());
+                String orderId = ReturnCode.NO_DATA.getValue();
+                if(UtilsData.MODE_BUY.equals(mode)) {
                     orderId = createOrder(BUY, tickPriceList.get(i), cnt, symbol);      // 매수
                 }else{
                     orderId = createOrder(SELL, tickPriceList.get(i), cnt, symbol);     // 매도
@@ -225,14 +223,14 @@ public class FoblGateImp extends AbstractExchange {
             /* Sell Start */
             log.info("[FOBLGATE][FISHINGTRADE][START BUY OR SELL TARGET PIECE COIN ]");
             for (int i = orderList.size() - 1; i >= 0; i--) {
-                Map<String, String> copiedOrderMap = TradeService.deepCopy(orderList.get(i));
+                Map<String, String> copiedOrderMap = Utils.deepCopy(orderList.get(i));
                 BigDecimal cnt                     = new BigDecimal(copiedOrderMap.get("cnt"));
 
                 while (cnt.compareTo(new BigDecimal("0")) > 0) {
                     if (!noMatchFirstTick) break;                   // 최신 매도/매수 건 값이 다를경우 돌 필요 없음.
                     if (noIntervalFlag) Thread.sleep(intervalTime); // intervalTime 만큼 휴식 후 매수 시작
-                    String orderId            = "";
-                    BigDecimal cntForExcution = new BigDecimal(String.valueOf(Math.floor(TradeService.getRandomDouble((double) fishing.getMinExecuteCnt(), (double) fishing.getMaxExecuteCnt()) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL));
+                    String orderId            = ReturnCode.NO_DATA.getValue();
+                    BigDecimal cntForExcution = new BigDecimal(Utils.getRandomString(fishing.getMinExecuteCnt(), fishing.getMaxExecuteCnt()));
                     // 남은 코인 수와 매도/매수할 코인수를 비교했을 때, 남은 코인 수가 더 적다면.
                     if (cnt.compareTo(cntForExcution) < 0) {
                         cntForExcution = cnt;
@@ -242,10 +240,10 @@ public class FoblGateImp extends AbstractExchange {
                     }
                     // 매도/매수 날리기전에 최신 매도/매수값이 내가 건 값이 맞는지 확인
                     String nowFirstTick = "";
-                    if(TradeData.MODE_BUY.equals(mode)) {
-                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(TradeData.MODE_BUY);
+                    if(UtilsData.MODE_BUY.equals(mode)) {
+                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(UtilsData.MODE_BUY);
                     }else{
-                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(TradeData.MODE_SELL);
+                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(UtilsData.MODE_SELL);
                     }
 
                     if (!copiedOrderMap.get("price").equals(nowFirstTick)) {
@@ -254,7 +252,7 @@ public class FoblGateImp extends AbstractExchange {
                         break;
                     }
 
-                    if(TradeData.MODE_BUY.equals(mode)) {
+                    if(UtilsData.MODE_BUY.equals(mode)) {
                         orderId = createOrder(SELL, copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol);
                     }else{
                         orderId = createOrder(BUY, copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol);
@@ -263,7 +261,7 @@ public class FoblGateImp extends AbstractExchange {
                     if(!orderId.equals(ReturnCode.NO_DATA.getValue())){
                         cnt = cnt.subtract(cntForExcution);
                         Thread.sleep(500);
-                        if(TradeData.MODE_BUY.equals(mode)) {
+                        if(UtilsData.MODE_BUY.equals(mode)) {
                             cancelOrder(orderId, SELL, copiedOrderMap.get("price"),symbol );
                         }else{
                             cancelOrder(orderId, BUY, copiedOrderMap.get("price"),symbol );
@@ -274,7 +272,7 @@ public class FoblGateImp extends AbstractExchange {
                 }
                 // 무조건 취소
                 Thread.sleep(500);
-                if(TradeData.MODE_BUY.equals(mode)) {
+                if(UtilsData.MODE_BUY.equals(mode)) {
                     cancelOrder(orderList.get(i).get("order_id"), BUY, orderList.get(i).get("price") ,symbol);
                 }else{
                     cancelOrder(orderList.get(i).get("order_id"), SELL, orderList.get(i).get("price") ,symbol);
@@ -283,11 +281,11 @@ public class FoblGateImp extends AbstractExchange {
             log.info("[FOBLGATE][FISHINGTRADE][END BUY OR SELL TARGET PIECE COIN ]");
         }catch (Exception e){
             returnCode = ReturnCode.FAIL.getCode();
-            log.error("[FOBLGATE][FISHINGTRADE] Error {}", e.getMessage());
+            log.error("[FOBLGATE][FISHINGTRADE] ERROR {}", e.getMessage());
             e.printStackTrace();
         }
 
-        log.info("[FOBLGATE][FISHINGTRADE END]");
+        log.info("[FOBLGATE][FISHINGTRADE] END");
         return returnCode;
     }
 
@@ -307,7 +305,7 @@ public class FoblGateImp extends AbstractExchange {
             header.put("pairName",pairName);
 
             String secretHash    = makeApiHash(keyList.get(API_KEY) + pairName + keyList.get(SECRET_KEY));
-            JsonObject returnVal = postHttpMethod(TradeData.FOBLGATE_ORDERBOOK, secretHash, header);
+            JsonObject returnVal = postHttpMethod(UtilsData.FOBLGATE_ORDERBOOK, secretHash, header);
             String status        = returnVal.get("status").getAsString();
             if(status.equals(SUCCESS)){
                 returnRes = gson.toJson(returnVal);
@@ -335,27 +333,25 @@ public class FoblGateImp extends AbstractExchange {
 
         try {
             boolean isStart      = false;
-            String symbol        = getSymbol(TradeService.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
+            String symbol        = getSymbol(Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
             String[] currentTick = getTodayTick(symbol);
             String openingPrice  = currentTick[0];
             String currentPrice  = currentTick[1];
-            String orderId       = "";
+            String orderId       = ReturnCode.NO_DATA.getValue();
             String targetPrice   = "";
             String action        = "";
             String mode          = "";
-            double minTradeCnt   = Double.parseDouble(realtimeSync.getMinTradeCnt());
-            double maxTradeCnt   = Double.parseDouble(realtimeSync.getMaxTradeCnt());
-            String cnt           = String.valueOf(Math.floor(TradeService.getRandomDouble(minTradeCnt, maxTradeCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
+            String cnt           = Utils.getRandomString(realtimeSync.getMinTradeCnt(), realtimeSync.getMaxTradeCnt());
 
             // 1. 최소/최대 매수 구간에 있는지 확인
             int isInRange        = isMoreOrLessPrice(currentPrice);
             if(isInRange != 0){              // 구간 밖일 경우
                 if(isInRange == -1){         // 지지선보다 낮을 경우
-                    mode         = TradeData.MODE_BUY;
+                    mode         = UtilsData.MODE_BUY;
                     action       = BUY;
                     targetPrice  = realtimeSync.getMinPrice();
                 }else if(isInRange == 1){    // 저항선보다 높을 경우
-                    mode         = TradeData.MODE_SELL;
+                    mode         = UtilsData.MODE_SELL;
                     action       = SELL;
                     targetPrice  = realtimeSync.getMaxPrice();
                 }
@@ -366,7 +362,7 @@ public class FoblGateImp extends AbstractExchange {
                 if(!tradeInfo.isEmpty()){
                     targetPrice = tradeInfo.get("price");
                     mode        = tradeInfo.get("mode");
-                    action      = (mode.equals(TradeData.MODE_BUY)) ? BUY : SELL;
+                    action      = (mode.equals(UtilsData.MODE_BUY)) ? BUY : SELL;
                     isStart     = true;
                 }
             }
@@ -426,7 +422,7 @@ public class FoblGateImp extends AbstractExchange {
         header.put("startDateTime",startDateTime);
         header.put("cnt", dateCount);
         String secretHash    = makeApiHash(keyList.get(API_KEY) + symbol + typeDay + min + startDateTime + dateCount + keyList.get(SECRET_KEY));
-        JsonObject returnVal = postHttpMethod(TradeData.FOBLGATE_TICK, secretHash, header);
+        JsonObject returnVal = postHttpMethod(UtilsData.FOBLGATE_TICK, secretHash, header);
         String status        = returnVal.get("status").getAsString();
         if(status.equals(SUCCESS)){
             // 전날의 종가가 대비로 %가 움직이기에, 해당 값에 맞게 맞춰줘야 함.
@@ -461,7 +457,7 @@ public class FoblGateImp extends AbstractExchange {
             header.put("amount",    cnt);     // cnt
             String secretHash = makeApiHash(keyList.get(API_KEY) + keyList.get(USER_ID) + symbol + type + price+ cnt+ keyList.get(SECRET_KEY));
 
-            JsonObject returnVal = postHttpMethod(TradeData.FOBLGATE_CREATE_ORDER, secretHash, header);
+            JsonObject returnVal = postHttpMethod(UtilsData.FOBLGATE_CREATE_ORDER, secretHash, header);
             String status        = gson.fromJson(returnVal.get("status"), String.class);
             if(status.equals(SUCCESS)){
                 orderId = gson.fromJson(returnVal.get("data"), String.class);
@@ -490,7 +486,7 @@ public class FoblGateImp extends AbstractExchange {
             header.put("ordPrice",  price);                 // price
             String secretHash = makeApiHash(keyList.get(API_KEY) + keyList.get(USER_ID) + symbol + ordNo + type + price+ keyList.get(SECRET_KEY));
 
-            JsonObject returnVal = postHttpMethod(TradeData.FOBLGATE_CANCEL_ORDER, secretHash, header);
+            JsonObject returnVal = postHttpMethod(UtilsData.FOBLGATE_CANCEL_ORDER, secretHash, header);
             String status        = returnVal.get("status").getAsString();
             if(status.equals(SUCCESS) || status.equals(ALREADY_TRADED)){
                 returnCode = ReturnCode.SUCCESS.getCode();
@@ -550,8 +546,8 @@ public class FoblGateImp extends AbstractExchange {
         connection.setRequestProperty("Content-Type","multipart/form-data;boundary="+boundary);
         connection.setRequestProperty("Accept"      , "*/*");
         connection.setRequestMethod("POST");
-        connection.setConnectTimeout(TradeData.TIMEOUT_VALUE);
-        connection.setReadTimeout(TradeData.TIMEOUT_VALUE);
+        connection.setConnectTimeout(UtilsData.TIMEOUT_VALUE);
+        connection.setReadTimeout(UtilsData.TIMEOUT_VALUE);
         connection.setDoOutput(true);
         connection.setDoInput(true);
         DataOutputStream dos = new DataOutputStream(connection.getOutputStream());

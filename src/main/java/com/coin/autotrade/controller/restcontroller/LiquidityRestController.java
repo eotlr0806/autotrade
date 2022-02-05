@@ -1,7 +1,7 @@
 package com.coin.autotrade.controller.restcontroller;
 
 import com.coin.autotrade.common.Response;
-import com.coin.autotrade.common.TradeService;
+import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.common.code.ReturnCode;
 import com.coin.autotrade.common.code.SessionKey;
 import com.coin.autotrade.model.Liquidity;
@@ -35,7 +35,7 @@ public class LiquidityRestController {
             }else{
                 response.setResponseWithObject(ReturnCode.SUCCESS, liquidity);
             }
-            log.info("[GET LIQUIDITY] Get liquidity list : {}", TradeService.getMapper().writeValueAsString(liquidity));
+            log.info("[GET LIQUIDITY] Get liquidity list : {}", Utils.getMapper().writeValueAsString(liquidity));
         }catch(Exception e){
             log.error("[GET LIQUIDITY] Occur error : {} ", e.getMessage());
             response.setResponse(ReturnCode.FAIL);
@@ -51,7 +51,7 @@ public class LiquidityRestController {
 
         ReturnCode returnVal  = ReturnCode.FAIL;
         Response response     = new Response(ReturnCode.FAIL);
-        Gson gson             = TradeService.getGson();
+        Gson gson             = Utils.getGson();
 
         try{
             Liquidity liquidity = gson.fromJson(body, Liquidity.class);

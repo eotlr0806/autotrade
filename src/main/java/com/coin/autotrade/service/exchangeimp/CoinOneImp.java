@@ -1,8 +1,8 @@
 package com.coin.autotrade.service.exchangeimp;
 
 
-import com.coin.autotrade.common.TradeData;
-import com.coin.autotrade.common.TradeService;
+import com.coin.autotrade.common.UtilsData;
+import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.common.code.ReturnCode;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
@@ -46,21 +46,21 @@ public class CoinOneImp extends AbstractExchange {
     @Override
     public void initClass(AutoTrade autoTrade) throws Exception{
         super.autoTrade = autoTrade;
-        setCoinToken(TradeService.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
+        setCoinToken(Utils.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
     }
 
     /** 호가 유동성을 이용하기 위한 초기값 설정 */
     @Override
     public void initClass(Liquidity liquidity) throws Exception {
         super.liquidity  = liquidity;
-        setCoinToken(TradeService.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
+        setCoinToken(Utils.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
     }
 
     @Override
     public void initClass(RealtimeSync realtimeSync, CoinService coinService) throws Exception{
         super.realtimeSync = realtimeSync;
         super.coinService  = coinService;
-        setCoinToken(TradeService.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
+        setCoinToken(Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
     }
 
     /** 매매 긁기를 이용하기 위한 초기값 설정 */
@@ -68,7 +68,7 @@ public class CoinOneImp extends AbstractExchange {
     public void initClass(Fishing fishing, CoinService coinService) throws Exception {
         super.fishing     = fishing;
         super.coinService = coinService;
-        setCoinToken(TradeService.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
+        setCoinToken(Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
     }
     /** 코인 토큰 정보 셋팅 **/
     private void setCoinToken(String[] coinData, Exchange exchange) throws Exception{
@@ -98,16 +98,16 @@ public class CoinOneImp extends AbstractExchange {
             // mode 처리
             String mode = autoTrade.getMode();
             String coin = autoTrade.getCoin().split(";")[0];
-            if(TradeData.MODE_RANDOM.equals(mode)){
-                mode = (TradeService.getRandomInt(0,1) == 0) ? TradeData.MODE_BUY : TradeData.MODE_SELL;
+            if(UtilsData.MODE_RANDOM.equals(mode)){
+                mode = (Utils.getRandomInt(0,1) == 0) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
             }
             Map<String, String> orderMap = setDefaultMap(cnt, coin, price);
             // Trade 모드에 맞춰 순서에 맞게 거래 타입 생성
-            if(TradeData.MODE_BUY.equals(mode)){
+            if(UtilsData.MODE_BUY.equals(mode)){
                 orderMap.put("is_ask","0"); // 1 if order is sell
                 firstAction  = BUY;
                 secondAction = SELL;
-            }else if(TradeData.MODE_SELL.equals(mode)){
+            }else if(UtilsData.MODE_SELL.equals(mode)){
                 orderMap.put("is_ask","1"); // 0 if order is sell
                 firstAction  = SELL;
                 secondAction = BUY;
@@ -145,23 +145,22 @@ public class CoinOneImp extends AbstractExchange {
 
         try{
             log.info("[COINONE][LIQUIDITY] START");
-            int minCnt  = liquidity.getMinCnt();
-            int maxCnt  = liquidity.getMaxCnt();
             String coin = liquidity.getCoin().split(";")[0];
 
             while(!sellQueue.isEmpty() || !buyQueue.isEmpty()){
-                String mode = (TradeService.getRandomInt(1,2) == 1) ? TradeData.MODE_BUY : TradeData.MODE_SELL;
-                String firstOrderId    = "";
-                String secondsOrderId  = "";
+                String mode = (Utils.getRandomInt(1,2) == 1) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
+                String firstOrderId    = ReturnCode.NO_DATA.getValue();
+                String secondsOrderId  = ReturnCode.NO_DATA.getValue();
                 String firstPrice      = "";
                 String secondsPrice    = "";
                 String firstAction     = "";
                 String secondAction    = "";
-                String firstCnt        = String.valueOf(Math.floor(TradeService.getRandomDouble((double)minCnt, (double)maxCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
-                String secondsCnt      = String.valueOf(Math.floor(TradeService.getRandomDouble((double)minCnt, (double)maxCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
+                String firstCnt        = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
+                String secondsCnt      = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
+
                 Map<String, String> firstCancelMap  = null;
                 Map<String, String> secondCancelMap = null;
-                if(!sellQueue.isEmpty() && !buyQueue.isEmpty() && mode.equals(TradeData.MODE_BUY)){
+                if(!sellQueue.isEmpty() && !buyQueue.isEmpty() && mode.equals(UtilsData.MODE_BUY)){
                     firstPrice   = buyQueue.poll();
                     secondsPrice = sellQueue.poll();
                     firstAction  = BUY;
@@ -171,7 +170,7 @@ public class CoinOneImp extends AbstractExchange {
                     secondCancelMap = setDefaultMap(secondsCnt, coin, secondsPrice);
                     firstCancelMap.put("is_ask", "0");
                     secondCancelMap.put("is_ask","1");
-                }else if(!buyQueue.isEmpty() && !sellQueue.isEmpty() && mode.equals(TradeData.MODE_SELL)){
+                }else if(!buyQueue.isEmpty() && !sellQueue.isEmpty() && mode.equals(UtilsData.MODE_SELL)){
                     firstPrice   = sellQueue.poll();
                     secondsPrice = buyQueue.poll();
                     firstAction  = SELL;
@@ -228,14 +227,13 @@ public class CoinOneImp extends AbstractExchange {
 
             String coin = fishing.getCoin().split(";")[0];
 
-
             /* Start */
             log.info("[COINONE][FISHINGTRADE][START BUY OR SELL TARGET ALL COIN]");
             for (int i = 0; i < tickPriceList.size(); i++) {
-                String cnt     = String.valueOf(Math.floor(TradeService.getRandomDouble((double) fishing.getMinContractCnt(), (double) fishing.getMaxContractCnt()) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
+                String cnt     = Utils.getRandomString(fishing.getMinContractCnt(), fishing.getMaxContractCnt());
                 String orderId = ReturnCode.NO_DATA.getValue();
                 Map<String, String> orderMap = setDefaultMap(cnt, coin, tickPriceList.get(i));
-                if(TradeData.MODE_BUY.equals(mode)) {
+                if(UtilsData.MODE_BUY.equals(mode)) {
                     orderId = createOrder(BUY,  tickPriceList.get(i), cnt, coin);
                     orderMap.put("is_ask","0");
                 }else{
@@ -247,17 +245,19 @@ public class CoinOneImp extends AbstractExchange {
                     orderList.add(orderMap);
                 }
             }
+            log.info("[COINONE][FISHINGTRADE][END BUY OR SELL TARGET ALL COIN]");
 
             /* Sell Start */
+            log.info("[COINONE][FISHINGTRADE][START BUY OR SELL TARGET PIECE COIN ]");
             for (int i = orderList.size() - 1; i >= 0; i--) {
-                Map<String, String> copiedOrderMap = TradeService.deepCopy(orderList.get(i));
+                Map<String, String> copiedOrderMap = Utils.deepCopy(orderList.get(i));
                 BigDecimal cnt                     = new BigDecimal(copiedOrderMap.get("qty"));
 
                 while (cnt.compareTo(new BigDecimal("0")) > 0) {
                     if (!noMatchFirstTick) break;                   // 최신 매도/매수 건 값이 다를경우 돌 필요 없음.
                     if (noIntervalFlag) Thread.sleep(intervalTime); // intervalTime 만큼 휴식 후 매수 시작
 
-                    BigDecimal cntForExcution = new BigDecimal(String.valueOf(Math.floor(TradeService.getRandomDouble((double) fishing.getMinExecuteCnt(), (double) fishing.getMaxExecuteCnt()) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL));
+                    BigDecimal cntForExcution = new BigDecimal(Utils.getRandomString(fishing.getMinExecuteCnt(), fishing.getMaxExecuteCnt()));
                     if (cnt.compareTo(cntForExcution) < 0) {    // 남은 코인 수와 매도/매수할 코인수를 비교했을 때, 남은 코인 수가 더 적다면.
                         cntForExcution = cnt;
                         noIntervalFlag = false;
@@ -267,10 +267,10 @@ public class CoinOneImp extends AbstractExchange {
 
                     // 매도/매수 날리기전에 최신 매도/매수값이 내가 건 값이 맞는지 확인
                     String nowFirstTick = "";
-                    if(TradeData.MODE_BUY.equals(mode)) {
-                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(TradeData.MODE_BUY);
+                    if(UtilsData.MODE_BUY.equals(mode)) {
+                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(UtilsData.MODE_BUY);
                     }else{
-                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(TradeData.MODE_SELL);
+                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(UtilsData.MODE_SELL);
                     }
 
                     if (!copiedOrderMap.get("price").equals(nowFirstTick)) {
@@ -280,7 +280,7 @@ public class CoinOneImp extends AbstractExchange {
                     }
 
                     String orderId = ReturnCode.NO_DATA.getValue();
-                    if(TradeData.MODE_BUY.equals(mode)) {
+                    if(UtilsData.MODE_BUY.equals(mode)) {
                         orderId = createOrder(SELL, copiedOrderMap.get("price"), cntForExcution.toPlainString(), coin);
                     }else{
                         orderId = createOrder(BUY,  copiedOrderMap.get("price"), cntForExcution.toPlainString(), coin);
@@ -301,7 +301,7 @@ public class CoinOneImp extends AbstractExchange {
                 Thread.sleep(500);
                 cancelOrder(orderList.get(i));
             }
-
+            log.info("[COINONE][FISHINGTRADE][END BUY OR SELL TARGET PIECE COIN ]");
         }catch (Exception e){
             returnCode = ReturnCode.FAIL.getCode();
             log.error("[COINONE][FISHINGTRADE] ERROR : {}", e.getMessage());
@@ -326,33 +326,28 @@ public class CoinOneImp extends AbstractExchange {
         Map<String, String> cancelMap       = null;
 
         try {
-
             boolean isStart      = false;
             String coin          = realtimeSync.getCoin().split(";")[0];
             String[] currentTick = getTodayTick(coin);
             String openingPrice  = currentTick[0];
             String currentPrice  = currentTick[1];
-            String orderId       = "";
+            String orderId       = ReturnCode.NO_DATA.getValue();
             String targetPrice   = "";
             String action        = "";
             String mode          = "";
-            double minCnt        = Double.parseDouble(realtimeSync.getMinTradeCnt());
-            double maxCnt        = Double.parseDouble(realtimeSync.getMaxTradeCnt());
-            String cnt           = String.valueOf(Math.floor(TradeService.getRandomDouble(minCnt, maxCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
-
+            String cnt           = Utils.getRandomString(realtimeSync.getMinTradeCnt(), realtimeSync.getMaxTradeCnt());
 
             int isInRange = isMoreOrLessPrice(currentPrice);
-
             if(isInRange != 0){              // 구간 밖일 경우
                 if(isInRange == -1){         // 지지선보다 낮을 경우
                     action       = BUY;
-                    mode         = TradeData.MODE_BUY;
+                    mode         = UtilsData.MODE_BUY;
                     targetPrice  = realtimeSync.getMinPrice();
                     cancelMap  = setDefaultMap(cnt, coin, targetPrice);
                     cancelMap.put("is_ask", "0");
                 }else if(isInRange == 1){    // 저항선보다 높을 경우
                     action       = SELL;
-                    mode         = TradeData.MODE_SELL;
+                    mode         = UtilsData.MODE_SELL;
                     targetPrice  = realtimeSync.getMaxPrice();
                     cancelMap  = setDefaultMap(cnt, coin, targetPrice);
                     cancelMap.put("is_ask", "1");
@@ -364,14 +359,14 @@ public class CoinOneImp extends AbstractExchange {
                 Map<String,String> tradeInfo = getTargetTick(openingPrice, currentPrice, realtime.get(realtimeChangeRate).getAsString());
                 if(!tradeInfo.isEmpty()){
                     targetPrice = tradeInfo.get("price");
-                    if(tradeInfo.get("mode").equals(TradeData.MODE_BUY)){
+                    if(tradeInfo.get("mode").equals(UtilsData.MODE_BUY)){
                         action      = BUY;
-                        mode        = TradeData.MODE_BUY;
+                        mode        = UtilsData.MODE_BUY;
                         cancelMap   = setDefaultMap(cnt, coin, targetPrice);
                         cancelMap.put("is_ask", "0");
                     }else{
                         action      = SELL;
-                        mode        = TradeData.MODE_SELL;
+                        mode        = UtilsData.MODE_SELL;
                         cancelMap  = setDefaultMap(cnt, coin, targetPrice);
                         cancelMap.put("is_ask", "1");
                     }
@@ -402,10 +397,10 @@ public class CoinOneImp extends AbstractExchange {
                 }
             }
         }catch (Exception e){
-            log.error("[COINONE][REALTIME SYNC TRADE] Error :{} ", e.getMessage());
+            log.error("[COINONE][REALTIME SYNC TRADE] ERROR :{} ", e.getMessage());
             e.printStackTrace();
         }
-        log.info("[COINONE][REALTIME SYNC TRADE END]");
+        log.info("[COINONE][REALTIME SYNC TRADE] END");
         return returnCode;
     }
 
@@ -418,7 +413,7 @@ public class CoinOneImp extends AbstractExchange {
     private String[] getTodayTick(String coin) throws Exception{
 
         String[] returnRes   = new String[2];
-        String request       = TradeData.COINONE_TICK + "?currency=" + URLEncoder.encode(coin);
+        String request       = UtilsData.COINONE_TICK + "?currency=" + URLEncoder.encode(coin);
         String response      = getHttpMethod(request);
         JsonObject resObject = gson.fromJson(response, JsonObject.class);
         String returnCode    = resObject.get("errorCode").getAsString();
@@ -439,7 +434,7 @@ public class CoinOneImp extends AbstractExchange {
         try{
             log.info("[COINONE][GET ORDER BOOK] START");
             String coin    = coinWithId[0];
-            String request = TradeData.COINONE_ORDERBOOK + "?currency=" + coin;
+            String request = UtilsData.COINONE_ORDERBOOK + "?currency=" + coin;
             returnRes = getHttpMethod(request);
             log.info("[COINONE][Order book] END");
         }catch (Exception e){
@@ -462,7 +457,7 @@ public class CoinOneImp extends AbstractExchange {
         String orderId = ReturnCode.NO_DATA.getValue();
 
         try{
-            String url        = ( type.equals(BUY) ) ? TradeData.COINONE_LIMIT_BUY : TradeData.COINONE_LIMIT_SELL;
+            String url        = ( type.equals(BUY) ) ? UtilsData.COINONE_LIMIT_BUY : UtilsData.COINONE_LIMIT_SELL;
             JsonObject header = setDefaultRequest(cnt, coin, price);
             JsonObject json   = postHttpMethod(url, gson.toJson(header));
             String returnCode = json.get("errorCode").getAsString();
@@ -493,7 +488,7 @@ public class CoinOneImp extends AbstractExchange {
             header.addProperty("is_ask",  Integer.parseInt(data.get("is_ask")));
             header.addProperty("order_id",data.get("order_id"));
 
-            JsonObject json   = postHttpMethod(TradeData.COINONE_CANCEL , gson.toJson(header));
+            JsonObject json   = postHttpMethod(UtilsData.COINONE_CANCEL , gson.toJson(header));
             String returnCode = json.get("errorCode").getAsString();
 
             if(SUCCESS.equals(returnCode) || CANCEL_SUCCESS.equals(returnCode)){
@@ -561,8 +556,8 @@ public class CoinOneImp extends AbstractExchange {
         HttpURLConnection connection = (HttpsURLConnection) url.openConnection();
         connection.setDoOutput(true);
         connection.setDoInput(true);
-        connection.setConnectTimeout(TradeData.TIMEOUT_VALUE);
-        connection.setReadTimeout(TradeData.TIMEOUT_VALUE);
+        connection.setConnectTimeout(UtilsData.TIMEOUT_VALUE);
+        connection.setReadTimeout(UtilsData.TIMEOUT_VALUE);
         connection.setRequestMethod("POST");
         connection.setRequestProperty("Content-Type", "application/json");
         connection.setRequestProperty("X-COINONE-PAYLOAD", encodingPayload);

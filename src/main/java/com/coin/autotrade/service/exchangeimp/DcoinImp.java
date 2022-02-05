@@ -1,7 +1,7 @@
 package com.coin.autotrade.service.exchangeimp;
 
-import com.coin.autotrade.common.TradeData;
-import com.coin.autotrade.common.TradeService;
+import com.coin.autotrade.common.UtilsData;
+import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.common.code.ReturnCode;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
@@ -19,8 +19,6 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.security.MessageDigest;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Slf4j
@@ -38,27 +36,27 @@ public class DcoinImp extends AbstractExchange {
     @Override
     public void initClass(AutoTrade autoTrade) throws Exception{
         super.autoTrade = autoTrade;
-        setApiKey(TradeService.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
+        setApiKey(Utils.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
     }
 
     @Override
     public void initClass(Liquidity liquidity) throws Exception{
         super.liquidity = liquidity;
-        setApiKey(TradeService.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
+        setApiKey(Utils.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
     }
 
     @Override
     public void initClass(RealtimeSync realtimeSync, CoinService coinService) throws Exception{
         super.realtimeSync = realtimeSync;
         super.coinService  = coinService;
-        setApiKey(TradeService.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
+        setApiKey(Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
     }
 
     @Override
     public void initClass(Fishing fishing ,CoinService coinService) throws Exception{
         super.fishing     = fishing;
         super.coinService = coinService;
-        setApiKey(TradeService.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
+        setApiKey(Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
     }
 
     private void setApiKey(String[] coinData, Exchange exchange) throws Exception{
@@ -87,19 +85,19 @@ public class DcoinImp extends AbstractExchange {
 
         int returnCode = ReturnCode.SUCCESS.getCode();
         try{
-            String     symbol   = getSymbol(TradeService.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
+            String     symbol   = getSymbol(Utils.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
             String firstAction  = "";
             String secondAction = "";
             // mode 처리
             String mode = autoTrade.getMode();
-            if(TradeData.MODE_RANDOM.equals(mode)){
-                mode = (TradeService.getRandomInt(0,1) == 0) ? TradeData.MODE_BUY : TradeData.MODE_SELL;
+            if(UtilsData.MODE_RANDOM.equals(mode)){
+                mode = (Utils.getRandomInt(0,1) == 0) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
             }
             // Trade 모드에 맞춰 순서에 맞게 거래 타입 생성
-            if(TradeData.MODE_BUY.equals(mode)){
+            if(UtilsData.MODE_BUY.equals(mode)){
                 firstAction  = BUY;
                 secondAction = SELL;
-            }else if(TradeData.MODE_SELL.equals(mode)){
+            }else if(UtilsData.MODE_SELL.equals(mode)){
                 firstAction  = SELL;
                 secondAction = BUY;
             }
@@ -129,27 +127,25 @@ public class DcoinImp extends AbstractExchange {
 
         try{
             log.info("[DCOIN][LIQUIDITY] START");
-            String symbol = getSymbol(TradeService.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
-            int minCnt    = liquidity.getMinCnt();
-            int maxCnt    = liquidity.getMaxCnt();
+            String symbol = getSymbol(Utils.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
 
             while(!sellQueue.isEmpty() || !buyQueue.isEmpty()){
-                String mode = (TradeService.getRandomInt(1,2) == 1) ? TradeData.MODE_BUY : TradeData.MODE_SELL;
-                String firstOrderId    = "";
-                String secondsOrderId  = "";
+                String mode = (Utils.getRandomInt(1,2) == 1) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
+                String firstOrderId    = ReturnCode.NO_DATA.getValue();
+                String secondsOrderId  = ReturnCode.NO_DATA.getValue();
                 String firstPrice      = "";
                 String secondsPrice    = "";
                 String firstAction     = "";
                 String secondAction    = "";
-                String firstCnt        = String.valueOf(Math.floor(TradeService.getRandomDouble((double)minCnt, (double)maxCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
-                String secondsCnt      = String.valueOf(Math.floor(TradeService.getRandomDouble((double)minCnt, (double)maxCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
+                String firstCnt        = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
+                String secondsCnt      = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
 
-                if(!sellQueue.isEmpty() && !buyQueue.isEmpty() && mode.equals(TradeData.MODE_BUY)){
+                if(!sellQueue.isEmpty() && !buyQueue.isEmpty() && mode.equals(UtilsData.MODE_BUY)){
                     firstPrice   = buyQueue.poll();
                     secondsPrice = sellQueue.poll();
                     firstAction  = BUY;
                     secondAction = SELL;
-                }else if(!buyQueue.isEmpty() && !sellQueue.isEmpty() && mode.equals(TradeData.MODE_SELL)){
+                }else if(!buyQueue.isEmpty() && !sellQueue.isEmpty() && mode.equals(UtilsData.MODE_SELL)){
                     firstPrice   = sellQueue.poll();
                     secondsPrice = buyQueue.poll();
                     firstAction  = SELL;
@@ -189,7 +185,7 @@ public class DcoinImp extends AbstractExchange {
 
         try{
             String mode   = "";
-            String symbol = getSymbol(TradeService.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
+            String symbol = getSymbol(Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
 
             boolean noIntervalFlag   = true;    // 해당 플래그를 이용해 마지막 매도/매수 후 바로 intervalTime 없이 바로 다음 매수/매도 진행
             boolean noMatchFirstTick = true;    // 해당 플래그를 이용해 매수/매도를 올린 가격이 현재 최상위 값이 맞는지 다른 사람의 코인을 사지 않게 방지
@@ -201,9 +197,9 @@ public class DcoinImp extends AbstractExchange {
             /* Start */
             log.info("[DCOIN][FISHINGTRADE][START BUY OR SELL TARGET ALL COIN]");
             for (int i = 0; i < tickPriceList.size(); i++) {
-                String cnt     = String.valueOf(Math.floor(TradeService.getRandomDouble((double) fishing.getMinContractCnt(), (double) fishing.getMaxContractCnt()) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
+                String cnt     = Utils.getRandomString(fishing.getMinContractCnt(), fishing.getMaxContractCnt());
                 String orderId = ReturnCode.NO_DATA.getValue();
-                if(mode.equals(TradeData.MODE_BUY)) {
+                if(mode.equals(UtilsData.MODE_BUY)) {
                     orderId = createOrder(BUY, tickPriceList.get(i), cnt, symbol);
                 }else{
                     orderId = createOrder(SELL, tickPriceList.get(i), cnt, symbol);
@@ -219,15 +215,16 @@ public class DcoinImp extends AbstractExchange {
             log.info("[DCOIN][FISHINGTRADE][END BUY OR SELL TARGET ALL COIN]");
 
             /* Sell Start */
+            log.info("[DCOIN][FISHINGTRADE][START BUY OR SELL TARGET PIECE COIN ]");
             for (int i = orderList.size() - 1; i >= 0; i--) {
-                Map<String, String> copiedOrderMap = TradeService.deepCopy(orderList.get(i));
+                Map<String, String> copiedOrderMap = Utils.deepCopy(orderList.get(i));
                 BigDecimal cnt                     = new BigDecimal(copiedOrderMap.get("cnt"));
 
                 while (cnt.compareTo(new BigDecimal("0")) > 0) {
                     if (!noMatchFirstTick) break;                   // 최신 매도/매수 건 값이 다를경우 돌 필요 없음.
                     if (noIntervalFlag) Thread.sleep(intervalTime); // intervalTime 만큼 휴식 후 매수 시작
                     String orderId = ReturnCode.NO_DATA.getValue();
-                    BigDecimal cntForExcution = new BigDecimal(String.valueOf(Math.floor(TradeService.getRandomDouble((double) fishing.getMinExecuteCnt(), (double) fishing.getMaxExecuteCnt()) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL));
+                    BigDecimal cntForExcution = new BigDecimal(Utils.getRandomString(fishing.getMinExecuteCnt(), fishing.getMaxExecuteCnt()));
                     // 남은 코인 수와 매도/매수할 코인수를 비교했을 때, 남은 코인 수가 더 적다면.
                     if (cnt.compareTo(cntForExcution) < 0) {
                         cntForExcution = cnt;
@@ -237,10 +234,10 @@ public class DcoinImp extends AbstractExchange {
                     }
                     // 매도/매수 날리기전에 최신 매도/매수값이 내가 건 값이 맞는지 확인
                     String nowFirstTick = "";
-                    if(TradeData.MODE_BUY.equals(mode)) {
-                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(TradeData.MODE_BUY);
+                    if(UtilsData.MODE_BUY.equals(mode)) {
+                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(UtilsData.MODE_BUY);
                     }else{
-                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(TradeData.MODE_SELL);
+                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(UtilsData.MODE_SELL);
                     }
                     String orderPrice = copiedOrderMap.get("price");
                     if (!orderPrice.equals(nowFirstTick)) {
@@ -249,7 +246,7 @@ public class DcoinImp extends AbstractExchange {
                         break;
                     }
 
-                    if(TradeData.MODE_BUY.equals(mode)) {
+                    if(UtilsData.MODE_BUY.equals(mode)) {
                         orderId = createOrder(SELL, copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol);
                     }else{
                         orderId = createOrder(BUY, copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol);
@@ -266,6 +263,7 @@ public class DcoinImp extends AbstractExchange {
                 cancelOrder(symbol, orderList.get(i).get("order_id"));
 
             }
+            log.info("[DCOIN][FISHINGTRADE][END BUY OR SELL TARGET PIECE COIN ]");
         }catch (Exception e){
             returnCode = ReturnCode.FAIL.getCode();
             log.error("[DCOIN][FISHINGTRADE] {}", e.getMessage());
@@ -281,7 +279,7 @@ public class DcoinImp extends AbstractExchange {
         try{
             String symbol      = getSymbol(coinWithId, exchange);
             String encodedData = "symbol=" + URLEncoder.encode(symbol) + "&type=" + URLEncoder.encode("step0");
-            returnRes          = getHttpMethod(TradeData.DCOIN_ORDERBOOK + "?" + encodedData);
+            returnRes          = getHttpMethod(UtilsData.DCOIN_ORDERBOOK + "?" + encodedData);
         }catch (Exception e){
             log.error("[DCOIN][ORDER BOOK] {}",e.getMessage());
             e.printStackTrace();
@@ -304,28 +302,24 @@ public class DcoinImp extends AbstractExchange {
         try {
 
             boolean isStart      = false;
-            String symbol        = getSymbol(TradeService.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
+            String symbol        = getSymbol(Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
             String[] currentTick = getTodayTick(symbol);
             String openingPrice  = currentTick[0];
             String currentPrice  = currentTick[1];
-            String orderId       = "";
+            String orderId       = ReturnCode.NO_DATA.getValue();
             String targetPrice   = "";
             String action        = "";
             String mode          = "";
-            double minCnt        = Double.parseDouble(realtimeSync.getMinTradeCnt());
-            double maxCnt        = Double.parseDouble(realtimeSync.getMaxTradeCnt());
-            String cnt           = String.valueOf(Math.floor(TradeService.getRandomDouble(minCnt, maxCnt) * TradeData.TICK_DECIMAL) / TradeData.TICK_DECIMAL);
-
+            String cnt           = Utils.getRandomString(realtimeSync.getMinTradeCnt(), realtimeSync.getMaxTradeCnt());
 
             int isInRange = isMoreOrLessPrice(currentPrice);
-
             if(isInRange != 0){              // 구간 밖일 경우
                 if(isInRange == -1){         // 지지선보다 낮을 경우
-                    mode         = TradeData.MODE_BUY;
+                    mode         = UtilsData.MODE_BUY;
                     action       = BUY;
                     targetPrice  = realtimeSync.getMinPrice();
                 }else if(isInRange == 1){    // 저항선보다 높을 경우
-                    mode         = TradeData.MODE_SELL;
+                    mode         = UtilsData.MODE_SELL;
                     action       = SELL;
                     targetPrice  = realtimeSync.getMaxPrice();
                 }
@@ -336,7 +330,7 @@ public class DcoinImp extends AbstractExchange {
                 if(!tradeInfo.isEmpty()){
                     targetPrice = tradeInfo.get("price");
                     mode        = tradeInfo.get("mode");
-                    action      = (mode.equals(TradeData.MODE_BUY)) ? BUY : SELL;
+                    action      = (mode.equals(UtilsData.MODE_BUY)) ? BUY : SELL;
                     isStart     = true;
                 }
             }
@@ -360,7 +354,6 @@ public class DcoinImp extends AbstractExchange {
 
                     Thread.sleep(300);
                     cancelOrder(symbol, orderId);
-
                 }
             }
         }catch (Exception e){
@@ -381,7 +374,7 @@ public class DcoinImp extends AbstractExchange {
     private String[] getTodayTick(String symbol) throws Exception{
 
         String[] returnRes   = new String[2];
-        String request       = TradeData.DCOIN_TICK + "?symbol=" + URLEncoder.encode(symbol);
+        String request       = UtilsData.DCOIN_TICK + "?symbol=" + URLEncoder.encode(symbol);
         String response      = getHttpMethod(request);
         JsonObject resObject = gson.fromJson(response, JsonObject.class);
         String returnCode    = resObject.get("code").getAsString();
@@ -421,7 +414,7 @@ public class DcoinImp extends AbstractExchange {
             header.addProperty("sign",    createSign(gson.toJson(header)));
 
             String params   = makeEncodedParas(header);
-            JsonObject json = postHttpMethod(TradeData.DCOIN_CREATE_ORDER, params);
+            JsonObject json = postHttpMethod(UtilsData.DCOIN_CREATE_ORDER, params);
             String returnCode   = json.get("code").getAsString();
             if (SUCCESS.equals(returnCode)) {
                 JsonObject dataObj = json.get("data").getAsJsonObject();
@@ -451,7 +444,7 @@ public class DcoinImp extends AbstractExchange {
             header.addProperty("symbol",   symbol.toLowerCase());
             header.addProperty("sign",     createSign(gson.toJson(header)));
 
-            JsonObject json   = postHttpMethod(TradeData.DCOIN_CANCEL_ORDER, makeEncodedParas(header));
+            JsonObject json   = postHttpMethod(UtilsData.DCOIN_CANCEL_ORDER, makeEncodedParas(header));
             String returnCode = json.get("code").getAsString();
             if (SUCCESS.equals(returnCode) || SUCCESS_CANCEL.equals(returnCode)) {
                 returnValue = ReturnCode.SUCCESS.getCode();
@@ -509,8 +502,8 @@ public class DcoinImp extends AbstractExchange {
         connection.setDoOutput(true);
         connection.setDoInput(true);
         connection.setRequestMethod("POST");
-        connection.setConnectTimeout(TradeData.TIMEOUT_VALUE);
-        connection.setReadTimeout(TradeData.TIMEOUT_VALUE);
+        connection.setConnectTimeout(UtilsData.TIMEOUT_VALUE);
+        connection.setReadTimeout(UtilsData.TIMEOUT_VALUE);
         connection.setRequestProperty("Context-Type", "application/x-www-form-urlencoded");
         connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
         // Writing the post data to the HTTP request body

@@ -1,8 +1,7 @@
 package com.coin.autotrade.controller.restcontroller;
 
-import ch.qos.logback.core.joran.conditional.ElseAction;
 import com.coin.autotrade.common.Response;
-import com.coin.autotrade.common.TradeService;
+import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.common.code.ReturnCode;
 import com.coin.autotrade.common.code.SessionKey;
 import com.coin.autotrade.model.Fishing;
@@ -36,7 +35,7 @@ public class FishingRestController {
             }else{
                 response.setResponseWithObject(ReturnCode.SUCCESS, fishingList);
             }
-            log.info("[GET FISHING TRADE] Get fishingtrade list : {}", TradeService.getMapper().writeValueAsString(fishingList));
+            log.info("[GET FISHING TRADE] Get fishingtrade list : {}", Utils.getMapper().writeValueAsString(fishingList));
         }catch(Exception e){
             response.setResponse(ReturnCode.FAIL);
             log.error("[GET FISHING TRADE] Occur error : {} ", e.getMessage());
@@ -53,7 +52,7 @@ public class FishingRestController {
 
         ReturnCode returnVal  = ReturnCode.FAIL;
         Response response     = new Response(ReturnCode.FAIL);
-        Gson gson             = TradeService.getGson();
+        Gson gson             = Utils.getGson();
 
         try{
             Fishing fishing = gson.fromJson(body, Fishing.class);
