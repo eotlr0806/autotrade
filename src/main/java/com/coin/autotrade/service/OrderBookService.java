@@ -81,12 +81,12 @@ public class OrderBookService {
             JsonArray bid = gson.fromJson(object.get("bid"), JsonArray.class);
             returnValue = setOrderBookDataByJsonArray(ask,bid, "px","qty");
 
-        } else if(exchange.equals(UtilsData.DCOIN)  || exchange.equals(UtilsData.BITHUMB_GLOBAL)){
+        } else if(exchange.equals(UtilsData.DCOIN)  || exchange.equals(UtilsData.BITHUMB_GLOBAL) || exchange.equals(UtilsData.LBANK)){
             JsonObject dataObj = object.getAsJsonObject("data");
             String[][] ask = null;
             String[][] bid = null;
 
-            if(exchange.equals(UtilsData.DCOIN)){
+            if(exchange.equals(UtilsData.DCOIN) || exchange.equals(UtilsData.LBANK)){
                 ask = gson.fromJson(dataObj.get("asks"),String[][].class);
                 bid = gson.fromJson(dataObj.get("bids"),String[][].class);
             }else if(exchange.equals(UtilsData.BITHUMB_GLOBAL)){

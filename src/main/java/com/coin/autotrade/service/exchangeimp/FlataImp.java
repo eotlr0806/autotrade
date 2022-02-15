@@ -416,7 +416,7 @@ public class FlataImp extends AbstractExchange {
         if(resObject.has("item")){
             JsonObject data = resObject.get("item").getAsJsonObject();
 
-            BigDecimal percent = data.get("chgRate").getAsBigDecimal();
+            BigDecimal percent = data.get("chgRate").getAsBigDecimal().divide(new BigDecimal(100),15, BigDecimal.ROUND_UP);
             BigDecimal current = data.get("current").getAsBigDecimal();
             BigDecimal open    = current.divide(new BigDecimal(1).add(percent),15, BigDecimal.ROUND_UP);  // 소수점 11번째에서 반올림
 

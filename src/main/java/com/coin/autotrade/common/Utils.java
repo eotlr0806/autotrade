@@ -334,6 +334,8 @@ public class Utils {
             abstractExchange = new OkexImp();
         } else if(UtilsData.GATEIO.equals(exchange)){
             abstractExchange = new GateIoImp();
+        } else if(UtilsData.LBANK.equals(exchange)){
+            abstractExchange = new LbankImp();
         }
 
         return abstractExchange;
