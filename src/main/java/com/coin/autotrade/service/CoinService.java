@@ -38,6 +38,7 @@ public class CoinService {
     private KucoinImp kucoinImp;
     private OkexImp okexImp;
     private GateIoImp gateIoImp;
+    private LbankImp lbankImp;
 
     private AbstractExchange abstractExchange;
     private String BUY_CODE  = "BUY";
@@ -387,6 +388,11 @@ public class CoinService {
                 gateIoImp = new GateIoImp();
             }
             rowList = gateIoImp.getOrderBook(findedEx, coinData);
+        }else if(exchange.equals(UtilsData.LBANK)){
+            if(lbankImp == null){
+                lbankImp = new LbankImp();
+            }
+            rowList = lbankImp.getOrderBook(findedEx, coinData);
         }
         String list = orderBookService.parseOrderBook(findedEx.getExchangeCode(), rowList);
         return list;
