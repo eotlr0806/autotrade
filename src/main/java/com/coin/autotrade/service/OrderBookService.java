@@ -6,12 +6,17 @@ import com.coin.autotrade.common.code.ReturnCode;
 import com.coin.autotrade.model.Exchange;
 import com.coin.autotrade.repository.ExchangeRepository;
 import com.coin.autotrade.service.exchangeimp.AbstractExchange;
+import com.coin.autotrade.service.exchangeimp.DigifinexImp;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.lang.reflect.Array;
+import java.math.BigDecimal;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Optional;
 
 @org.springframework.stereotype.Service
@@ -81,7 +86,9 @@ public class OrderBookService {
             JsonArray bid = gson.fromJson(object.get("bid"), JsonArray.class);
             returnValue = setOrderBookDataByJsonArray(ask,bid, "px","qty");
 
-        } else if(exchange.equals(UtilsData.DCOIN)  || exchange.equals(UtilsData.BITHUMB_GLOBAL) || exchange.equals(UtilsData.LBANK)){
+        } else if(exchange.equals(UtilsData.DCOIN)
+                        || exchange.equals(UtilsData.BITHUMB_GLOBAL)
+                        || exchange.equals(UtilsData.LBANK)){
             JsonObject dataObj = object.getAsJsonObject("data");
             String[][] ask = null;
             String[][] bid = null;
@@ -95,21 +102,32 @@ public class OrderBookService {
             }
             returnValue = setOrderBookDataByArray(ask,bid,"price","qty");
 
-        } else if(exchange.equals(UtilsData.KUCOIN) || exchange.equals(UtilsData.OKEX) || exchange.equals(UtilsData.GATEIO)){
+        } else if(exchange.equals(UtilsData.KUCOIN)
+                        || exchange.equals(UtilsData.OKEX)
+                        || exchange.equals(UtilsData.GATEIO)
+                        || exchange.equals(UtilsData.DIGIFINEX)){
 
             JsonObject dataObj = null;
             if(exchange.equals(UtilsData.KUCOIN)){
                 dataObj = object.getAsJsonObject("data");
             }else if(exchange.equals(UtilsData.OKEX)){
                 dataObj = object.getAsJsonArray("data").get(0).getAsJsonObject();
-            }else if(exchange.equals(UtilsData.GATEIO)){
+            }else if(exchange.equals(UtilsData.GATEIO) || exchange.equals(UtilsData.DIGIFINEX)){
                 dataObj = object;
             }
 
             String[][] ask = gson.fromJson(dataObj.get("asks"),String[][].class);
             String[][] bid = gson.fromJson(dataObj.get("bids"),String[][].class);
-            returnValue = setOrderBookDataByArray(ask,bid,"price","qty");
 
+            if(exchange.equals(UtilsData.DIGIFINEX)){
+                Arrays.sort(ask, (String[] o1, String[] o2) -> {
+                    BigDecimal first  = new BigDecimal(o1[0]);
+                    BigDecimal second = new BigDecimal(o2[0]);
+                    return first.compareTo(second);
+                });
+            }
+
+            returnValue = setOrderBookDataByArray(ask,bid,"price","qty");
         }
 
         return returnValue;

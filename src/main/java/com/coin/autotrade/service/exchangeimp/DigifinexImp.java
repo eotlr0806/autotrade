@@ -1,35 +1,36 @@
 package com.coin.autotrade.service.exchangeimp;
 
-import com.coin.autotrade.common.UtilsData;
 import com.coin.autotrade.common.Utils;
+import com.coin.autotrade.common.UtilsData;
 import com.coin.autotrade.common.code.ReturnCode;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.codec.binary.Hex;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import javax.net.ssl.HttpsURLConnection;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
+import java.io.*;
 import java.math.BigDecimal;
 import java.net.URL;
-import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 @Slf4j
-public class BithumbGlobalImp extends AbstractExchange {
+public class DigifinexImp extends AbstractExchange {
 
     final private String ACCESS_TOKEN   = "access_token";
     final private String SECRET_KEY     = "secret_key";
+
     final private String BUY            = "buy";
     final private String SELL           = "sell";
+
     final private String SUCCESS        = "0";
-    final private String SUCCESS_CANCEL = "20012";
+    final private String ALREADY_TRADED = "ORDER_NOT_FOUND";
+
     Map<String, String> keyList         = new HashMap<>();
 
     @Override
@@ -62,11 +63,13 @@ public class BithumbGlobalImp extends AbstractExchange {
     private void setCoinToken(String[] coinData, Exchange exchange) throws Exception{
         // Set token key
         for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
-            if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1]) ){
+            if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1])){
                 keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
                 keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
+
             }
         }
+        log.info("[DIGIFINEX][SET API KEY] First Key setting in instance API:{}, secret:{}",keyList.get(ACCESS_TOKEN), keyList.get(SECRET_KEY));
         if(keyList.isEmpty()){
             String msg = "There is no match coin. " + Arrays.toString(coinData) + " " + exchange.getExchangeCode();
             throw new Exception(msg);
@@ -74,48 +77,44 @@ public class BithumbGlobalImp extends AbstractExchange {
     }
 
     /**
-     * Bithumb global 자전 거래
-     * @param symbol coin + "-" + symbol
+     * gateio global 자전 거래
+     * @param symbol coin + "_" + symbol
      */
     @Override
     public int startAutoTrade(String price, String cnt){
-        log.info("[BITHUMBGLOBAL][AUTOTRADE] START");
+        log.info("[DIGIFINEX][AUTOTRADE] START");
         int returnCode = ReturnCode.SUCCESS.getCode();
 
         try{
             String symbol       = getSymbol(Utils.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
             String firstAction  = "";
             String secondAction = "";
-            cnt                 = setCutCoinCnt(symbol, cnt);
 
             // mode 처리
             String mode = autoTrade.getMode();
             if(UtilsData.MODE_RANDOM.equals(mode)){
                 mode = (Utils.getRandomInt(0,1) == 0) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
             }
-
+            // Trade 모드에 맞춰 순서에 맞게 거래 타입 생성
             if(UtilsData.MODE_BUY.equals(mode)){
                 firstAction  = BUY;
                 secondAction = SELL;
-            }else{
+            }else if(UtilsData.MODE_SELL.equals(mode)){
                 firstAction  = SELL;
                 secondAction = BUY;
             }
-
             String orderId = ReturnCode.NO_DATA.getValue();
-            if(!(orderId = createOrder(firstAction, price, cnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){   // 매수
-                Thread.sleep(300);
-                if(createOrder(secondAction,price, cnt, symbol).equals(ReturnCode.NO_DATA.getValue())){               // 매도
-                    cancelOrder(orderId, symbol);                      // 매도 실패 시, 매수 취소
+            if(!(orderId = createOrder(firstAction,price, cnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){
+                if(createOrder(secondAction,price, cnt, symbol).equals(ReturnCode.NO_DATA.getValue())){          // SELL 모드가 실패 시,
+                    cancelOrder(orderId, symbol);
                 }
             }
         }catch (Exception e){
             returnCode = ReturnCode.FAIL.getCode();
-            log.error("[BITHUMBGLOBAL][AUTOTRADE] Error : {}", e.getMessage());
+            log.error("[DIGIFINEX][AUTOTRADE] Error : {}", e.getMessage());
             e.printStackTrace();
         }
-
-        log.info("[BITHUMBGLOBAL][AUTOTRADE] End");
+        log.info("[DIGIFINEX][AUTOTRADE] END");
         return returnCode;
     }
 
@@ -129,61 +128,59 @@ public class BithumbGlobalImp extends AbstractExchange {
         List<Map<String,String>> CancelList = new ArrayList();
 
         try{
-            log.info("[BITHUMBGLOBAL][LIQUIDITY] START");
+            log.info("[DIGIFINEX][LIQUIDITY] START");
             String symbol = getSymbol(Utils.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
 
             while(!sellQueue.isEmpty() || !buyQueue.isEmpty()){
-                String mode = (Utils.getRandomInt(1,2) == 1) ? UtilsData.MODE_BUY: UtilsData.MODE_SELL;
-                String firstOrderId    = ReturnCode.NO_DATA.getValue();
-                String secondsOrderId  = ReturnCode.NO_DATA.getValue();
+                String mode            = (Utils.getRandomInt(1,2) == 1) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
+                String firstOrderId    = "";
+                String secondsOrderId  = "";
                 String firstPrice      = "";
                 String secondsPrice    = "";
                 String firstAction     = "";
                 String secondAction    = "";
                 String firstCnt        = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
                 String secondsCnt      = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
-                firstCnt               = setCutCoinCnt(symbol, firstCnt);
-                secondsCnt             = setCutCoinCnt(symbol, secondsCnt);
 
                 if(!sellQueue.isEmpty() && !buyQueue.isEmpty() && mode.equals(UtilsData.MODE_BUY)){
-                    firstPrice     = buyQueue.poll();
-                    secondsPrice   = sellQueue.poll();
-                    firstAction    = BUY;
-                    secondAction   = SELL;
+                    firstPrice   = buyQueue.poll();
+                    secondsPrice = sellQueue.poll();
+                    firstAction  = BUY;
+                    secondAction = SELL;
                 }else if(!buyQueue.isEmpty() && !sellQueue.isEmpty() && mode.equals(UtilsData.MODE_SELL)){
-                    firstPrice     = sellQueue.poll();
-                    secondsPrice   = buyQueue.poll();
-                    firstAction    = SELL;
-                    secondAction   = BUY;
+                    firstPrice   = sellQueue.poll();
+                    secondsPrice = buyQueue.poll();
+                    firstAction  = SELL;
+                    secondAction = BUY;
                 }
-                firstOrderId   = createOrder(firstAction, firstPrice, firstCnt, symbol);
+                firstOrderId = createOrder(firstAction, firstPrice, firstCnt, symbol);
                 Thread.sleep(300);
                 secondsOrderId = createOrder(secondAction, secondsPrice, secondsCnt, symbol);
 
                 // first / second 둘 중 하나라도 거래가 성사 되었을 경우
                 if(!firstOrderId.equals(ReturnCode.NO_DATA.getValue())  || !secondsOrderId.equals(ReturnCode.NO_DATA.getValue())){
-                    Thread.sleep(1000);
+                    Thread.sleep(2000);
                     if(!firstOrderId.equals(ReturnCode.NO_DATA.getValue())){
                         cancelOrder(firstOrderId, symbol);
                     }
-                    Thread.sleep(300);
                     if(!secondsOrderId.equals(ReturnCode.NO_DATA.getValue())){
+                        Thread.sleep(500);
                         cancelOrder(secondsOrderId, symbol);
                     }
                 }
             }
         }catch (Exception e){
-            returnCode = ReturnCode.FAIL.getCode();
-            log.error("[BITHUMBGLOBAL][LIQUIDITY] Error {}", e.getMessage());
+            returnCode = ReturnCode.SUCCESS.getCode();
+            log.error("[DIGIFINEX][LIQUIDITY] Error {}", e.getMessage());
             e.printStackTrace();
         }
-        log.info("[BITHUMBGLOBAL][LIQUIDITY] END");
+        log.info("[DIGIFINEX][LIQUIDITY] END");
         return returnCode;
     }
 
     @Override
     public int startFishingTrade(Map<String,List> list, int intervalTime){
-        log.info("[BITHUMBGLOBAL][FISHINGTRADE] START");
+        log.info("[DIGIFINEX][FISHINGTRADE] START");
 
         int returnCode = ReturnCode.SUCCESS.getCode();
 
@@ -200,21 +197,21 @@ public class BithumbGlobalImp extends AbstractExchange {
             boolean noMatchFirstTick = true;    // 해당 플래그를 이용해 매수/매도를 올린 가격이 현재 최상위 값이 맞는지 다른 사람의 코인을 사지 않게 방지
 
             for(String temp : list.keySet()){  mode = temp; }
-            ArrayList<String> tickPriceList = (ArrayList) list.get(mode);
+            ArrayList<String> tickPriceList          = (ArrayList) list.get(mode);
             ArrayList<Map<String, String>> orderList = new ArrayList<>();
 
             /* Start */
-            log.info("[BITHUMBGLOBAL][FISHINGTRADE][START BUY OR SELL TARGET ALL COIN]");
+            log.info("[DIGIFINEX][FISHINGTRADE][START BUY OR SELL TARGET ALL COIN]");
             for (int i = 0; i < tickPriceList.size(); i++) {
                 String cnt = Utils.getRandomString(fishing.getMinContractCnt(), fishing.getMaxContractCnt());
-                cnt        = setCutCoinCnt(symbol, cnt);
+
                 String orderId = ReturnCode.NO_DATA.getValue();
                 if(UtilsData.MODE_BUY.equals(mode)) {
                     orderId = createOrder(BUY,  tickPriceList.get(i), cnt, symbol);
                 }else{
                     orderId = createOrder(SELL, tickPriceList.get(i), cnt, symbol);
                 }
-                if(!orderId.equals(ReturnCode.NO_DATA.getValue())){  // 매수/매도가 정상적으로 이뤄졌을 경우 데이터를 list에 담는다
+                if(!orderId.equals(ReturnCode.NO_DATA.getValue())){     // 매수/매도가 정상적으로 이뤄졌을 경우 데이터를 list에 담는다
                     Map<String, String> orderMap = new HashMap<>();
                     orderMap.put("price" ,tickPriceList.get(i));
                     orderMap.put("cnt" ,cnt);
@@ -222,20 +219,19 @@ public class BithumbGlobalImp extends AbstractExchange {
                     orderList.add(orderMap);
                 }
             }
-            log.info("[BITHUMBGLOBAL][FISHINGTRADE][END BUY OR SELL TARGET ALL COIN]");
+            log.info("[DIGIFINEX][FISHINGTRADE][END BUY OR SELL TARGET ALL COIN]");
 
             /* Sell Start */
+            log.info("[DIGIFINEX][FISHINGTRADE][START BUY OR SELL TARGET PIECE COIN ]");
             for (int i = orderList.size() - 1; i >= 0; i--) {
                 Map<String, String> copiedOrderMap = Utils.deepCopy(orderList.get(i));
                 BigDecimal cnt                     = new BigDecimal(copiedOrderMap.get("cnt"));
-                cnt                                = new BigDecimal(setCutCoinCnt(symbol, cnt.toPlainString()));
 
                 while (cnt.compareTo(new BigDecimal("0")) > 0) {
                     if (!noMatchFirstTick) break;                   // 최신 매도/매수 건 값이 다를경우 돌 필요 없음.
                     if (noIntervalFlag) Thread.sleep(intervalTime); // intervalTime 만큼 휴식 후 매수 시작
                     String orderId            = ReturnCode.NO_DATA.getValue();
                     BigDecimal cntForExcution = new BigDecimal(Utils.getRandomString(fishing.getMinExecuteCnt(), fishing.getMaxExecuteCnt()));
-                    cntForExcution            = new BigDecimal(setCutCoinCnt(symbol, cntForExcution.toPlainString()));
 
                     // 남은 코인 수와 매도/매수할 코인수를 비교했을 때, 남은 코인 수가 더 적다면.
                     if (cnt.compareTo(cntForExcution) < 0) {
@@ -253,7 +249,7 @@ public class BithumbGlobalImp extends AbstractExchange {
                     }
                     String orderPrice = copiedOrderMap.get("price");
                     if (!orderPrice.equals(nowFirstTick)) {
-                        log.info("[BITHUMBGLOBAL][FISHINGTRADE] Not Match First Tick. All Trade will be canceled RequestTick : {}, realTick : {}", copiedOrderMap.get("price"), nowFirstTick);
+                        log.info("[DIGIFINEX][FISHINGTRADE] Not Match First Tick. All Trade will be canceled RequestTick : {}, realTick : {}", copiedOrderMap.get("price"), nowFirstTick);
                         noMatchFirstTick = false;
                         break;
                     }
@@ -267,7 +263,7 @@ public class BithumbGlobalImp extends AbstractExchange {
                     if(!orderId.equals(ReturnCode.NO_DATA.getValue())){
                         cnt = cnt.subtract(cntForExcution);
                     }else{
-                        log.error("[BITHUMBGLOBAL][FISHINGTRADE] While loop is broken, Because create order is failed");
+                        log.error("[DIGIFINEX][FISHINGTRADE] While loop is broken, Because create order is failed");
                         break;
                     }
                 }
@@ -275,27 +271,30 @@ public class BithumbGlobalImp extends AbstractExchange {
                 Thread.sleep(1000);
                 cancelOrder(orderList.get(i).get("order_id"), symbol);
             }
+            log.info("[DIGIFINEX][FISHINGTRADE][END BUY OR SELL TARGET PIECE COIN ]");
         }catch (Exception e){
             returnCode = ReturnCode.FAIL.getCode();
-            log.error("[BITHUMBGLOBAL][FISHINGTRADE] Error {}", e.getMessage());
+            log.error("[DIGIFINEX][FISHINGTRADE] Error {}", e.getMessage());
             e.printStackTrace();
         }
-
-        log.info("[BITHUMBGLOBAL][FISHINGTRADE] END");
+        log.info("[DIGIFINEX][FISHINGTRADE] END");
         return returnCode;
     }
 
-    @Override
+    /**
+     * Realtime Sync 거래
+     * @param realtime
+     * @return
+     */
     public int startRealtimeTrade(JsonObject realtime) {
-        log.info("[BITHUMBGLOBAL][REALTIME SYNC TRADE] START");
+        log.info("[DIGIFINEX][REALTIME SYNC TRADE] START");
         int returnCode   = ReturnCode.SUCCESS.getCode();
         String realtimeChangeRate = "signed_change_rate";
 
         try {
-
             boolean isStart      = false;
             String symbol        = getSymbol(Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
-            String[] currentTick = getTodayTick(symbol);
+            String[] currentTick = getTodayTick(realtimeSync.getExchange(), Utils.splitCoinWithId(realtimeSync.getCoin()));
             String openingPrice  = currentTick[0];
             String currentPrice  = currentTick[1];
             String orderId       = ReturnCode.NO_DATA.getValue();
@@ -303,17 +302,17 @@ public class BithumbGlobalImp extends AbstractExchange {
             String action        = "";
             String mode          = "";
             String cnt           = Utils.getRandomString(realtimeSync.getMinTradeCnt(), realtimeSync.getMaxTradeCnt());
-            cnt                  = setCutCoinCnt(symbol, cnt);
-            int isInRange = isMoreOrLessPrice(currentPrice);
 
+            // 1. 최소/최대 매수 구간에 있는지 확인
+            int isInRange        = isMoreOrLessPrice(currentPrice);
             if(isInRange != 0){              // 구간 밖일 경우
                 if(isInRange == -1){         // 지지선보다 낮을 경우
-                    action       = BUY;
                     mode         = UtilsData.MODE_BUY;
+                    action       = BUY;
                     targetPrice  = realtimeSync.getMinPrice();
                 }else if(isInRange == 1){    // 저항선보다 높을 경우
-                    action       = SELL;
                     mode         = UtilsData.MODE_SELL;
+                    action       = SELL;
                     targetPrice  = realtimeSync.getMaxPrice();
                 }
                 isStart = true;
@@ -328,9 +327,9 @@ public class BithumbGlobalImp extends AbstractExchange {
                 }
             }
 
+            // 2. %를 맞추기 위한 매수/매도 로직
             if(isStart){
                 if( !(orderId = createOrder(action, targetPrice, cnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){    // 매수/OrderId가 있으면 성공
-
                     Thread.sleep(300);
 
                     // 3. bestoffer set 로직
@@ -339,21 +338,23 @@ public class BithumbGlobalImp extends AbstractExchange {
                         JsonObject object       = array.get(i).getAsJsonObject();
                         String bestofferPrice   = object.get("price").getAsString();
                         String bestofferCnt     = object.get("cnt").getAsString();
-                        bestofferCnt            = setCutCoinCnt(symbol, bestofferCnt);
                         String bestofferOrderId = ReturnCode.NO_DATA.getValue();
 
                         if( !(bestofferOrderId = createOrder(action, bestofferPrice, bestofferCnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){
-                            log.info("[BITHUMBGLOBAL][REALTIME SYNC] Bestoffer is setted. price:{}, cnt:{}", bestofferPrice, bestofferCnt);
+                            log.info("[DIGIFINEX][REALTIME SYNC] Bestoffer is setted. price:{}, cnt:{}", bestofferPrice, bestofferCnt);
                         }
                     }
-                    cancelOrder(orderId,symbol);
+
+                    // 베스트 오퍼 체크 작업 이후 기존에 걸었던 매수에 대해 캔슬
+                    cancelOrder(orderId, symbol);
                 }
             }
+
         }catch (Exception e){
-            log.error("[BITHUMBGLOBAL][REALTIME SYNC TRADE] Error :{} ", e.getMessage());
+            log.error("[DIGIFINEX][REALTIME SYNC TRADE] ERROR :{} ", e.getMessage());
             e.printStackTrace();
         }
-        log.info("[BITHUMBGLOBAL][REALTIME SYNC TRADE] END");
+        log.info("[DIGIFINEX][REALTIME SYNC TRADE] END");
         return returnCode;
     }
 
@@ -364,210 +365,188 @@ public class BithumbGlobalImp extends AbstractExchange {
      * @param coinWithId
      * @return [ 시가 , 종가 ] String Array
      */
-    private String[] getTodayTick(String symbol) throws Exception{
+    private String[] getTodayTick(Exchange exchange, String[] coinWithId) throws Exception{
 
         String[] returnRes   = new String[2];
-        String request       = UtilsData.BITHUMB_GLOBAL_TICK + "?symbol=" + URLEncoder.encode(symbol);
-        String response      = getHttpMethod(request);
-        JsonObject resObject = gson.fromJson(response, JsonObject.class);
-        String returnCode    = resObject.get("code").getAsString();
-        if(SUCCESS.equals(returnCode)){
-            JsonObject data = resObject.get("data").getAsJsonArray().get(0).getAsJsonObject();
-            BigDecimal percent = data.get("p").getAsBigDecimal();
-            BigDecimal current = data.get("c").getAsBigDecimal();
-            BigDecimal open    = current.divide(new BigDecimal(1).add(percent),10, BigDecimal.ROUND_UP);  // 소수점 11번째에서 반올림
+        String coin          = coinWithId[0];
+        String coinId        = coinWithId[1];
+        String symbol        = getCurrency(exchange, coin, coinId);
 
-            returnRes[0] = open.toPlainString();
-            returnRes[1] = current.toPlainString();
-            log.info("[BITHUMBGLOBAL][GET TODAY TICK] response : {}", Arrays.toString(returnRes));
-        }else{
-            log.error("[BITHUMBGLOBAL][GET TODAY TICK] response : {}", response);
-            throw new Exception(response);
-        }
+        String request       = UtilsData.GATEIO_TICK + "?currency_pair=" + coin + "_" + symbol;
+        String response      = getHttpMethod(request);
+        JsonArray resArr     = gson.fromJson(response, JsonArray.class);
+        JsonObject resObj    = resArr.get(0).getAsJsonObject();
+
+        BigDecimal current   = resObj.get("last").getAsBigDecimal();    // 현재 값
+        BigDecimal percent   = resObj.get("change_percentage").getAsBigDecimal().divide(new BigDecimal(100),10, BigDecimal.ROUND_UP);
+        BigDecimal open      = current.divide(new BigDecimal(1).add(percent),10, BigDecimal.ROUND_UP);  // 소수점 11번째에서 반올림
+
+        returnRes[0] = open.toPlainString();
+        returnRes[1] = current.toPlainString();
+        log.info("[DIGIFINEX][GET TODAY TICK] response : {}", Arrays.toString(returnRes));
 
         return returnRes;
     }
 
     @Override
     public String getOrderBook(Exchange exchange, String[] coinWithId) {
-        String returnRes = ReturnCode.FAIL.getValue();
-
-        log.info("[BITHUMBGLOBAL][ORDER BOOK] START");
+        String returnRes = "";
         try{
-            String symbol   = getSymbol(coinWithId,exchange);
-            String request  = UtilsData.BITHUMB_GLOBAL_ORDERBOOK + "?symbol=" + symbol;
-            returnRes       = getHttpMethod(request);
+            log.info("[DIGIFINEX][ORDER BOOK] START");
+            String request = UtilsData.DIGIFINEX_ORDERBOOK + "?symbol=" + getSymbol(coinWithId, exchange);
+            returnRes = getHttpMethod(request);
+            log.info("[DIGIFINEX][ORDER BOOK] END");
+
         }catch (Exception e){
-            log.error("[BITHUMBGLOBAL][ORDER BOOK] Error {}", e.getMessage());
+            log.error("[DIGIFINEX][ORDER BOOK] Error {}",e.getMessage());
             e.printStackTrace();
         }
-        log.info("[BITHUMBGLOBAL][ORDER BOOK] END");
 
         return returnRes;
     }
 
-    /** Biyhumb global 매수/매도 로직 */
-    public String createOrder(String type, String price, String cnt, String symbol){
 
+
+    /**
+     * @param type buy or sell
+     * @param price
+     * @param cnt amount
+     * @param symbol
+     * @return
+     */
+    private String createOrder(String type, String price, String cnt, String symbol){
         String orderId = ReturnCode.NO_DATA.getValue();
-
-        try{
-            JsonObject header = new JsonObject();
-            header.addProperty("apiKey",    keyList.get(ACCESS_TOKEN));
-            header.addProperty("msgNo",     System.currentTimeMillis());
-            header.addProperty("price",     price);
-            header.addProperty("quantity",  cnt);
-            header.addProperty("side",      type);
-            header.addProperty("symbol",    symbol);
-            header.addProperty("timestamp", System.currentTimeMillis());
-            header.addProperty("type",      "limit"); // 지정가
-            header.addProperty("signature", setSignature(header));
-
-            JsonObject returnVal = postHttpMethod(UtilsData.BITHUMB_GLOBAL_CREATE_ORDER, gson.toJson(header));
-            String status        = returnVal.get("code").getAsString();
-            if(status.equals(SUCCESS)){
-                JsonObject obj  = returnVal.get("data").getAsJsonObject();
-                orderId         = obj.get("orderId").getAsString();
-                log.info("[BITHUMBGLOBAL][CREATE ORDER] Response : {}", gson.toJson(returnVal));
+        try {
+            JsonObject params = new JsonObject();
+            params.addProperty("market","spot");
+            params.addProperty("symbol",symbol);
+            params.addProperty("type",type);
+            params.addProperty("amount",cnt);
+            params.addProperty("price",price);
+            JsonObject returnRes = postHttpMethod(UtilsData.DIGIFINEX_CREATE_ORDER, params);
+            if(returnRes.get("code").getAsString().equals(SUCCESS)){
+                orderId = returnRes.get("order_id").getAsString();
+                log.info("[DIGIFINEX][CREATE ORDER] Success response : {}", gson.toJson(returnRes));
             }else{
-                log.error("[BITHUMBGLOBAL][CREATE ORDER] Response :{}", gson.toJson(returnVal));
+                log.error("[DIGIFINEX][CREATE ORDER] Fail response : {}", gson.toJson(returnRes));
             }
         }catch (Exception e){
-            log.error("[BITHUMBGLOBAL][CREATE ORDER] Error {}",e.getMessage());
+            log.error("[DIGIFINEX][CREATE ORDER] Error : {}",e.getMessage());
             e.printStackTrace();
         }
         return orderId;
     }
+    /* Http post method */
+    public JsonObject postHttpMethod(String endPoint, JsonObject params) {
 
-    /* Bithumb global 거래 취소 */
-    public int cancelOrder(String orderId, String symbol) {
+        JsonObject returnObj = null;
 
-        int returnValue = ReturnCode.FAIL.getCode();
+        try{
+            String body = makeParamsTypeofUrl(params);
+            String sign = HmacAndHex(body);
+            log.info("[DIGIFINEX][POST HTTP] url:{}, body:{}, sign:{}", endPoint, body, sign);
 
-        try {
-            JsonObject header = new JsonObject();
-            header.addProperty("apiKey",    keyList.get(ACCESS_TOKEN));
-            header.addProperty("msgNo",     System.currentTimeMillis());
-            header.addProperty("orderId",   orderId);
-            header.addProperty("symbol",    symbol);
-            header.addProperty("timestamp", System.currentTimeMillis());
-            header.addProperty("signature", setSignature(header));
+            URL url = new URL(endPoint);
+            HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
+            connection.setDoOutput(true);
+            connection.setDoInput(true);
+            connection.setConnectTimeout(UtilsData.TIMEOUT_VALUE);
+            connection.setReadTimeout(UtilsData.TIMEOUT_VALUE);
+            connection.setRequestMethod("POST");
+            connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
+            // Set Header for OKKE API
+            connection.setRequestProperty("ACCESS-KEY", keyList.get(ACCESS_TOKEN));
+            connection.setRequestProperty("ACCESS-TIMESTAMP", getTimestamp());
+            connection.setRequestProperty("ACCESS-SIGN", sign);
 
-            JsonObject json = postHttpMethod(UtilsData.BITHUMB_GLOBAL_CANCEL_ORDER, gson.toJson(header));
-            String status   = json.get("code").getAsString();
-            if (status.equals(SUCCESS) || status.equals(SUCCESS_CANCEL)) {
-                returnValue = ReturnCode.SUCCESS.getCode();
-                log.info("[BITHUMBGLOBAL][CANCEL ORDER] Response:{}", gson.toJson(json));
-            } else {
-                log.error("[BITHUMBGLOBAL][CANCEL ORDER] Response:{}", gson.toJson(json));
+
+            // Writing the post data to the HTTP request body
+            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream()));
+            bw.write(body);
+            bw.close();
+
+            String response = (connection.getErrorStream() == null)
+                    ? getResponseMsg(connection.getInputStream()) : getResponseMsg(connection.getErrorStream());
+
+            returnObj = gson.fromJson(response, JsonObject.class);
+
+        } catch(Exception e){
+            log.error("[DIGIFINEX][POST HTTP] {}", e.getMessage());
+            e.printStackTrace();
+        }
+
+        return returnObj;
+    }
+    // Get Input response message
+    private String getResponseMsg(InputStream stream) throws Exception{
+        BufferedReader br = new BufferedReader(new InputStreamReader(stream));
+        StringBuffer response = new StringBuffer();
+        String inputLine;
+        while ((inputLine = br.readLine()) != null) {
+            response.append(inputLine);
+        }
+        br.close();
+
+        return response.toString();
+    }
+
+    private String makeParamsTypeofUrl(JsonObject object) throws Exception{
+        int executeCnt = 1;
+        StringBuilder builder = new StringBuilder();
+        for(String key : object.keySet()){
+            if(executeCnt < object.size()){
+                builder.append(key).append("=").append(object.get(key).getAsString()).append("&");
+            }else{
+                builder.append(key).append("=").append(object.get(key).getAsString());
             }
-        }catch(Exception e){
-            log.error("[BITHUMBGLOBAL][CANCEL ORDER] Error {}", e.getMessage());
+            executeCnt++;
+        }
+        return builder.toString();
+    }
+
+    private String HmacAndHex(String data) throws Exception {
+        String secret = keyList.get(SECRET_KEY);
+        //1. SecretKeySpec 클래스를 사용한 키 생성
+        SecretKeySpec secretKey = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+        //2. 지정된  MAC 알고리즘을 구현하는 Mac 객체를 작성합니다.
+        Mac hasher = Mac.getInstance("HmacSHA256");
+        //3. 키를 사용해 이 Mac 객체를 초기화
+        hasher.init(secretKey);
+        //3. 암호화 하려는 데이터의 바이트의 배열을 처리해 MAC 조작을 종료
+        byte[] hash = hasher.doFinal(data.getBytes(StandardCharsets.UTF_8));
+        //4. Hex Encode to String
+        return Hex.encodeHexString(hash);
+    }
+
+
+
+
+    // Server timestamp 시간을 가져오기 위해 사용
+    private String getTimestamp() throws Exception{
+        JsonObject object = gson.fromJson(getHttpMethod(UtilsData.DIGIFINEX_TIMESTAMP), JsonObject.class);
+        String returnRes  = object.get("server_time").getAsString();
+        log.info("[DIGIFINEX][GET TIMESTAMP] timestamp : {}", returnRes);
+        return returnRes;
+    }
+
+
+    /* DIGIFINEX global 거래 취소 */
+    private int cancelOrder(String orderId, String symbol) {
+        int returnValue = ReturnCode.FAIL.getCode();
+        try {
+
+            log.info("[DIGIFINEX][CANCEL ORDER] Response orderId:{}", orderId);
+        }catch (Exception e){
+            log.error("[DIGIFINEX][CANCEL ORDER] Error orderId:{}, response:{}",orderId, e.getMessage());
             e.printStackTrace();
         }
         return returnValue;
     }
 
-
-    /* Http post method */
-    private JsonObject postHttpMethod(String targetUrl, String payload) throws Exception{
-
-        log.info("[BITHUMBGLOBAL][POST HTTP] targetUrl : {} , request : {}",targetUrl, payload);
-        URL url = new URL(targetUrl);
-        HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
-        connection.setDoOutput(true);
-        connection.setDoInput(true);
-        connection.setConnectTimeout(UtilsData.TIMEOUT_VALUE);
-        connection.setReadTimeout(UtilsData.TIMEOUT_VALUE);
-        connection.setRequestMethod("POST");
-        connection.setRequestProperty("Content-Type", "application/json");
-        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
-        // Writing the post data to the HTTP request body
-        BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream()));
-        bw.write(payload);
-        bw.close();
-        StringBuffer response = new StringBuffer();
-        if(connection.getResponseCode() == HttpsURLConnection.HTTP_OK){
-            BufferedReader br = null;
-            if(connection.getInputStream() != null){
-                br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            }else if(connection.getErrorStream() != null){
-                br = new BufferedReader(new InputStreamReader(connection.getErrorStream()));
-            }else{
-                log.error("[BITHUMBGLOBAL][POST HTTP] Return Code is 200. But inputstream and errorstream is null");
-                throw new Exception();
-            }
-            String inputLine = "";
-            while ((inputLine = br.readLine()) != null) {
-                response.append(inputLine);
-            }
-            br.close();
-        }else{
-            log.error("[BITHUMBGLOBAL][POST HTTP] Return code : {}, msg : {}",connection.getResponseCode(), connection.getResponseMessage());
-            throw new Exception();
-        }
-        return gson.fromJson(response.toString(), JsonObject.class);
-    }
-
-
-    /* Hmac sha 256 start **/
-    private String getHmacSha256(String message) throws Exception{
-        String returnVal = "";
-
-        String secret            = keyList.get(SECRET_KEY);
-        Mac sha256_HMAC          = Mac.getInstance("HmacSHA256");
-        SecretKeySpec secret_key = new SecretKeySpec(secret.getBytes(), "HmacSHA256");
-        sha256_HMAC.init(secret_key);
-        byte[] bytes = sha256_HMAC.doFinal(message.getBytes());
-        returnVal    =  byteArrayToHexString(bytes);
-
-        return returnVal.toLowerCase();
-    }
-
-    /* Hmac sha 256 end */
-    private String byteArrayToHexString(byte[] b) throws Exception{
-        StringBuilder hs = new StringBuilder();
-        String stmp;
-        for (int n = 0; b != null && n < b.length; n++) {
-            stmp = Integer.toHexString(b[n] & 0XFF);
-            if (stmp.length() == 1)
-                hs.append('0');
-            hs.append(stmp);
-        }
-        return hs.toString().toLowerCase();
-    }
-
-    /* Cnt 를 소수점 첫째짜리 까지만 하도록 변경 */
-    private String setCutCoinCnt(String symbol, String cnt){
-        int dot = 0;    // 화폐 단위가 BTC일 경우 0
-        if(!symbol.split("-")[1].equals("BTC")) {
-            dot = 1;    // 아닐경우 1
-        }
-
-        double doubleCnt = Double.parseDouble(cnt);
-        int pow          = (dot == 0) ? 1 : (int) Math.pow(10,dot);
-
-        return String.valueOf(Math.floor(doubleCnt * pow) / pow);
-    }
-
-    /* making signature method */
-    private String setSignature(JsonObject header) throws Exception{
-        String sign = "";
-        int idx = 0;
-        for(String key : header.keySet()){
-            if(idx == header.size() - 1){
-                sign += key + "=" + header.get(key).getAsString();
-            }else{
-                sign += key + "=" + header.get(key).getAsString() + "&";
-            }
-            idx++;
-        }
-        return getHmacSha256(sign);
-    }
-
     // 거래소에 맞춰 심볼 반환
     private String getSymbol(String[] coinData, Exchange exchange) throws Exception {
-        return coinData[0] + "-" + getCurrency(exchange,coinData[0], coinData[1]);
+        return coinData[0] + "_" + getCurrency(exchange, coinData[0], coinData[1]);
     }
 
 }
