@@ -35,7 +35,7 @@ public class FishingRestController {
             }else{
                 response.setResponseWithObject(ReturnCode.SUCCESS, fishingList);
             }
-            log.info("[GET FISHING TRADE] Get fishingtrade list : {}", Utils.getMapper().writeValueAsString(fishingList));
+            log.info("[GET FISHING TRADE] Success get fishingtrade.");
         }catch(Exception e){
             response.setResponse(ReturnCode.FAIL);
             log.error("[GET FISHING TRADE] Occur error : {} ", e.getMessage());
