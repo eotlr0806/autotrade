@@ -1117,8 +1117,12 @@
         setRealPriceTable : (exchange, data) => {
             let dynamicText = "";
             try{
-                ask = data.ask.slice(0,10).reverse() || []   // sell
-                bid = data.bid.slice(0,10) || []             // buy
+                let limitCnt = 10;  // 기존에 10개
+                if(exchange == 6){  // TODO : 빗썸아이디.
+                    limitCnt = 30;  // 빗썸의 경우 30개(최대가 30개임)
+                }
+                ask = data.ask.slice(0,limitCnt).reverse() || []   // sell
+                bid = data.bid.slice(0,limitCnt) || []             // buy
 
                 ask.forEach(item => {
                     dynamicText += `

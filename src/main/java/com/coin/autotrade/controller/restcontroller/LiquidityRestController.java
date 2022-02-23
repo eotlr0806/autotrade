@@ -35,7 +35,7 @@ public class LiquidityRestController {
             }else{
                 response.setResponseWithObject(ReturnCode.SUCCESS, liquidity);
             }
-            log.info("[GET LIQUIDITY] Get liquidity list : {}", Utils.getMapper().writeValueAsString(liquidity));
+            log.info("[GET LIQUIDITY] Success get liquidity.");
         }catch(Exception e){
             log.error("[GET LIQUIDITY] Occur error : {} ", e.getMessage());
             response.setResponse(ReturnCode.FAIL);

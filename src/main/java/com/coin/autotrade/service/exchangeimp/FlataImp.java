@@ -256,7 +256,7 @@ public class FlataImp extends AbstractExchange {
 
             /* Start */
             for (int i = 0; i < tickPriceList.size(); i++) {
-                String cnt = String.valueOf(Math.floor(Utils.getRandomDouble((double) fishing.getMinContractCnt(), (double) fishing.getMaxContractCnt()) * UtilsData.TICK_DECIMAL) / UtilsData.TICK_DECIMAL);
+                String cnt     = Utils.getRandomString(fishing.getMinContractCnt(), fishing.getMaxContractCnt());
                 String orderId = ReturnCode.NO_DATA.getValue();
                 if(UtilsData.MODE_BUY.equals(mode)) {
                     orderId = createOrder(BUY, tickPriceList.get(i), cnt, symbol, sessionKey);

@@ -336,6 +336,8 @@ public class Utils {
             abstractExchange = new GateIoImp();
         } else if(UtilsData.LBANK.equals(exchange)){
             abstractExchange = new LbankImp();
+        } else if(UtilsData.DIGIFINEX.equals(exchange)){
+            abstractExchange = new DigifinexImp();
         }
 
         return abstractExchange;

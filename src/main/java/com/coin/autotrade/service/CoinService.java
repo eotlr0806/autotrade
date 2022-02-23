@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.rmi.CORBA.Util;
 import java.math.BigDecimal;
 import java.util.*;
 
@@ -20,27 +21,12 @@ import java.util.*;
 @Slf4j
 public class CoinService {
 
-    /** TODO : Service 어노테이션을 주었기때문에 Spring 이 올라오면서 주입됨.
-     *  그렇기때문에 여러 거래소에 대해서 getOrderBook 을 사용해야 되는데 어떻게 설계를 해야될까...
-      */
     @Autowired
     ExchangeRepository exchangeRepository;
 
     @Autowired
     OrderBookService orderBookService;
 
-    private BithumbImp bithumbImp;
-    private BithumbGlobalImp bithumbGlobalImp;
-    private CoinOneImp coinOneImp;
-    private DcoinImp dcoinImp;
-    private FlataImp flataImp;
-    private FoblGateImp foblGateImp;
-    private KucoinImp kucoinImp;
-    private OkexImp okexImp;
-    private GateIoImp gateIoImp;
-    private LbankImp lbankImp;
-
-    private AbstractExchange abstractExchange;
     private String BUY_CODE  = "BUY";
     private String SELL_CODE = "SELL";
     private Gson gson        = new Gson();
@@ -303,7 +289,6 @@ public class CoinService {
         return returnMap;
     }
 
-
     /**
      * 현재 매도/매수에 대한 최소/최대 호가 조회
      * @param exchange
@@ -340,61 +325,9 @@ public class CoinService {
 
     /** 거래소별 order book 값을 맞춰 가져오게 변경 */
     private String getOrderBookByExchange(Exchange findedEx, String[] coinData) throws Exception{
+        AbstractExchange abstractExchange = Utils.getInstance(findedEx.getExchangeCode());
+        String rowList = abstractExchange.getOrderBook(findedEx, coinData);
 
-        String exchange = findedEx.getExchangeCode();
-        String rowList = null;
-        if(exchange.equals(UtilsData.BITHUMB)){
-            if(bithumbImp == null) {
-                bithumbImp = new BithumbImp();
-            }
-            rowList = bithumbImp.getOrderBook(findedEx, coinData);
-        }else if(exchange.equals(UtilsData.BITHUMB_GLOBAL)){
-            if(bithumbGlobalImp == null) {
-                bithumbGlobalImp = new BithumbGlobalImp();
-            }
-            rowList = bithumbGlobalImp.getOrderBook(findedEx, coinData);
-        }else if(exchange.equals(UtilsData.COINONE)){
-            if(coinOneImp == null) {
-                coinOneImp = new CoinOneImp();
-            }
-            rowList = coinOneImp.getOrderBook(findedEx, coinData);
-        }else if(exchange.equals(UtilsData.DCOIN)){
-            if(dcoinImp == null) {
-                dcoinImp = new DcoinImp();
-            }
-            rowList = dcoinImp.getOrderBook(findedEx, coinData);
-        }else if(exchange.equals(UtilsData.FLATA)){
-            if(flataImp == null) {
-                flataImp = new FlataImp();
-            }
-            rowList = flataImp.getOrderBook(findedEx, coinData);
-        }else if(exchange.equals(UtilsData.FOBLGATE)){
-            if(foblGateImp == null) {
-                foblGateImp = new FoblGateImp();
-            }
-            rowList = foblGateImp.getOrderBook(findedEx, coinData);
-        }else if(exchange.equals(UtilsData.KUCOIN)){
-            if(kucoinImp == null) {
-                kucoinImp = new KucoinImp();
-            }
-            rowList = kucoinImp.getOrderBook(findedEx, coinData);
-        }else if(exchange.equals(UtilsData.OKEX)){
-            if(okexImp == null){
-                okexImp = new OkexImp();
-            }
-            rowList = okexImp.getOrderBook(findedEx, coinData);
-        }else if(exchange.equals(UtilsData.GATEIO)){
-            if(gateIoImp == null){
-                gateIoImp = new GateIoImp();
-            }
-            rowList = gateIoImp.getOrderBook(findedEx, coinData);
-        }else if(exchange.equals(UtilsData.LBANK)){
-            if(lbankImp == null){
-                lbankImp = new LbankImp();
-            }
-            rowList = lbankImp.getOrderBook(findedEx, coinData);
-        }
-        String list = orderBookService.parseOrderBook(findedEx.getExchangeCode(), rowList);
-        return list;
+        return orderBookService.parseOrderBook(findedEx.getExchangeCode(), rowList);
     }
 }
