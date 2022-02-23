@@ -38,7 +38,7 @@ public class RealtimeSyncRestController {
             }else{
                 response.setResponseWithObject(ReturnCode.SUCCESS, realtimeSyncList);
             }
-            log.info("[GET REALTIME SYNC] Get realtime sync success :{}", Utils.getMapper().writeValueAsString(realtimeSyncList));
+            log.info("[GET REALTIME SYNC] Success get realtime sync");
         }catch(Exception e){
             log.error("[GET REALTIME SYNC] {}", e.getMessage());
             e.printStackTrace();

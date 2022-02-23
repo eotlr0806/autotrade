@@ -24,13 +24,9 @@ public class DigifinexImp extends AbstractExchange {
 
     final private String ACCESS_TOKEN   = "access_token";
     final private String SECRET_KEY     = "secret_key";
-
     final private String BUY            = "buy";
     final private String SELL           = "sell";
-
     final private String SUCCESS        = "0";
-    final private String ALREADY_TRADED = "ORDER_NOT_FOUND";
-
     Map<String, String> keyList         = new HashMap<>();
 
     @Override
@@ -106,7 +102,7 @@ public class DigifinexImp extends AbstractExchange {
             String orderId = ReturnCode.NO_DATA.getValue();
             if(!(orderId = createOrder(firstAction,price, cnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){
                 if(createOrder(secondAction,price, cnt, symbol).equals(ReturnCode.NO_DATA.getValue())){          // SELL 모드가 실패 시,
-                    cancelOrder(orderId, symbol);
+                    cancelOrder(orderId);
                 }
             }
         }catch (Exception e){
@@ -161,11 +157,11 @@ public class DigifinexImp extends AbstractExchange {
                 if(!firstOrderId.equals(ReturnCode.NO_DATA.getValue())  || !secondsOrderId.equals(ReturnCode.NO_DATA.getValue())){
                     Thread.sleep(2000);
                     if(!firstOrderId.equals(ReturnCode.NO_DATA.getValue())){
-                        cancelOrder(firstOrderId, symbol);
+                        cancelOrder(firstOrderId);
                     }
                     if(!secondsOrderId.equals(ReturnCode.NO_DATA.getValue())){
                         Thread.sleep(500);
-                        cancelOrder(secondsOrderId, symbol);
+                        cancelOrder(secondsOrderId);
                     }
                 }
             }
@@ -269,7 +265,7 @@ public class DigifinexImp extends AbstractExchange {
                 }
                 // 무조건 일단 취소
                 Thread.sleep(1000);
-                cancelOrder(orderList.get(i).get("order_id"), symbol);
+                cancelOrder(orderList.get(i).get("order_id"));
             }
             log.info("[DIGIFINEX][FISHINGTRADE][END BUY OR SELL TARGET PIECE COIN ]");
         }catch (Exception e){
@@ -346,7 +342,7 @@ public class DigifinexImp extends AbstractExchange {
                     }
 
                     // 베스트 오퍼 체크 작업 이후 기존에 걸었던 매수에 대해 캔슬
-                    cancelOrder(orderId, symbol);
+                    cancelOrder(orderId);
                 }
             }
 
@@ -368,17 +364,14 @@ public class DigifinexImp extends AbstractExchange {
     private String[] getTodayTick(Exchange exchange, String[] coinWithId) throws Exception{
 
         String[] returnRes   = new String[2];
-        String coin          = coinWithId[0];
-        String coinId        = coinWithId[1];
-        String symbol        = getCurrency(exchange, coin, coinId);
-
-        String request       = UtilsData.GATEIO_TICK + "?currency_pair=" + coin + "_" + symbol;
+        String request       = UtilsData.DIGIFINEX_TICK + "?symbol=" + getSymbol(coinWithId, exchange);
         String response      = getHttpMethod(request);
-        JsonArray resArr     = gson.fromJson(response, JsonArray.class);
+        JsonObject object    = gson.fromJson(response, JsonObject.class);
+        JsonArray resArr     = object.get("ticker").getAsJsonArray();
         JsonObject resObj    = resArr.get(0).getAsJsonObject();
 
         BigDecimal current   = resObj.get("last").getAsBigDecimal();    // 현재 값
-        BigDecimal percent   = resObj.get("change_percentage").getAsBigDecimal().divide(new BigDecimal(100),10, BigDecimal.ROUND_UP);
+        BigDecimal percent   = resObj.get("change").getAsBigDecimal().divide(new BigDecimal(100),10, BigDecimal.ROUND_UP);
         BigDecimal open      = current.divide(new BigDecimal(1).add(percent),10, BigDecimal.ROUND_UP);  // 소수점 11번째에서 반올림
 
         returnRes[0] = open.toPlainString();
@@ -532,11 +525,18 @@ public class DigifinexImp extends AbstractExchange {
 
 
     /* DIGIFINEX global 거래 취소 */
-    private int cancelOrder(String orderId, String symbol) {
+    private int cancelOrder(String orderId) {
         int returnValue = ReturnCode.FAIL.getCode();
         try {
-
-            log.info("[DIGIFINEX][CANCEL ORDER] Response orderId:{}", orderId);
+            JsonObject params = new JsonObject();
+            params.addProperty("market","spot");
+            params.addProperty("order_id",orderId);
+            JsonObject returnRes = postHttpMethod(UtilsData.DIGIFINEX_CANCEL_ORDER, params);
+            if(returnRes.get("code").getAsString().equals(SUCCESS)){
+                log.info("[DIGIFINEX][CANCEL ORDER] Success cancel orderId : {} response : {}",orderId, gson.toJson(returnRes));
+            }else{
+                log.error("[DIGIFINEX][CANCEL ORDER] Fail response : {}", gson.toJson(returnRes));
+            }
         }catch (Exception e){
             log.error("[DIGIFINEX][CANCEL ORDER] Error orderId:{}, response:{}",orderId, e.getMessage());
             e.printStackTrace();

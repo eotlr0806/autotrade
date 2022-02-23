@@ -38,7 +38,7 @@ public class AutoTradeRestController {
             }else{
                 response.setResponseWithObject(ReturnCode.SUCCESS, autoList);
             }
-            log.info("[GET AUTOTRADE] Get autotrade success");
+            log.info("[GET AUTOTRADE] Success get autotrade.");
         }catch(Exception e){
             log.error("[GET AUTOTRADE] {}", e.getMessage());
             e.printStackTrace();
