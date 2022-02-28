@@ -101,13 +101,15 @@ public class LbankImp extends AbstractExchange {
                 secondAction = BUY;
             }
 
-            String orderId = ReturnCode.NO_DATA.getValue();
-            if(!(orderId = createOrder(firstAction, price, cnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){   // 매수
+            String firstOrderId  = ReturnCode.NO_DATA.getValue();
+            String secondOrderId = ReturnCode.NO_DATA.getValue();
+            if(!(firstOrderId = createOrder(firstAction, price, cnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){   // 매수
                 Thread.sleep(500);
-                if(createOrder(secondAction,price, cnt, symbol).equals(ReturnCode.NO_DATA.getValue())){            // 매도
-                    cancelOrder(symbol, orderId);   // 매도 실패 시, 매수 취소
-                }
+                secondOrderId = createOrder(secondAction,price, cnt, symbol);
             }
+            cancelOrder(symbol, firstOrderId);
+            cancelOrder(symbol, secondOrderId);
+
         }catch (Exception e){
             returnCode = ReturnCode.FAIL.getCode();
             log.error("[LBANK][AUTOTRADE] Error : {}", e.getMessage());
