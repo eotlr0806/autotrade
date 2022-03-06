@@ -26,7 +26,7 @@ public class OrderBookRestController {
         try{
 
             if(isData(params)){
-                String orders = orderBook.getOrderBook(Long.parseLong(params.get("exchange")), params.get("currency"), params.get("userId"));
+                String orders = orderBook.getOrderBook(Long.parseLong(params.get("exchange")), params.get("currency"));
                 List<String> orderList = new ArrayList<>();
                 orderList.add(orders);
 
