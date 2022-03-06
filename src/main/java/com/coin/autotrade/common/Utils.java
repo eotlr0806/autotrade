@@ -338,6 +338,8 @@ public class Utils {
             abstractExchange = new LbankImp();
         } else if(UtilsData.DIGIFINEX.equals(exchange)){
             abstractExchange = new DigifinexImp();
+        } else if(UtilsData.XTCOM.equals(exchange)){
+            abstractExchange = new XtcomImp();
         }
 
         return abstractExchange;

@@ -15,7 +15,8 @@ const EXCHANGE_LIST = {
     KUCOIN: "KUCOIN",
     OKEX: "OKEX",
     LBANK: "LBANK",
-    DIGIFINEX: "DIGIFINEX"
+    DIGIFINEX: "DIGIFINEX",
+    XTCOM: "XTCOM",
 }
 
 const TRADE_LIST = {
