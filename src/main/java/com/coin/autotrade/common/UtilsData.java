@@ -26,6 +26,7 @@ public class UtilsData {
     public static String GATEIO         = "GATEIO";
     public static String LBANK          = "LBANK";
     public static String DIGIFINEX      = "DIGIFINEX";
+    public static String XTCOM          = "XTCOM";
 
     public static String MODE_RANDOM    = "RANDOM";
     public static String MODE_SELL      = "SELL";
@@ -77,6 +78,11 @@ public class UtilsData {
     public static String DIGIFINEX_TIMESTAMP      = "https://openapi.digifinex.com/v3/time";
     public static String DIGIFINEX_CREATE_ORDER   = "https://openapi.digifinex.com/v3/spot/order/new";
     public static String DIGIFINEX_CANCEL_ORDER   = "https://openapi.digifinex.com/v3/spot/order/cancel";
+
+    public static String XTCOM_ORDERBOOK          = "https://api.xt.com/data/api/v1/getDepth";
+    public static String XTCOM_CREATE_ORDER       = "https://api.xt.com/trade/api/v1/order";
+    public static String XTCOM_CANCEL_ORDER       = "https://api.xt.com/trade/api/v1/cancel";
+    public static String XTCOM_TICK               = "https://api.xt.com/data/api/v1/getTickers";
 
     public static String BITHUMB_URL                    = "https://api.bithumb.com";
     public static String BITHUMB_ORDERBOOK              = "https://api.bithumb.com/public/orderbook";

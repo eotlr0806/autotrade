@@ -30,7 +30,7 @@ public class OrderBookService {
      * Order book list 를 조회하는 메서드
      * @return NO_DATA / FAIL / order list
      */
-    public String getOrderBook(Long exchangeId, String coinData, String userId){
+    public String getOrderBook(Long exchangeId, String coinData){
 
         String returnVal = ReturnCode.NO_DATA.getValue();
 
@@ -70,25 +70,24 @@ public class OrderBookService {
         if(exchange.equals(UtilsData.COINONE)){          // Coinone
             returnValue = data;
         } else if(exchange.equals(UtilsData.FOBLGATE)){  // Foblgate
-            JsonObject dataObj  = gson.fromJson(object.get("data"), JsonObject.class);
-            JsonArray ask       = gson.fromJson(dataObj.get("sellList"), JsonArray.class);
-            JsonArray bid       = gson.fromJson(dataObj.get("buyList"), JsonArray.class);
+            JsonObject dataObj  = object.getAsJsonObject("data");
+            JsonArray ask       = dataObj.get("sellList").getAsJsonArray();
+            JsonArray bid       = dataObj.get("buyList").getAsJsonArray();
             returnValue = setOrderBookDataByJsonArray(ask, bid, "price","amount");
-
         } else if(exchange.equals(UtilsData.BITHUMB)){   // BITHUMB
-            JsonObject dataObj = object.getAsJsonObject("data");
-            JsonArray ask       = gson.fromJson(dataObj.get("asks"), JsonArray.class);
-            JsonArray bid       = gson.fromJson(dataObj.get("bids"), JsonArray.class);
+            JsonObject dataObj = object;
+            if(exchange.equals(UtilsData.BITHUMB)){
+                dataObj = object.getAsJsonObject("data");
+            }
+            JsonArray ask       = dataObj.get("asks").getAsJsonArray();
+            JsonArray bid       = dataObj.get("bids").getAsJsonArray();
+
             returnValue = setOrderBookDataByJsonArray(ask, bid, "price","quantity");
-
-        } else if(exchange.equals(UtilsData.FLATA)){  // Flata - 현재 운영X
-            JsonArray ask = gson.fromJson(object.get("ask"), JsonArray.class);
-            JsonArray bid = gson.fromJson(object.get("bid"), JsonArray.class);
-            returnValue = setOrderBookDataByJsonArray(ask,bid, "px","qty");
-
-        } else if(exchange.equals(UtilsData.DCOIN)
-                        || exchange.equals(UtilsData.BITHUMB_GLOBAL)
-                        || exchange.equals(UtilsData.LBANK)){
+        } else if(exchange.equals(UtilsData.FLATA)) {  // Flata - 현재 운영X
+            JsonArray ask = object.get("ask").getAsJsonArray();
+            JsonArray bid = object.get("bid").getAsJsonArray();
+            returnValue = setOrderBookDataByJsonArray(ask, bid, "px", "qty");
+        } else if(exchange.equals(UtilsData.DCOIN) || exchange.equals(UtilsData.BITHUMB_GLOBAL) || exchange.equals(UtilsData.LBANK)){
             JsonObject dataObj = object.getAsJsonObject("data");
             String[][] ask = null;
             String[][] bid = null;
@@ -105,14 +104,17 @@ public class OrderBookService {
         } else if(exchange.equals(UtilsData.KUCOIN)
                         || exchange.equals(UtilsData.OKEX)
                         || exchange.equals(UtilsData.GATEIO)
-                        || exchange.equals(UtilsData.DIGIFINEX)){
+                        || exchange.equals(UtilsData.DIGIFINEX)
+                        || exchange.equals(UtilsData.XTCOM)){
 
             JsonObject dataObj = null;
             if(exchange.equals(UtilsData.KUCOIN)){
                 dataObj = object.getAsJsonObject("data");
             }else if(exchange.equals(UtilsData.OKEX)){
                 dataObj = object.getAsJsonArray("data").get(0).getAsJsonObject();
-            }else if(exchange.equals(UtilsData.GATEIO) || exchange.equals(UtilsData.DIGIFINEX)){
+            }else if(exchange.equals(UtilsData.GATEIO)
+                    || exchange.equals(UtilsData.DIGIFINEX)
+                    || exchange.equals(UtilsData.XTCOM)){
                 dataObj = object;
             }
 
@@ -143,15 +145,15 @@ public class OrderBookService {
         for(int i=0; i < asks.size(); i++){
             JsonObject askObj = (JsonObject) asks.get(i);
             JsonObject newAsk = new JsonObject();
-            newAsk.addProperty("price", askObj.get(priceKey).toString().replace("\"","") );
-            newAsk.addProperty("qty"  , askObj.get(qtyKey).toString().replace("\"","") );
+            newAsk.addProperty("price", askObj.get(priceKey).getAsString() );
+            newAsk.addProperty("qty"  , askObj.get(qtyKey).getAsString() );
             parseAsk.add(newAsk);
         }
         for(int i=0; i < bids.size(); i++){
             JsonObject bidObj = (JsonObject) bids.get(i);
             JsonObject newBid = new JsonObject();
-            newBid.addProperty("price", bidObj.get(priceKey).toString().replace("\"",""));
-            newBid.addProperty("qty"  , bidObj.get(qtyKey).toString().replace("\"",""));
+            newBid.addProperty("price", bidObj.get(priceKey).getAsString());
+            newBid.addProperty("qty"  , bidObj.get(qtyKey).getAsString());
             parseBid.add(newBid);
         }
         JsonObject returnObj = new JsonObject();
