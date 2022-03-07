@@ -1,9 +1,8 @@
 package com.coin.autotrade.service.exchangeimp;
 
-import com.coin.autotrade.common.HttpRequest;
 import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.common.UtilsData;
-import com.coin.autotrade.common.code.ReturnCode;
+import com.coin.autotrade.common.enumeration.ReturnCode;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
 import com.google.gson.JsonArray;
@@ -12,17 +11,8 @@ import com.lbank.java.api.sdk.response.ResCancelOrderVo;
 import com.lbank.java.api.sdk.response.ResCreateOrderVo;
 import com.lbank.java.api.sdk.service.LBankServiceImpl;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.codec.binary.Hex;
-import org.apache.commons.lang3.StringEscapeUtils;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
-import java.net.URLEncoder;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
 

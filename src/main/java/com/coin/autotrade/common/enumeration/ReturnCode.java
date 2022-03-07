@@ -1,4 +1,4 @@
-package com.coin.autotrade.common.code;
+package com.coin.autotrade.common.enumeration;
 
 public enum ReturnCode {
     SUCCESS(2000,"SUCCESS","Success"),

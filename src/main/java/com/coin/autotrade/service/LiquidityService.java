@@ -2,7 +2,7 @@ package com.coin.autotrade.service;
 
 import com.coin.autotrade.common.UtilsData;
 import com.coin.autotrade.common.Utils;
-import com.coin.autotrade.common.code.ReturnCode;
+import com.coin.autotrade.common.enumeration.ReturnCode;
 import com.coin.autotrade.model.Liquidity;
 import com.coin.autotrade.repository.LiquidityRepository;
 import com.coin.autotrade.service.thread.LiquidityTradeThread;

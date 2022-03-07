@@ -1,7 +1,7 @@
 package com.coin.autotrade.controller;
 
-import com.coin.autotrade.common.code.ReturnCode;
-import com.coin.autotrade.common.code.SessionKey;
+import com.coin.autotrade.common.enumeration.ReturnCode;
+import com.coin.autotrade.common.enumeration.SessionKey;
 import com.coin.autotrade.service.RsaService;
 import com.coin.autotrade.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
