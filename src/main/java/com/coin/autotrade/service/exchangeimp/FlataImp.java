@@ -2,7 +2,7 @@ package com.coin.autotrade.service.exchangeimp;
 
 import com.coin.autotrade.common.UtilsData;
 import com.coin.autotrade.common.Utils;
-import com.coin.autotrade.common.code.ReturnCode;
+import com.coin.autotrade.common.enumeration.ReturnCode;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
 import com.google.gson.JsonArray;
@@ -17,7 +17,6 @@ import java.io.OutputStreamWriter;
 import java.math.BigDecimal;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLEncoder;
 import java.util.*;
 
 @Slf4j

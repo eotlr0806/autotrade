@@ -1,7 +1,7 @@
 package com.coin.autotrade.controller.restcontroller;
 
 import com.coin.autotrade.common.Response;
-import com.coin.autotrade.common.code.ReturnCode;
+import com.coin.autotrade.common.enumeration.ReturnCode;
 import com.coin.autotrade.service.TradeConfigService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -1,6 +1,6 @@
 package com.coin.autotrade.common;
 
-import com.coin.autotrade.common.code.ReturnCode;
+import com.coin.autotrade.common.enumeration.ReturnCode;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import lombok.Getter;

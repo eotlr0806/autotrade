@@ -1,7 +1,7 @@
 package com.coin.autotrade.service;
 
 import com.coin.autotrade.common.Utils;
-import com.coin.autotrade.common.code.ReturnCode;
+import com.coin.autotrade.common.enumeration.ReturnCode;
 import com.coin.autotrade.model.AutoTrade;
 import com.coin.autotrade.model.Fishing;
 import com.coin.autotrade.model.Liquidity;

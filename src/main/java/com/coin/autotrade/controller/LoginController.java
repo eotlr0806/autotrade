@@ -1,6 +1,6 @@
 package com.coin.autotrade.controller;
 
-import com.coin.autotrade.common.code.SessionKey;
+import com.coin.autotrade.common.enumeration.SessionKey;
 import com.coin.autotrade.service.RsaService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;

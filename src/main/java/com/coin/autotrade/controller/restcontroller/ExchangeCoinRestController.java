@@ -2,7 +2,7 @@ package com.coin.autotrade.controller.restcontroller;
 
 import com.coin.autotrade.common.Response;
 import com.coin.autotrade.common.Utils;
-import com.coin.autotrade.common.code.ReturnCode;
+import com.coin.autotrade.common.enumeration.ReturnCode;
 import com.coin.autotrade.model.ExchangeCoin;
 import com.coin.autotrade.service.ExchangeCoinService;
 import com.google.gson.Gson;

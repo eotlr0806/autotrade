@@ -2,21 +2,18 @@ package com.coin.autotrade.service;
 
 import com.coin.autotrade.common.UtilsData;
 import com.coin.autotrade.common.Utils;
-import com.coin.autotrade.common.code.ReturnCode;
+import com.coin.autotrade.common.enumeration.ReturnCode;
 import com.coin.autotrade.model.Exchange;
 import com.coin.autotrade.repository.ExchangeRepository;
 import com.coin.autotrade.service.exchangeimp.AbstractExchange;
-import com.coin.autotrade.service.exchangeimp.DigifinexImp;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.Optional;
 
 @org.springframework.stereotype.Service

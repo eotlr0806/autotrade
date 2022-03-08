@@ -2,7 +2,7 @@ package com.coin.autotrade.service.exchangeimp;
 
 import com.coin.autotrade.common.UtilsData;
 import com.coin.autotrade.common.Utils;
-import com.coin.autotrade.common.code.ReturnCode;
+import com.coin.autotrade.common.enumeration.ReturnCode;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
 import com.google.gson.JsonArray;
@@ -309,9 +309,9 @@ public class FoblGateImp extends AbstractExchange {
             String status        = returnVal.get("status").getAsString();
             if(status.equals(SUCCESS)){
                 returnRes = gson.toJson(returnVal);
-                log.info("[FOBLGATE][GET ORDER BOOK] Response : {}", returnRes);
+                log.info("[FOBLGATE][GET ORDER BOOK] SUCCESS");
             }else{
-                log.error("[FOBLGATE][GET ORDER BOOK] Response:{}", gson.toJson(returnVal));
+                log.error("[FOBLGATE][GET ORDER BOOK] Fail Response:{}", gson.toJson(returnVal));
             }
         }catch (Exception e){
             log.error("[FOBLGATE][GET ORDER BOOK] Error : {}",e.getMessage());

@@ -36,10 +36,8 @@ public class ExchangeCoin {
     @Column(name = "public_key", length= 128)
     private String publicKey;
 
-
     @Column(name = "private_key", length= 128)
     private String privateKey;
-
 
     @Column(name = "exchange_user_id", length= 128)
     private String exchangeUserId;

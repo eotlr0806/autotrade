@@ -2,8 +2,8 @@ package com.coin.autotrade.controller.restcontroller;
 
 import com.coin.autotrade.common.Response;
 import com.coin.autotrade.common.Utils;
-import com.coin.autotrade.common.code.ReturnCode;
-import com.coin.autotrade.common.code.SessionKey;
+import com.coin.autotrade.common.enumeration.ReturnCode;
+import com.coin.autotrade.common.enumeration.SessionKey;
 import com.coin.autotrade.model.AutoTrade;
 import com.coin.autotrade.service.AutoTradeService;
 import com.google.gson.Gson;

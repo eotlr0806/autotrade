@@ -2,13 +2,12 @@ package com.coin.autotrade.service.exchangeimp;
 
 import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.common.UtilsData;
-import com.coin.autotrade.common.code.ReturnCode;
+import com.coin.autotrade.common.enumeration.ReturnCode;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.codec.binary.Hex;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
@@ -22,12 +21,8 @@ import org.apache.http.util.EntityUtils;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import javax.net.ssl.HttpsURLConnection;
-import java.io.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.math.MathContext;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
@@ -36,6 +31,7 @@ public class XtcomImp extends AbstractExchange {
 
     final private String ACCESS_TOKEN   = "access_token";
     final private String SECRET_KEY     = "secret_key";
+    final private String MIN_AMOUNT     = "min_amount";
     final private String BUY            = "buy";
     final private String SELL           = "sell";
     final private String SUCCESS        = "200";
@@ -74,14 +70,26 @@ public class XtcomImp extends AbstractExchange {
             if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1])){
                 keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
                 keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
-
             }
         }
-        log.info("[XTCOM][SET API KEY] First Key setting in instance API:{}, secret:{}",keyList.get(ACCESS_TOKEN), keyList.get(SECRET_KEY));
+
+
         if(keyList.isEmpty()){
             String msg = "There is no match coin. " + Arrays.toString(coinData) + " " + exchange.getExchangeCode();
             throw new Exception(msg);
         }
+        // XTCOM의 경우 min amount 값이 있음.
+        keyList.put(MIN_AMOUNT, getMinAmount(coinData, exchange));
+        log.info("[XTCOM][SET API KEY] First Key setting in instance API:{}, secret:{}, min_Amount:{}",keyList.get(ACCESS_TOKEN), keyList.get(SECRET_KEY), keyList.get(MIN_AMOUNT));
+    }
+
+    // Get min amount
+    private String getMinAmount(String[] coinData, Exchange exchange) throws Exception{
+        JsonObject object = gson.fromJson(getHttpMethod(UtilsData.XTCOM_GET_COININFO), JsonObject.class);
+        String symbol     = getSymbol(coinData, exchange);
+        String minAmount  = object.getAsJsonObject(symbol).get("minAmount").getAsString();
+
+        return minAmount;
     }
 
     /**
@@ -457,9 +465,36 @@ public class XtcomImp extends AbstractExchange {
 
     // 소수점 2번째 자리까지만 보여주도록
     private String roundDownCnt(String cnt) throws Exception{
+
         BigDecimal decimalCnt = new BigDecimal(cnt);
-        BigDecimal setValue   = decimalCnt.setScale(1, BigDecimal.ROUND_DOWN);
+        BigDecimal setValue   = decimalCnt.setScale(getMinAmountLength(), BigDecimal.ROUND_DOWN);
         return setValue.toPlainString();
+    }
+
+    // Get MinCnt
+    private int getMinAmountLength() throws Exception{
+        String minAmount    = new BigDecimal(keyList.get(MIN_AMOUNT)).toPlainString();
+        int returnLength    = -1;
+        int dotLength       = -1;
+
+        for (int i = 0; i < minAmount.length(); i++) {
+            // 소수점 자리수
+            if(Character.compare(minAmount.charAt(i),'1') == 0){
+                if(dotLength == -1){
+                    returnLength = 0;   // 1자리
+                    break;
+                }else{
+                    // 0.01
+                    // 0123
+                    returnLength = i - dotLength;
+                    break;
+                }
+            }else if(Character.compare(minAmount.charAt(i),'.') == 0){
+                dotLength = i;
+            }
+        }
+
+        return returnLength;
     }
 
     private JsonObject postHttpMethod(String url, Map<String, Object> params) {

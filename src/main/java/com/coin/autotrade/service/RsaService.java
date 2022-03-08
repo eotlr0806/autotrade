@@ -1,6 +1,6 @@
 package com.coin.autotrade.service;
 
-import com.coin.autotrade.common.code.SessionKey;
+import com.coin.autotrade.common.enumeration.SessionKey;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.Cipher;

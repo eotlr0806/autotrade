@@ -1,6 +1,6 @@
 package com.coin.autotrade.common;
 
-import com.coin.autotrade.common.code.ReturnCode;
+import com.coin.autotrade.common.enumeration.ReturnCode;
 import com.coin.autotrade.service.exchangeimp.*;
 import com.coin.autotrade.service.thread.AutoTradeThread;
 import com.coin.autotrade.service.thread.FishingTradeThread;
