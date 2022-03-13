@@ -27,6 +27,7 @@ public class UtilsData {
     public static String LBANK          = "LBANK";
     public static String DIGIFINEX      = "DIGIFINEX";
     public static String XTCOM          = "XTCOM";
+    public static String COINSBIT       = "COINSBIT";
 
     public static String MODE_RANDOM    = "RANDOM";
     public static String MODE_SELL      = "SELL";
@@ -102,6 +103,12 @@ public class UtilsData {
     public static String OKEX_ENDPOINT_CREATE_ORDER     = "/api/v5/trade/order";
     public static String OKEX_ENDPOINT_CANCEL_ORDER     = "/api/v5/trade/cancel-order";
 
+    public static String COINSBIT_URL                   = "https://coinsbit.io";
+    public static String COINSBIT_ORDERBOOK             = "/api/v1/public/book";    // params : ?market=ETH_BTC&side=buy
+    public static String COINSBIT_TICK                  = "/api/v1/public/ticker";  // parmas : ?market=ETH_BTC
+    public static String COINSBIT_GET_COININFO          = "/api/v1/public/markets";
+    public static String COINSBIT_CREATE_ORDER          = "/api/v1/order/new";
+    public static String COINSBIT_CANCEL_ORDER          = "/api/v1/order/cancel";
 
     /** Define Variable */
     public static int TIMEOUT_VALUE = 10000;

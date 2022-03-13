@@ -340,6 +340,8 @@ public class Utils {
             abstractExchange = new DigifinexImp();
         } else if(UtilsData.XTCOM.equals(exchange)){
             abstractExchange = new XtcomImp();
+        } else if(UtilsData.COINSBIT.equals(exchange)){
+            abstractExchange = new CoinsBitImp();
         }
 
         return abstractExchange;
