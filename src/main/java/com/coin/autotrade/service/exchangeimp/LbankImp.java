@@ -18,17 +18,11 @@ import java.util.*;
 
 @Slf4j
 public class LbankImp extends AbstractExchange {
-
     final private String USER_ID          = "user_id";
-    final private String API_KET          = "api_key";
-    final private String SECRET_KEY       = "secret_key";
     final private String ALREADY_TRADED   = "10025";
-
     final private String BUY              = "buy";
     final private String SELL             = "sell";
     private LBankServiceImpl service      = null;
-
-
 
     @Override
     public void initClass(AutoTrade autoTrade) throws Exception{

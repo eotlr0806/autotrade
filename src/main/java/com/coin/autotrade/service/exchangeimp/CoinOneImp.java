@@ -30,17 +30,11 @@ import java.util.*;
  */
 @Slf4j
 public class CoinOneImp extends AbstractExchange {
-
-    final private String ACCESS_TOKEN     = "access_token";
-    final private String SECRET_KEY       = "secret_key";
     final private String CANCEL_SUCCESS   = "116";
     final private String SUCCESS          = "0";
     final private int CANCEL_AGAIN        = 5;
     final private String BUY              = "BUY";
     final private String SELL             = "SELL";
-    private Map<String, String> keyList   = new HashMap<>();
-
-
 
     /** 자전 거래를 이용하기위한 초기값 설정 */
     @Override
@@ -75,7 +69,7 @@ public class CoinOneImp extends AbstractExchange {
         // Set token key
         for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
             if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1]) ){
-                keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
+                keyList.put(PUBLIC_KEY, exCoin.getPublicKey());
                 keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
             }
         }
@@ -535,7 +529,7 @@ public class CoinOneImp extends AbstractExchange {
         long nonce = System.currentTimeMillis();;
         JsonObject defaultRequest = new JsonObject();
 
-        defaultRequest.addProperty(ACCESS_TOKEN, keyList.get(ACCESS_TOKEN));
+        defaultRequest.addProperty("access_token", keyList.get(PUBLIC_KEY));
         defaultRequest.addProperty("nonce",System.currentTimeMillis());
         defaultRequest.addProperty("qty",Double.parseDouble(cnt));
         defaultRequest.addProperty("currency",currency);

@@ -28,14 +28,9 @@ import java.util.*;
 
 @Slf4j
 public class XtcomImp extends AbstractExchange {
-
-    final private String ACCESS_TOKEN   = "access_token";
-    final private String SECRET_KEY     = "secret_key";
-    final private String MIN_AMOUNT     = "min_amount";
     final private String BUY            = "buy";
     final private String SELL           = "sell";
     final private String SUCCESS        = "200";
-    Map<String, String> keyList         = new HashMap<>();
 
     @Override
     public void initClass(AutoTrade autoTrade) throws Exception{
@@ -68,7 +63,7 @@ public class XtcomImp extends AbstractExchange {
         // Set token key
         for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
             if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1])){
-                keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
+                keyList.put(PUBLIC_KEY, exCoin.getPublicKey());
                 keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
             }
         }
@@ -80,7 +75,7 @@ public class XtcomImp extends AbstractExchange {
         }
         // XTCOM의 경우 min amount 값이 있음.
         keyList.put(MIN_AMOUNT, getMinAmount(coinData, exchange));
-        log.info("[XTCOM][SET API KEY] First Key setting in instance API:{}, secret:{}, min_Amount:{}",keyList.get(ACCESS_TOKEN), keyList.get(SECRET_KEY), keyList.get(MIN_AMOUNT));
+        log.info("[XTCOM][SET API KEY] First Key setting in instance API:{}, secret:{}, min_Amount:{}",keyList.get(PUBLIC_KEY), keyList.get(SECRET_KEY), keyList.get(MIN_AMOUNT));
     }
 
     // Get min amount
@@ -440,7 +435,7 @@ public class XtcomImp extends AbstractExchange {
         try {
 
             Map<String, Object> map = new HashMap<String, Object>();
-            map.put("accesskey", keyList.get(ACCESS_TOKEN));
+            map.put("accesskey", keyList.get(PUBLIC_KEY));
             map.put("nonce", System.currentTimeMillis());
             map.put("market", symbol);
             map.put("price", price);
@@ -574,7 +569,7 @@ public class XtcomImp extends AbstractExchange {
         int returnValue = ReturnCode.FAIL.getCode();
         try {
             Map<String, Object> map = new HashMap<String, Object>();
-            map.put("accesskey", keyList.get(ACCESS_TOKEN));
+            map.put("accesskey", keyList.get(PUBLIC_KEY));
             map.put("nonce", System.currentTimeMillis());
             map.put("market", symbol);
             map.put("id", orderId);

@@ -21,13 +21,9 @@ import java.util.*;
 
 @Slf4j
 public class DigifinexImp extends AbstractExchange {
-
-    final private String ACCESS_TOKEN   = "access_token";
-    final private String SECRET_KEY     = "secret_key";
     final private String BUY            = "buy";
     final private String SELL           = "sell";
     final private String SUCCESS        = "0";
-    Map<String, String> keyList         = new HashMap<>();
 
     @Override
     public void initClass(AutoTrade autoTrade) throws Exception{
@@ -60,12 +56,12 @@ public class DigifinexImp extends AbstractExchange {
         // Set token key
         for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
             if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1])){
-                keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
+                keyList.put(PUBLIC_KEY, exCoin.getPublicKey());
                 keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
 
             }
         }
-        log.info("[DIGIFINEX][SET API KEY] First Key setting in instance API:{}, secret:{}",keyList.get(ACCESS_TOKEN), keyList.get(SECRET_KEY));
+        log.info("[DIGIFINEX][SET API KEY] First Key setting in instance API:{}, secret:{}",keyList.get(PUBLIC_KEY), keyList.get(SECRET_KEY));
         if(keyList.isEmpty()){
             String msg = "There is no match coin. " + Arrays.toString(coinData) + " " + exchange.getExchangeCode();
             throw new Exception(msg);
@@ -449,7 +445,7 @@ public class DigifinexImp extends AbstractExchange {
             connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
             connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
             // Set Header for OKKE API
-            connection.setRequestProperty("ACCESS-KEY", keyList.get(ACCESS_TOKEN));
+            connection.setRequestProperty("ACCESS-KEY", keyList.get(PUBLIC_KEY));
             connection.setRequestProperty("ACCESS-TIMESTAMP", getTimestamp());
             connection.setRequestProperty("ACCESS-SIGN", sign);
 

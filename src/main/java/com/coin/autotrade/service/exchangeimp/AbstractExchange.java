@@ -28,12 +28,17 @@ public abstract class AbstractExchange {
     /**##############################################################
      * #################### Declaration variable ####################
      * ############################################################## */
-    AutoTrade autoTrade         = null;
-     Liquidity liquidity         = null;
-     Fishing fishing             = null;
-     RealtimeSync realtimeSync   = null;
-     CoinService coinService     = null; // Fishing 시, 사용하기 위한 coin Service class
-     Gson gson                   = new Gson();
+     final protected String PUBLIC_KEY      = "public_key";
+     final protected String SECRET_KEY      = "secret_key";
+     final protected String MIN_AMOUNT      = "min_amount";
+     final protected String API_PASSWORD    = "apiPassword";
+     protected Map<String, String> keyList  = new HashMap<>();
+     AutoTrade autoTrade                    = null;
+     Liquidity liquidity                    = null;
+     Fishing fishing                        = null;
+     RealtimeSync realtimeSync              = null;
+     CoinService coinService                = null; // Fishing 시, 사용하기 위한 coin Service class
+     Gson gson                              = new Gson();
 
 
 
@@ -54,13 +59,6 @@ public abstract class AbstractExchange {
     public abstract int startLiquidity(Map list);
     public abstract int startFishingTrade(Map<String, List> list, int intervalTime);
     public abstract int startRealtimeTrade(JsonObject realtime);
-
-    /**
-     * Order book list 를 조회하는 메서드
-     * @param exchange
-     * @param coinWithId
-     * @return 실패 시, ReturnCode.FAIL / 성공 시, 데이터
-     */
     public abstract String getOrderBook(Exchange exchange, String[] coinWithId);
 
 

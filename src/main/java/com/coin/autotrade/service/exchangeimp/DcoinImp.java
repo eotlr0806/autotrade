@@ -23,15 +23,10 @@ import java.util.*;
 
 @Slf4j
 public class DcoinImp extends AbstractExchange {
-
-    final private String ACCESS_TOKEN         = "apiToken";
-    final private String SECRET_KEY           = "secretKey";
     final private String BUY                  = "BUY";
     final private String SELL                 = "SELL";
     final private String SUCCESS              = "0";
     final private String SUCCESS_CANCEL       = "2";
-    private Map<String, String> keyList       = new HashMap<>();
-
 
     @Override
     public void initClass(AutoTrade autoTrade) throws Exception{
@@ -64,7 +59,7 @@ public class DcoinImp extends AbstractExchange {
         // Set token key
         for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
             if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1]) ){
-                keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
+                keyList.put(PUBLIC_KEY, exCoin.getPublicKey());
                 keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
             }
         }
@@ -405,7 +400,7 @@ public class DcoinImp extends AbstractExchange {
         try {
             // DCoin 의 경우, property 값들이 오름차순으로 입력되야 해서, 공통 함수로 빼기 어려움.
             JsonObject header = new JsonObject();
-            header.addProperty("api_key", keyList.get(ACCESS_TOKEN));
+            header.addProperty("api_key", keyList.get(PUBLIC_KEY));
             header.addProperty("price",   Double.parseDouble(price));
             header.addProperty("side",    side);
             header.addProperty("symbol",  symbol.toLowerCase());
@@ -439,7 +434,7 @@ public class DcoinImp extends AbstractExchange {
         int returnValue = ReturnCode.FAIL.getCode();
         try {
             JsonObject header = new JsonObject();
-            header.addProperty("api_key",  keyList.get(ACCESS_TOKEN));
+            header.addProperty("api_key",  keyList.get(PUBLIC_KEY));
             header.addProperty("order_id", orderId);
             header.addProperty("symbol",   symbol.toLowerCase());
             header.addProperty("sign",     createSign(gson.toJson(header)));

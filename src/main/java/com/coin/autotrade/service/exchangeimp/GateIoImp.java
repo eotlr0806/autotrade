@@ -18,16 +18,11 @@ import java.util.*;
 
 @Slf4j
 public class GateIoImp extends AbstractExchange {
-
-    final private String ACCESS_TOKEN   = "access_token";
-    final private String SECRET_KEY     = "secret_key";
-    final private String API_PASSWORD   = "apiPassword";
     final private String BUY            = "buy";
     final private String SELL           = "sell";
     final private String ORDERBOOK_SIZE = "100";
     final private String ALREADY_TRADED = "ORDER_NOT_FOUND";
     private ApiClient apiClient         = new ApiClient();
-    Map<String, String> keyList         = new HashMap<>();
     private SpotApi spotApi             = null;
 
     @Override
@@ -61,7 +56,7 @@ public class GateIoImp extends AbstractExchange {
         // Set token key
         for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
             if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1])){
-                keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
+                keyList.put(PUBLIC_KEY, exCoin.getPublicKey());
                 keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
                 keyList.put(API_PASSWORD, exCoin.getApiPassword());
                 // Init Gateio API SDK
@@ -70,7 +65,7 @@ public class GateIoImp extends AbstractExchange {
                 spotApi = new SpotApi(apiClient);
             }
         }
-        log.info("[GATEIO][SET API KEY] First Key setting in instance API:{}, secret:{}",keyList.get(ACCESS_TOKEN), keyList.get(SECRET_KEY));
+        log.info("[GATEIO][SET API KEY] First Key setting in instance API:{}, secret:{}",keyList.get(PUBLIC_KEY), keyList.get(SECRET_KEY));
         if(keyList.isEmpty()){
             String msg = "There is no match coin. " + Arrays.toString(coinData) + " " + exchange.getExchangeCode();
             throw new Exception(msg);

@@ -28,6 +28,7 @@ public class UtilsData {
     public static String DIGIFINEX      = "DIGIFINEX";
     public static String XTCOM          = "XTCOM";
     public static String COINSBIT       = "COINSBIT";
+    public static String MEXC           = "MEXC";
 
     public static String MODE_RANDOM    = "RANDOM";
     public static String MODE_SELL      = "SELL";
@@ -109,6 +110,13 @@ public class UtilsData {
     public static String COINSBIT_GET_COININFO          = "/api/v1/public/markets";
     public static String COINSBIT_CREATE_ORDER          = "/api/v1/order/new";
     public static String COINSBIT_CANCEL_ORDER          = "/api/v1/order/cancel";
+
+    public static String MEXC_URL                       = "https://www.mexc.com";
+    public static String MEXC_ORDERBOOK                 = "/open/api/v2/market/depth";    // ?symbol=btc_usdt&depth=10
+    public static String MEXC_CREATE_ORDER              = "/open/api/v2/order/place";
+    public static String MEXC_CANCEL_ORDER              = "/open/api/v2/order/cancel";
+//    public static String XTCOM_TICK               = "https://api.xt.com/data/api/v1/getTickers";
+    public static String MEXC_GET_COININFO              = "https://www.mexc.com/open/api/v2/market/symbols";
 
     /** Define Variable */
     public static int TIMEOUT_VALUE = 10000;

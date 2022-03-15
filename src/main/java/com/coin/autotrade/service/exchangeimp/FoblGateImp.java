@@ -23,15 +23,11 @@ import java.util.*;
 
 @Slf4j
 public class FoblGateImp extends AbstractExchange {
-
-    private String API_KEY               = "apiKey";
-    private String SECRET_KEY            = "secretKey";
     private String USER_ID               = "userId";
     private String SELL                  = "ask";
     private String BUY                   = "bid";
     private String SUCCESS               = "0";
     private String ALREADY_TRADED        = "5004";
-    private Map<String, String> keyList  = new HashMap<>();
 
     /* Foblgate Function initialize for autotrade */
     @Override
@@ -68,11 +64,11 @@ public class FoblGateImp extends AbstractExchange {
         for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
             if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1])){
                 keyList.put(USER_ID,     exCoin.getExchangeUserId());
-                keyList.put(API_KEY,     exCoin.getPublicKey());
+                keyList.put(PUBLIC_KEY,     exCoin.getPublicKey());
                 keyList.put(SECRET_KEY,  exCoin.getPrivateKey());
             }
         }
-        log.info("[FOBLGATE][SET API KEY] First Key setting in instance API:{}, secret:{}",keyList.get(API_KEY), keyList.get(SECRET_KEY));
+        log.info("[FOBLGATE][SET API KEY] First Key setting in instance API:{}, secret:{}",keyList.get(PUBLIC_KEY), keyList.get(SECRET_KEY));
 
         if(keyList.isEmpty()){
             String msg = "There is no match coin. " + Arrays.toString(coinData) + " " + exchange.getExchangeCode();
@@ -301,10 +297,10 @@ public class FoblGateImp extends AbstractExchange {
             String pairName = getSymbol(coinWithId, exchange);
 
             Map<String, String> header = new HashMap<>();
-            header.put("apiKey",keyList.get(API_KEY));
+            header.put("apiKey",keyList.get(PUBLIC_KEY));
             header.put("pairName",pairName);
 
-            String secretHash    = makeApiHash(keyList.get(API_KEY) + pairName + keyList.get(SECRET_KEY));
+            String secretHash    = makeApiHash(keyList.get(PUBLIC_KEY) + pairName + keyList.get(SECRET_KEY));
             JsonObject returnVal = postHttpMethod(UtilsData.FOBLGATE_ORDERBOOK, secretHash, header);
             String status        = returnVal.get("status").getAsString();
             if(status.equals(SUCCESS)){
@@ -415,13 +411,13 @@ public class FoblGateImp extends AbstractExchange {
         String dateCount     = "2";     // 하루치(2일 경우 어제, 3일경우 그제까지 반환)
 
         Map<String, String> header = new HashMap<>();
-        header.put("apiKey",keyList.get(API_KEY));
+        header.put("apiKey",keyList.get(PUBLIC_KEY));
         header.put("pairName",symbol);
         header.put("type",typeDay);
         header.put("min",min);
         header.put("startDateTime",startDateTime);
         header.put("cnt", dateCount);
-        String secretHash    = makeApiHash(keyList.get(API_KEY) + symbol + typeDay + min + startDateTime + dateCount + keyList.get(SECRET_KEY));
+        String secretHash    = makeApiHash(keyList.get(PUBLIC_KEY) + symbol + typeDay + min + startDateTime + dateCount + keyList.get(SECRET_KEY));
         JsonObject returnVal = postHttpMethod(UtilsData.FOBLGATE_TICK, secretHash, header);
         String status        = returnVal.get("status").getAsString();
         if(status.equals(SUCCESS)){
@@ -452,10 +448,10 @@ public class FoblGateImp extends AbstractExchange {
 
         String orderId = ReturnCode.NO_DATA.getValue();
         try{
-            Map<String, String> header = setDefaultRequest(keyList.get(USER_ID), symbol,type,keyList.get(API_KEY));
+            Map<String, String> header = setDefaultRequest(keyList.get(USER_ID), symbol,type,keyList.get(PUBLIC_KEY));
             header.put("price",     price);   // price
             header.put("amount",    cnt);     // cnt
-            String secretHash = makeApiHash(keyList.get(API_KEY) + keyList.get(USER_ID) + symbol + type + price+ cnt+ keyList.get(SECRET_KEY));
+            String secretHash = makeApiHash(keyList.get(PUBLIC_KEY) + keyList.get(USER_ID) + symbol + type + price+ cnt+ keyList.get(SECRET_KEY));
 
             JsonObject returnVal = postHttpMethod(UtilsData.FOBLGATE_CREATE_ORDER, secretHash, header);
             String status        = gson.fromJson(returnVal.get("status"), String.class);
@@ -481,10 +477,10 @@ public class FoblGateImp extends AbstractExchange {
         int returnCode = ReturnCode.FAIL.getCode();
         try{
 
-            Map<String, String> header = setDefaultRequest(keyList.get(USER_ID), symbol, type, keyList.get(API_KEY));
+            Map<String, String> header = setDefaultRequest(keyList.get(USER_ID), symbol, type, keyList.get(PUBLIC_KEY));
             header.put("ordNo",     ordNo);                 // order Id
             header.put("ordPrice",  price);                 // price
-            String secretHash = makeApiHash(keyList.get(API_KEY) + keyList.get(USER_ID) + symbol + ordNo + type + price+ keyList.get(SECRET_KEY));
+            String secretHash = makeApiHash(keyList.get(PUBLIC_KEY) + keyList.get(USER_ID) + symbol + ordNo + type + price+ keyList.get(SECRET_KEY));
 
             JsonObject returnVal = postHttpMethod(UtilsData.FOBLGATE_CANCEL_ORDER, secretHash, header);
             String status        = returnVal.get("status").getAsString();

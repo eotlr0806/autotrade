@@ -23,14 +23,10 @@ import java.util.*;
 
 @Slf4j
 public class BithumbGlobalImp extends AbstractExchange {
-
-    final private String ACCESS_TOKEN   = "access_token";
-    final private String SECRET_KEY     = "secret_key";
     final private String BUY            = "buy";
     final private String SELL           = "sell";
     final private String SUCCESS        = "0";
     final private String SUCCESS_CANCEL = "20012";
-    Map<String, String> keyList         = new HashMap<>();
 
     @Override
     public void initClass(AutoTrade autoTrade) throws Exception{
@@ -63,7 +59,7 @@ public class BithumbGlobalImp extends AbstractExchange {
         // Set token key
         for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
             if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1]) ){
-                keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
+                keyList.put(PUBLIC_KEY, exCoin.getPublicKey());
                 keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
             }
         }
@@ -413,7 +409,7 @@ public class BithumbGlobalImp extends AbstractExchange {
 
         try{
             JsonObject header = new JsonObject();
-            header.addProperty("apiKey",    keyList.get(ACCESS_TOKEN));
+            header.addProperty("apiKey",    keyList.get(PUBLIC_KEY));
             header.addProperty("msgNo",     System.currentTimeMillis());
             header.addProperty("price",     price);
             header.addProperty("quantity",  cnt);
@@ -446,7 +442,7 @@ public class BithumbGlobalImp extends AbstractExchange {
 
         try {
             JsonObject header = new JsonObject();
-            header.addProperty("apiKey",    keyList.get(ACCESS_TOKEN));
+            header.addProperty("apiKey",    keyList.get(PUBLIC_KEY));
             header.addProperty("msgNo",     System.currentTimeMillis());
             header.addProperty("orderId",   orderId);
             header.addProperty("symbol",    symbol);

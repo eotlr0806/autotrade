@@ -23,14 +23,9 @@ import java.util.*;
 
 @Slf4j
 public class CoinsBitImp extends AbstractExchange {
-
-    final private String ACCESS_TOKEN   = "access_token";
-    final private String SECRET_KEY     = "secret_key";
-    final private String MIN_AMOUNT     = "min_amount";
     final private String BUY            = "buy";
     final private String SELL           = "sell";
     final private String ALREADY_CANCEL = "Trade order not found";
-    Map<String, String> keyList         = new HashMap<>();
 
     @Override
     public void initClass(AutoTrade autoTrade) throws Exception{
@@ -63,7 +58,7 @@ public class CoinsBitImp extends AbstractExchange {
         // Set token key
         for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
             if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1])){
-                keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
+                keyList.put(PUBLIC_KEY, exCoin.getPublicKey());
                 keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
             }
         }
@@ -74,7 +69,7 @@ public class CoinsBitImp extends AbstractExchange {
         }
         // XTCOM의 경우 min amount 값이 있음.
         keyList.put(MIN_AMOUNT, getMinAmount(coinData, exchange));
-        log.info("[COINSBIT][SET API KEY] First Key setting in instance API:{}, secret:{}, min_Amount:{}",keyList.get(ACCESS_TOKEN), keyList.get(SECRET_KEY), keyList.get(MIN_AMOUNT));
+        log.info("[COINSBIT][SET API KEY] First Key setting in instance API:{}, secret:{}, min_Amount:{}",keyList.get(PUBLIC_KEY), keyList.get(SECRET_KEY), keyList.get(MIN_AMOUNT));
     }
 
     // Get min amount
@@ -545,7 +540,7 @@ public class CoinsBitImp extends AbstractExchange {
             connection.setRequestMethod("POST");
             connection.setRequestProperty("Content-Type", "application/json");
             connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
-            connection.setRequestProperty("X-TXC-APIKEY",  keyList.get(ACCESS_TOKEN));
+            connection.setRequestProperty("X-TXC-APIKEY",  keyList.get(PUBLIC_KEY));
             connection.setRequestProperty("X-TXC-PAYLOAD", payload);
             connection.setRequestProperty("X-TXC-SIGNATURE", sign);
 

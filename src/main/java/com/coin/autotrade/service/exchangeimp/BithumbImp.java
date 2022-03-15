@@ -1,6 +1,6 @@
 package com.coin.autotrade.service.exchangeimp;
 
-import com.coin.autotrade.common.HttpRequest;
+import com.coin.autotrade.service.BithumbHttpService;
 import com.coin.autotrade.common.UtilsData;
 import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.common.enumeration.ReturnCode;
@@ -25,16 +25,10 @@ import java.util.*;
 
 @Slf4j
 public class BithumbImp extends AbstractExchange {
-
-    final private String ACCESS_TOKEN     = "access_token";
-    final private String SECRET_KEY       = "secret_key";
     final private String ALREADY_TRADED   = "3000";
     final private String SUCCESS          = "0000";
-
     final private String BUY              = "bid";
     final private String SELL             = "ask";
-    Map<String, String> keyList           = new HashMap<>();
-
 
 
     @Override
@@ -68,7 +62,7 @@ public class BithumbImp extends AbstractExchange {
         // Set token key
         for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
             if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1]) ){
-                keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
+                keyList.put(PUBLIC_KEY, exCoin.getPublicKey());
                 keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
             }
         }
@@ -476,7 +470,7 @@ public class BithumbImp extends AbstractExchange {
         String response = ReturnCode.NO_DATA.getValue();
 
         log.info("[BITHUMB][POST HTTP] url : {} , request : {}", targetUrl, rgParams.toString());
-        HttpRequest request = new HttpRequest(targetUrl, "POST");
+        BithumbHttpService request = new BithumbHttpService(targetUrl, "POST");
         request.readTimeout(10000);
         if (httpHeaders != null && !httpHeaders.isEmpty()) {    // setRequestProperty on header
             httpHeaders.put("api-client-type", "2");
@@ -503,7 +497,7 @@ public class BithumbImp extends AbstractExchange {
         String str                    = endpoint + ";"	+ strData + ";" + nNonce;
         String encoded                = asHex(hmacSha512(str, keyList.get(SECRET_KEY)));
 
-        array.put("Api-Key",   keyList.get(ACCESS_TOKEN));
+        array.put("Api-Key",   keyList.get(PUBLIC_KEY));
         array.put("Api-Sign",  encoded);
         array.put("Api-Nonce", nNonce);
 

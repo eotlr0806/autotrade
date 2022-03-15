@@ -22,16 +22,11 @@ import java.util.*;
 
 @Slf4j
 public class OkexImp extends AbstractExchange {
-
-    final private String ACCESS_TOKEN   = "access_token";
-    final private String SECRET_KEY     = "secret_key";
-    final private String API_PASSWORD   = "apiPassword";
     final private String BUY            = "buy";
     final private String SELL           = "sell";
     final private String ORDERBOOK_SIZE = "100";
     final private String SUCCESS        = "0";
     final private String ALREADY_TRADED = "51402";
-    Map<String, String> keyList         = new HashMap<>();
 
     @Override
     public void initClass(AutoTrade autoTrade) throws Exception{
@@ -65,13 +60,13 @@ public class OkexImp extends AbstractExchange {
 
         for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
             if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1])){
-                keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
+                keyList.put(PUBLIC_KEY, exCoin.getPublicKey());
                 keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
                 keyList.put(API_PASSWORD, exCoin.getApiPassword());
             }
         }
 
-        log.info("[OKEX][SET API KEY] First Key setting in instance API:{}, secret:{}, password:{}",keyList.get(ACCESS_TOKEN), keyList.get(SECRET_KEY), keyList.get(API_PASSWORD));
+        log.info("[OKEX][SET API KEY] First Key setting in instance API:{}, secret:{}, password:{}",keyList.get(PUBLIC_KEY), keyList.get(SECRET_KEY), keyList.get(API_PASSWORD));
         if(keyList.isEmpty()){
             String msg = "There is no match coin. " + Arrays.toString(coinData) + " " + exchange.getExchangeCode();
             throw new Exception(msg);
@@ -491,7 +486,7 @@ public class OkexImp extends AbstractExchange {
             connection.setRequestProperty("Content-Type", "application/json");
             connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
             // Set Header for OKKE API
-            connection.setRequestProperty("OK-ACCESS-KEY", keyList.get(ACCESS_TOKEN));
+            connection.setRequestProperty("OK-ACCESS-KEY", keyList.get(PUBLIC_KEY));
             connection.setRequestProperty("OK-ACCESS-SIGN", sign);
             connection.setRequestProperty("OK-ACCESS-TIMESTAMP", currentTime);
             connection.setRequestProperty("OK-ACCESS-PASSPHRASE", keyList.get(API_PASSWORD));
