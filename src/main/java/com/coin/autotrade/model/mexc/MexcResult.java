@@ -1,4 +1,4 @@
-package com.coin.autotrade.common;
+package com.coin.autotrade.model.mexc;
 
 import lombok.Getter;
 import lombok.Setter;

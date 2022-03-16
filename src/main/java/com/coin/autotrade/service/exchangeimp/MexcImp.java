@@ -1,6 +1,6 @@
 package com.coin.autotrade.service.exchangeimp;
 
-import com.coin.autotrade.common.MexcResult;
+import com.coin.autotrade.model.mexc.MexcResult;
 import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.common.UtilsData;
 import com.coin.autotrade.common.enumeration.ReturnCode;
@@ -20,9 +20,6 @@ import okhttp3.*;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -400,16 +397,12 @@ public class MexcImp extends AbstractExchange {
     private String[] getTodayTick(Exchange exchange, String[] coinWithId) throws Exception {
 
         String[] returnRes = new String[2];
-        String url = UtilsData.COINSBIT_URL + UtilsData.COINSBIT_TICK + "?market=" + getSymbol(coinWithId, exchange);
+        String url = UtilsData.MEXC_TICK+ "&symbol=" + getSymbol(coinWithId, exchange);
         JsonObject response = gson.fromJson(getHttpMethod(url), JsonObject.class);
-        JsonObject obj = response.getAsJsonObject("result");
+        JsonArray obj       = response.getAsJsonArray("data").get(0).getAsJsonArray();
 
-        BigDecimal current = obj.get("last").getAsBigDecimal();    // 현재 값
-        BigDecimal percent = obj.get("change").getAsBigDecimal().divide(new BigDecimal(100), 15, BigDecimal.ROUND_UP);
-        BigDecimal open = current.divide(new BigDecimal(1).add(percent), 15, BigDecimal.ROUND_UP);  // 소수점 11번째에서 반올림
-
-        returnRes[0] = open.toPlainString();
-        returnRes[1] = current.toPlainString();
+        returnRes[0] = obj.get(1).getAsString();
+        returnRes[1] = obj.get(2).getAsString();
         log.info("[MEXC][GET TODAY TICK] response : {}", Arrays.toString(returnRes));
 
         return returnRes;
@@ -428,22 +421,6 @@ public class MexcImp extends AbstractExchange {
             e.printStackTrace();
         }
         return returnRes;
-    }
-
-    private JsonArray parseOrderBook(JsonObject obj) throws Exception {
-        JsonArray result = new JsonArray();
-        JsonArray orders = obj.getAsJsonObject("result").getAsJsonArray("orders");
-
-        for (JsonElement element : orders) {
-            JsonObject targetObj = element.getAsJsonObject();
-
-            JsonObject addObj = new JsonObject();
-            addObj.add("price", targetObj.get("price"));
-            addObj.add("quantity", targetObj.get("amount"));
-            result.add(addObj);
-        }
-
-        return result;
     }
 
 
@@ -472,7 +449,6 @@ public class MexcImp extends AbstractExchange {
         return orderId;
     }
 
-    /* XTCOM global 거래 취소 */
     private int cancelOrder(String orderId) {
         int returnValue = ReturnCode.FAIL.getCode();
         try {
