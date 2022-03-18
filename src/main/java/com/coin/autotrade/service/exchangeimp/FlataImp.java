@@ -172,9 +172,9 @@ public class FlataImp extends AbstractExchange {
     public int startLiquidity(Map list){
         int returnCode = ReturnCode.SUCCESS.getCode();
 
-        Queue<String> sellQueue = (LinkedList) list.get("sell");
-        Queue<String> buyQueue  = (LinkedList) list.get("buy");
-        List<Map<String,String>> CancelList = new ArrayList();
+        Queue<String> sellQueue  = (LinkedList) list.get("sell");
+        Queue<String> buyQueue   = (LinkedList) list.get("buy");
+        Queue<String> cancelList = new LinkedList<>();
 
         try{
             log.info("[FLATA][LIQUIDITY] Start");
@@ -182,42 +182,35 @@ public class FlataImp extends AbstractExchange {
             String sessionKey = getSessionKey(coinData, liquidity.getExchange());
             String symbol     = getSymbol(coinData, liquidity.getExchange());
 
-            while(!sellQueue.isEmpty() || !buyQueue.isEmpty()){
-                String mode            = (Utils.getRandomInt(1,2) == 1) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
-                String firstOrderId    = "";
-                String secondsOrderId  = "";
-                String firstPrice      = "";
-                String secondsPrice    = "";
-                String firstAction     = "";
-                String secondAction    = "";
-                String firstCnt        = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
-                String secondsCnt      = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
+            while (!sellQueue.isEmpty() || !buyQueue.isEmpty() || !cancelList.isEmpty()) {
+                String mode           = (Utils.getRandomInt(1, 2) == 1) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
+                boolean cancelFlag    = (Utils.getRandomInt(1, 2) == 1) ? true : false;
+                String orderId        = ReturnCode.NO_DATA.getValue();
+                String price          = "";
+                String action         = "";
+                String cnt            = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
 
-                if(!sellQueue.isEmpty() && !buyQueue.isEmpty() && mode.equals(UtilsData.MODE_BUY)){
-                    firstPrice   = buyQueue.poll();
-                    secondsPrice = sellQueue.poll();
-                    firstAction  = BUY;
-                    secondAction = SELL;
-                }else if(!buyQueue.isEmpty() && !sellQueue.isEmpty() && mode.equals(UtilsData.MODE_SELL)){
-                    firstPrice   = sellQueue.poll();
-                    secondsPrice = buyQueue.poll();
-                    firstAction  = SELL;
-                    secondAction = BUY;
+                if (!buyQueue.isEmpty() && mode.equals(UtilsData.MODE_BUY)) {
+                    price   = buyQueue.poll();
+                    action  = BUY;
+                } else if (!sellQueue.isEmpty() && mode.equals(UtilsData.MODE_SELL)) {
+                    price   = sellQueue.poll();
+                    action  = SELL;
                 }
-                firstOrderId = createOrder(firstAction, firstPrice, firstCnt, symbol, sessionKey);
-                Thread.sleep(300);
-                secondsOrderId = createOrder(secondAction, secondsPrice, secondsCnt, symbol, sessionKey);
+                // 매수 로직
+                if(!action.equals("")){
+                    orderId = createOrder(action, price, cnt, symbol, sessionKey);
+                    if(!orderId.equals(ReturnCode.NO_DATA.getValue())){
+                        cancelList.add(orderId);
+                    }
+                    Thread.sleep(1500);
+                }
 
-                // first / second 둘 중 하나라도 거래가 성사 되었을 경우
-                if(!firstOrderId.equals(ReturnCode.NO_DATA.getValue())  || !secondsOrderId.equals(ReturnCode.NO_DATA.getValue())){
-                    Thread.sleep(1000);
-                    if(!firstOrderId.equals(ReturnCode.NO_DATA.getValue())){
-                        cancelOrder(firstOrderId, sessionKey);
-                    }
-                    Thread.sleep(300);
-                    if(!secondsOrderId.equals(ReturnCode.NO_DATA.getValue())){
-                        cancelOrder(secondsOrderId, sessionKey);
-                    }
+                // 취소 로직
+                if(!cancelList.isEmpty() && cancelFlag){
+                    String cancelId = cancelList.poll();
+                    cancelOrder(cancelId, sessionKey);
+                    Thread.sleep(500);
                 }
             }
         }catch (Exception e){
