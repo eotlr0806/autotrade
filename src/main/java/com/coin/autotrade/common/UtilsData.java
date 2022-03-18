@@ -92,6 +92,7 @@ public class UtilsData {
     public static String BITHUMB_TICK                   = "https://api.bithumb.com/public/ticker";
     public static String BITHUMB_ENDPOINT_CREATE_ORDER  = "/trade/place";
     public static String BITHUMB_ENDPOINT_CANCEL_ORDER  = "/trade/cancel";
+    public static String BITHUMB_ENDPOINT_BALANCE       = "/info/balance";
 
     public static String BITHUMB_GLOBAL_ORDERBOOK       = "https://global-openapi.bithumb.pro/openapi/v1/spot/orderBook";
     public static String BITHUMB_GLOBAL_TICK            = "https://global-openapi.bithumb.pro/openapi/v1/spot/ticker";

@@ -78,6 +78,16 @@ public class MainController {
         return mav;
     }
 
+    /* main/trade_config trading */
+    @GetMapping(value = "/main/trade_action")
+    public ModelAndView tradeAction(HttpServletRequest request) throws Exception{
+        ModelAndView mav = new ModelAndView();
+        mav.setViewName("contents/trade_action");
+        mav.addObject("userId",request.getSession().getAttribute(SessionKey.USER_ID.toString()));
+        return mav;
+    }
+
+
     /* main/trade trading */
     @GetMapping(value = "/main/trade")
     public ModelAndView trade(HttpServletRequest request) throws Exception{

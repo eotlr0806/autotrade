@@ -60,9 +60,14 @@
                                     <a href="#"><i class="icon-stack2"></i> <span>트레이딩</span></a>
                                     <ul class="nav">
                                         <li class="nav-item">
-                                            <a class="nav-link" id="trade_embeded" data-toggle="tab" href="#trade" role="tab">거래</a>
+                                            <a class="nav-link" id="trade_embeded" data-toggle="tab" href="#trade" role="tab">스케줄 거래</a>
                                         </li>
                                     </ul>
+<!--                                    <ul class="nav">-->
+<!--                                        <li class="nav-item">-->
+<!--                                            <a class="nav-link" id="trade_action_embeded" data-toggle="tab" href="#trade_action" role="tab">기본 거래</a>-->
+<!--                                        </li>-->
+<!--                                    </ul>-->
                                 </li>
                                 <li>
                                     <a href="#"><i class="icon-wrench3"></i> <span>운영관리</span></a>
@@ -92,6 +97,10 @@
                 <div class="tab-content">
                     <div class="tab-pane" id="trade" role="tabpanel">
                       <embed id="embed_trade" name="embed_trade" type="text/html"  src="/main/trade" style="width:100%; height:1000px;"></embed>
+                    </div>
+
+                    <div class="tab-pane" id="trade_action" role="tabpanel">
+                        <embed id="embed_trade_action" name="embed_trade_action" type="text/html"  src="/main/trade_action" style="width:100%; height:1000px;"></embed>
                     </div>
 
                     <div class="tab-pane" id="coin_config" role="tabpanel">
@@ -137,23 +146,26 @@
 <script>
     // nav class 가 충돌이나서 사용
     $(document).ready(() => {
-        $(".nav a").on("click", item => {   
-            $(".nav").find(".active").removeClass("active");   
-            $(this).parent().addClass("active"); 
+        $(".nav a").on("click", item => {
+            $(".nav").find(".active").removeClass("active");
+            $(this).parent().addClass("active");
 
             if(item.target.id != 'trade_embeded'){
                 $('#trade').empty();
                 $('#trade').append(`<embed id="embed_trade" name="embed_trade" type="text/html"  src="/main/trade" style="width:100%; height:1000px;"></embed>`);
+            }else if(item.target.id != 'trade_embeded'){
+                $('#trade').empty();
+                $('#trade').append(`<embed id="embed_trade_action" name="embed_trade_action" type="text/html"  src="/main/trade_action" style="width:100%; height:1000px;"></embed>`);
             }else if(item.target.id != 'coin_config_embeded'){
                 $('#coin_config').empty();
-                $('#coin_config').append(`<embed id="embed_coin_config" name="embed_coin_config" type="text/html"  src="/main/coin_config" style="width:100%; height:1000px;"></embed>`);                
+                $('#coin_config').append(`<embed id="embed_coin_config" name="embed_coin_config" type="text/html"  src="/main/coin_config" style="width:100%; height:1000px;"></embed>`);
             }else if(item.target.id != 'trade_config_embeded'){
                 $('#trade_config').empty();
-                $('#trade_config').append(`<embed id="embed_trade_config" name="embed_trade_config" type="text/html"  src="/main/trade_config" style="width:100%; height:1000px;"></embed>`);                
+                $('#trade_config').append(`<embed id="embed_trade_config" name="embed_trade_config" type="text/html"  src="/main/trade_config" style="width:100%; height:1000px;"></embed>`);
             }
 
         });
 
-        $('#trade_embeded').trigger('click'); 
+        $('#trade_embeded').trigger('click');
     })
 </script>
