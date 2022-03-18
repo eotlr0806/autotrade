@@ -12,7 +12,7 @@
 | Digifinex | https://docs.digifinex.com/en-ww/v3/#introduction |
 | GateIO | https://www.gate.io/docs/apiv4/en/#about-apiv4-key-improvement |
 | Ku Coin | https://docs.kucoin.com/#general | 
-| OkEx | https://www.okex.com/docs/en/#README | 
+| OkEx | https://www.okx.com/docs-v5/en/#market-maker-program | 
 | XT Com | https://doc.xt.com/ |
 | CoinsBit | https://www.notion.so/coinsbitwsapi/API-COINSBIT-WS-API-COINSBIT-cf1044cff30646d49a0bab0e28f27a87 |
 | MEXC | https://github.com/mxcdevelop/APIDoc |
