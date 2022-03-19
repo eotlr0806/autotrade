@@ -1,10 +1,12 @@
 package com.coin.autotrade.service.thread;
 
 import com.coin.autotrade.common.BeanUtils;
-import com.coin.autotrade.common.UtilsData;
 import com.coin.autotrade.common.Utils;
+import com.coin.autotrade.common.UtilsData;
+import com.coin.autotrade.common.enumeration.RealTimeSyncType;
 import com.coin.autotrade.model.RealtimeSync;
 import com.coin.autotrade.repository.RealtimeSyncRepository;
+import com.coin.autotrade.service.BithumbHttpService;
 import com.coin.autotrade.service.CoinService;
 import com.coin.autotrade.service.exchangeimp.AbstractExchange;
 import com.google.gson.JsonArray;
@@ -14,9 +16,15 @@ import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.math.BigDecimal;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Base64;
 
 /**
  * Liquidity Trade Thread
@@ -29,8 +37,9 @@ public class RealtimeSyncThread implements Runnable{
     CoinService         coinService;
     RealtimeSyncRepository realtimeSyncRepository;
     AbstractExchange abstractExchange;
-    boolean run                 = true;
-    RealtimeSync realtimeSync   = null;
+    boolean run                           = true;
+    RealtimeSync realtimeSync             = null;
+    private BigDecimal initRealTimeRate   = null;
 
     /**
      * 해당 쓰레드에 필요한 초기값 셋팅
@@ -55,9 +64,15 @@ public class RealtimeSyncThread implements Runnable{
             int intervalTime = 100;
             while(run){
 
-                JsonObject realtime = getRealtimeData(realtimeSync.getSyncCoin());
-                abstractExchange.startRealtimeTrade(realtime);
+                // 업비트 초기화시간인 9시에 맞춰, 8:50 ~ 9:10 까지는 배치가 돌지 않음.
+                boolean sleepTime = isSleepTime();
+                if(!sleepTime){
+                    boolean resetTargetRate = getInitTargetRate();
+                    JsonObject realtime     = getRealtimeData();
+                    setChangeRate(realtime);    // 시작된 시점 기준으로 realtime 을 잡도록.
 
+                    abstractExchange.startRealtimeTrade(realtime, resetTargetRate);  // 해당 데이터에서 사용하는 값은 signed_change_rate
+                }
                 intervalTime = realtimeSync.getSyncTime() * 1000;
                 log.info("[REALTIME SYNC THREAD] Run thread , intervalTime : {} seconds", intervalTime/1000);
                 Thread.sleep(intervalTime);
@@ -71,9 +86,86 @@ public class RealtimeSyncThread implements Runnable{
         }
     }
 
+    private boolean getInitTargetRate() throws Exception {
+        if(initRealTimeRate == null){
+            return true;
+        }else{
+            return false;
+        }
+    }
+
+    private boolean isSleepTime() throws Exception {
+        LocalDateTime nowTime = LocalDateTime.now();
+        log.info("[REALTIME SYNC THREAD] current Time : {} ", nowTime);
+        int nowHour = nowTime.getHour();
+        int nowMin  = nowTime.getMinute();
+        if(nowHour == 8){       // 8:55 ~ 8:59
+            if(nowMin >= 55 && nowMin <= 59){
+                log.info("[REALTIME SYNC THREAD] This is stop time : {} ", nowTime);
+                resetInitRealTimeRate();
+                return true;
+            }
+        }else if(nowHour == 9){ // 9:00 ~ 9:05
+            if(nowMin <= 5){
+                log.info("[REALTIME SYNC THREAD] This is stop time : {} ", nowTime);
+                resetInitRealTimeRate();
+                return true;
+            }
+        }else if(nowHour == 23){    // 23:55 ~ 23:59
+            if(nowMin >= 55 && nowMin <= 59){
+                log.info("[REALTIME SYNC THREAD] This is stop time : {} ", nowTime);
+                resetInitRealTimeRate();
+                return true;
+            }
+        }else if(nowHour == 0){    // 00:00 ~ 00:05
+            if(nowMin <= 5){
+                log.info("[REALTIME SYNC THREAD] This is stop time : {} ", nowTime);
+                resetInitRealTimeRate();
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void resetInitRealTimeRate() throws Exception {
+        if(initRealTimeRate != null){
+            initRealTimeRate = null;
+        }
+    }
+
+    // 시작 한 시점을 시준으로 기준을 잡게 하기 위해 사용
+    private void setChangeRate(JsonObject object) throws Exception {
+        if(initRealTimeRate == null){
+            initRealTimeRate = new BigDecimal(object.get("signed_change_rate").getAsString());
+            if(object.has("signed_change_rate")){
+                object.remove("signed_change_rate");
+                object.addProperty("signed_change_rate","0.00");
+            }
+        }else{
+            // 시작 -3% 현재 -4%, 이동 -1% = current - start ( start > current )
+            // 시작 -3% 현재 -2%, 이동 1%  = current - start ( start < current )
+            // 시작 3%  현재 2% , 이동 -1% = current - start ( start > current )
+            // 시작 3%  현재 4% , 이동 1%  = current - start
+            BigDecimal nowRate  = new BigDecimal(object.get("signed_change_rate").getAsString());
+            BigDecimal moveRate = nowRate.subtract(initRealTimeRate);
+            if(object.has("signed_change_rate")){
+                object.remove("signed_change_rate");
+                object.addProperty("signed_change_rate",moveRate);
+            }
+        }
+    }
+
     // 업비트쪽으로 Get 을 날려 실시간 데이터를 받아 옴.
-    private JsonObject getRealtimeData(String coin) throws Exception{
-        String url = UtilsData.UPBIT_REALTIME + "?markets=" + coin;
+    private JsonObject getRealtimeData() throws Exception{
+
+        String coin = realtimeSync.getSyncCoin();
+        String url = "";
+        if(realtimeSync.getType() == RealTimeSyncType.NOW){   // 실시간
+            url = UtilsData.UPBIT_REALTIME + "?markets=" + coin;
+        }else{
+            url = UtilsData.UPBIT_REALTIME_BEFORE + "?markets=" + coin + "&to=" + makeBeforeTime();
+        }
         log.info("[REALTIME SYNC THREAD] Get realtime data on this url : {}" , url);
 
         URL urlWithParam = new URL(url);
@@ -102,6 +194,20 @@ public class RealtimeSyncThread implements Runnable{
 
         JsonArray returnArr = Utils.getGson().fromJson(response.toString(), JsonArray.class);
         return returnArr.get(0).getAsJsonObject();  // [{ ... }] 형식으로, Arr 안에 1개의 Json만있음.
+    }
+
+    private String makeBeforeTime() throws Exception {
+
+        LocalDateTime now           = LocalDateTime.now();
+        LocalDateTime target        = now.minusHours(realtimeSync.getBeforeTime());
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+        log.info("[REALTIME SYNC THREAD] target before time : {}" , target.toString());
+        String date = target.format(formatter);
+        String url = URLEncoder.encode(date,"UTF-8");
+        log.info("[REALTIME SYNC THREAD] target before time : {}" , url);
+
+        return url;
     }
 
 }

@@ -281,7 +281,7 @@ public class DcoinImp extends AbstractExchange {
      * @param realtime
      * @return
      */
-    public int startRealtimeTrade(JsonObject realtime) {
+    public int startRealtimeTrade(JsonObject realtime, boolean resetFlag) {
         log.info("[DCOIN][REALTIME SYNC TRADE START]");
         int returnCode   = ReturnCode.SUCCESS.getCode();
         String realtimeChangeRate = "signed_change_rate";
@@ -291,7 +291,12 @@ public class DcoinImp extends AbstractExchange {
             boolean isStart      = false;
             String symbol        = getSymbol(Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
             String[] currentTick = getTodayTick(symbol);
-            String openingPrice  = currentTick[0];
+            //            String openingPrice  = currentTick[0];
+            if(resetFlag){
+                realtimeTargetInitRate = currentTick[1];
+            }
+            String openingPrice  = realtimeTargetInitRate;
+
             String currentPrice  = currentTick[1];
             String orderId       = ReturnCode.NO_DATA.getValue();
             String targetPrice   = "";

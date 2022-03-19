@@ -201,6 +201,8 @@
         {title: "베스트오퍼 간격",   orderable: true},
         {title: "가격변동 %",   orderable: true},
 
+        {title: "모드",   orderable: true},
+        {title: "과거시간",   orderable: true},
         {title: "상태",   orderable: true},
         {title: "동작",   orderable: true},
         {title: "삭제",   orderable: true},
@@ -378,6 +380,8 @@
                     innerTrade.push(`${item.minBestofferCnt} ~ ${item.maxBestofferCnt}`);
                     innerTrade.push(item.tickRange);
                     innerTrade.push(item.pricePercent);
+                    innerTrade.push(item.type);
+                    innerTrade.push(item.beforeTime);
                 }
 
                 innerTrade.push(item.status);

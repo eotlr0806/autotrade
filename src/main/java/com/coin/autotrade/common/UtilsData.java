@@ -40,6 +40,7 @@ public class UtilsData {
 
     /************************* DEFINE API URL *************************/
     public static String UPBIT_REALTIME           = "https://api.upbit.com/v1/ticker";  // 실시간 연동 API
+    public static String UPBIT_REALTIME_BEFORE    = "https://api.upbit.com/v1/candles/minutes/1";
 
     public static String COINONE_ORDERBOOK        = "https://api.coinone.co.kr/orderbook";
     public static String COINONE_TICK             = "https://api.coinone.co.kr/ticker_utc";

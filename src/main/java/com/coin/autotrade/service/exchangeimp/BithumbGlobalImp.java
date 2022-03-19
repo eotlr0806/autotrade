@@ -28,6 +28,7 @@ public class BithumbGlobalImp extends AbstractExchange {
     final private String SUCCESS        = "0";
     final private String SUCCESS_CANCEL = "20012";
 
+
     @Override
     public void initClass(AutoTrade autoTrade) throws Exception{
         super.autoTrade = autoTrade;
@@ -272,7 +273,7 @@ public class BithumbGlobalImp extends AbstractExchange {
     }
 
     @Override
-    public int startRealtimeTrade(JsonObject realtime) {
+    public int startRealtimeTrade(JsonObject realtime, boolean resetFlag) {
         log.info("[BITHUMBGLOBAL][REALTIME SYNC TRADE] START");
         int returnCode   = ReturnCode.SUCCESS.getCode();
         String realtimeChangeRate = "signed_change_rate";
@@ -282,7 +283,11 @@ public class BithumbGlobalImp extends AbstractExchange {
             boolean isStart      = false;
             String symbol        = getSymbol(Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
             String[] currentTick = getTodayTick(symbol);
-            String openingPrice  = currentTick[0];
+//            String openingPrice  = currentTick[0];
+            if(resetFlag){
+                realtimeTargetInitRate = currentTick[1];
+            }
+            String openingPrice  = realtimeTargetInitRate;
             String currentPrice  = currentTick[1];
             String orderId       = ReturnCode.NO_DATA.getValue();
             String targetPrice   = "";

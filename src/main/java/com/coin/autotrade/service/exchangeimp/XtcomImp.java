@@ -295,7 +295,7 @@ public class XtcomImp extends AbstractExchange {
      * @param realtime
      * @return
      */
-    public int startRealtimeTrade(JsonObject realtime) {
+    public int startRealtimeTrade(JsonObject realtime, boolean resetFlag) {
         log.info("[XTCOM][REALTIME SYNC TRADE] START");
         int returnCode   = ReturnCode.SUCCESS.getCode();
         String realtimeChangeRate = "signed_change_rate";
@@ -304,7 +304,12 @@ public class XtcomImp extends AbstractExchange {
             boolean isStart      = false;
             String symbol        = getSymbol(Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
             String[] currentTick = getTodayTick(realtimeSync.getExchange(), Utils.splitCoinWithId(realtimeSync.getCoin()));
-            String openingPrice  = currentTick[0];
+            //            String openingPrice  = currentTick[0];
+            if(resetFlag){
+                realtimeTargetInitRate = currentTick[1];
+            }
+            String openingPrice  = realtimeTargetInitRate;
+
             String currentPrice  = currentTick[1];
             String orderId       = ReturnCode.NO_DATA.getValue();
             String targetPrice   = "";
