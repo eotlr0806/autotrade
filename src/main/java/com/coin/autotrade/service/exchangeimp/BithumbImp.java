@@ -124,49 +124,47 @@ public class BithumbImp extends AbstractExchange {
 
         Queue<String> sellQueue = (LinkedList) list.get("sell");
         Queue<String> buyQueue  = (LinkedList) list.get("buy");
-        List<Map<String,String>> CancelList = new ArrayList();
+        Queue<Map<String,String>> cancelList = new LinkedList<>();
 
         try{
             log.info("[BITHUMB][LIQUIDITY] START");
             String[] coinData = Utils.splitCoinWithId(liquidity.getCoin());
             String currency   = getCurrency(liquidity.getExchange(), coinData[0], coinData[1]);
 
-            while(!sellQueue.isEmpty() || !buyQueue.isEmpty()){
-                String mode            = (Utils.getRandomInt(1,2) == 1) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
-                String firstOrderId    = ReturnCode.NO_DATA.getValue();
-                String secondsOrderId  = ReturnCode.NO_DATA.getValue();
-                String firstPrice      = "";
-                String secondsPrice    = "";
-                String firstAction     = "";
-                String secondAction    = "";
-                String firstCnt        = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
-                String secondsCnt      = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
+            while (!sellQueue.isEmpty() || !buyQueue.isEmpty() || !cancelList.isEmpty()) {
+                String mode           = (Utils.getRandomInt(1, 2) == 1) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
+                boolean cancelFlag    = (Utils.getRandomInt(1, 2) == 1) ? true : false;
+                String orderId        = ReturnCode.NO_DATA.getValue();
+                String price          = "";
+                String action         = "";
+                String cnt            = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
 
-                if(!sellQueue.isEmpty() && !buyQueue.isEmpty() && mode.equals(UtilsData.MODE_BUY)){
-                    firstPrice   = buyQueue.poll();
-                    secondsPrice = sellQueue.poll();
-                    firstAction  = BUY;
-                    secondAction = SELL;
-                }else if(!buyQueue.isEmpty() && !sellQueue.isEmpty() && mode.equals(UtilsData.MODE_SELL)){
-                    firstPrice   = sellQueue.poll();
-                    secondsPrice = buyQueue.poll();
-                    firstAction  = SELL;
-                    secondAction = BUY;
+                if(!buyQueue.isEmpty() && mode.equals(UtilsData.MODE_BUY)){
+                    price   = buyQueue.poll();
+                    action  = BUY;
+                }else if(!sellQueue.isEmpty() && mode.equals(UtilsData.MODE_SELL)){
+                    price   = sellQueue.poll();
+                    action  = SELL;
                 }
-                firstOrderId   = createOrder(firstAction, firstPrice, firstCnt,  coinData[0],currency);
-                Thread.sleep(300);
-                secondsOrderId = createOrder(secondAction, secondsPrice, secondsCnt,  coinData[0],currency);
 
-                // first / second 둘 중 하나라도 거래가 성사 되었을 경우
-                Thread.sleep(1000);
-                if(!firstOrderId.equals(ReturnCode.NO_DATA.getValue())  || !secondsOrderId.equals(ReturnCode.NO_DATA.getValue())){
-                    if(!firstOrderId.equals(ReturnCode.NO_DATA.getValue())){
-                        cancelOrder(firstAction,  firstOrderId, coinData[0],currency);
+                // 매수 로직
+                if(!action.equals("")){
+                    orderId = createOrder(action, price, cnt, coinData[0], currency);
+                    if(!orderId.equals(ReturnCode.NO_DATA.getValue())){
+                        Map<String, String> cancel = new HashMap<>();
+                        cancel.put("orderId", orderId);
+                        cancel.put("action",  action);
+                        cancelList.add(cancel);
                     }
-                    Thread.sleep(300);
-                    if(!secondsOrderId.equals(ReturnCode.NO_DATA.getValue())){
-                        cancelOrder(secondAction, secondsOrderId,coinData[0],currency);
-                    }
+                    Thread.sleep(1000);
+                }
+                // 취소 로직
+                if(!cancelList.isEmpty() && cancelFlag){
+                    Map<String, String> cancelMap = cancelList.poll();
+                    String cancelId               = cancelMap.get("orderId");
+                    String cancelAction           = cancelMap.get("action");
+                    cancelOrder(cancelAction,  cancelId, coinData[0], currency);
+                    Thread.sleep(500);
                 }
             }
         }catch (Exception e){
