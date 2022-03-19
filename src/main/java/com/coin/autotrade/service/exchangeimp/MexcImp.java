@@ -318,10 +318,12 @@ public class MexcImp extends AbstractExchange {
             //            String openingPrice  = currentTick[0];
             if(resetFlag){
                 realtimeTargetInitRate = currentTick[1];
+                log.info("[MEXC][REALTIME SYNC TRADE] Set init open rate : {} ", realtimeTargetInitRate);
             }
             String openingPrice  = realtimeTargetInitRate;
-
             String currentPrice = currentTick[1];
+            log.info("[MEXC][REALTIME SYNC TRADE] open:{}, current:{} ", openingPrice, currentPrice);
+
             String orderId = ReturnCode.NO_DATA.getValue();
             String targetPrice = "";
             String action = "";
@@ -401,7 +403,6 @@ public class MexcImp extends AbstractExchange {
 
         returnRes[0] = obj.get(1).getAsString();
         returnRes[1] = obj.get(2).getAsString();
-        log.info("[MEXC][GET TODAY TICK] response : {}", Arrays.toString(returnRes));
 
         return returnRes;
     }

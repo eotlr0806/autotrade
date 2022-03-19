@@ -334,10 +334,12 @@ public class FoblGateImp extends AbstractExchange {
             //            String openingPrice  = currentTick[0];
             if(resetFlag){
                 realtimeTargetInitRate = currentTick[1];
+                log.info("[FOBLGATE][REALTIME SYNC TRADE] Set init open rate : {} ", realtimeTargetInitRate);
             }
             String openingPrice  = realtimeTargetInitRate;
-
             String currentPrice  = currentTick[1];
+            log.info("[FOBLGATE][REALTIME SYNC TRADE] open:{}, current:{} ", openingPrice, currentPrice);
+
             String orderId       = ReturnCode.NO_DATA.getValue();
             String targetPrice   = "";
             String action        = "";
@@ -432,7 +434,6 @@ public class FoblGateImp extends AbstractExchange {
             JsonArray array   = object.get("series").getAsJsonArray();
             returnRes[0]      = array.get(0).getAsString().split("\\|")[4];  // 전날의 종가가 오늘의 시가
             returnRes[1]      = array.get(1).getAsString().split("\\|")[4];  // 현재의 종가(현재가)
-            log.info("[FOBLGATE][GET TODAY TICK] Response : {}", Arrays.toString(returnRes));
         }else{
             log.error("[FOBLGATE][GET TODAY TICK] Response:{}", gson.toJson(returnVal));
             throw new Exception(gson.toJson(returnVal));

@@ -307,10 +307,12 @@ public class XtcomImp extends AbstractExchange {
             //            String openingPrice  = currentTick[0];
             if(resetFlag){
                 realtimeTargetInitRate = currentTick[1];
+                log.info("[XTCOM][REALTIME SYNC TRADE] Set init open rate : {} ", realtimeTargetInitRate);
             }
             String openingPrice  = realtimeTargetInitRate;
-
             String currentPrice  = currentTick[1];
+            log.info("[XTCOM][REALTIME SYNC TRADE] open:{}, current:{} ", openingPrice, currentPrice);
+
             String orderId       = ReturnCode.NO_DATA.getValue();
             String targetPrice   = "";
             String action        = "";
@@ -395,7 +397,6 @@ public class XtcomImp extends AbstractExchange {
 
         returnRes[0] = open.toPlainString();
         returnRes[1] = current.toPlainString();
-        log.info("[XTCOM][GET TODAY TICK] response : {}", Arrays.toString(returnRes));
 
         return returnRes;
     }

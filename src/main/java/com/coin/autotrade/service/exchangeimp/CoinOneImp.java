@@ -307,10 +307,12 @@ public class CoinOneImp extends AbstractExchange {
             //            String openingPrice  = currentTick[0];
             if(resetFlag){
                 realtimeTargetInitRate = currentTick[1];
+                log.info("[COINONE][REALTIME SYNC TRADE] Set init open rate : {} ", realtimeTargetInitRate);
             }
             String openingPrice  = realtimeTargetInitRate;
-
             String currentPrice  = currentTick[1];
+            log.info("[COINONE][REALTIME SYNC TRADE] open:{}, current:{} ", openingPrice, currentPrice);
+
             String orderId       = ReturnCode.NO_DATA.getValue();
             String targetPrice   = "";
             String action        = "";
@@ -400,7 +402,6 @@ public class CoinOneImp extends AbstractExchange {
         if(SUCCESS.equals(returnCode)){
             returnRes[0] = resObject.get("yesterday_last").getAsString();
             returnRes[1] = resObject.get("last").getAsString();
-            log.info("[COINONE][GET TODAY TICK] response : {}", Arrays.toString(returnRes));
         }else{
             log.error("[COINONE][GET TODAY TICK] response : {}", response);
             throw new Exception(response);

@@ -175,7 +175,7 @@ public abstract class AbstractExchange {
 
         // 최대매수 호가 혹은 최대 매도 호가와 타겟 가격이 동일해졌다면 베스트 오퍼 예약
         if(expectedTargetTick.compareTo(targetPriceBigDecimal) == 0){
-            log.info("[REALTIME SYNC] Target tick is same to real tick. target:{}, real:{}", targetPriceBigDecimal, expectedTargetTick);
+            log.info("[REALTIME SYNC] Target tick is the same with real tick. So make bestoffer. target:{}, real:{}", targetPriceBigDecimal, expectedTargetTick);
             int limitCheckTick               = realtimeSync.getTickCnt();
             BigDecimal tickRangeDecimal      = new BigDecimal(realtimeSync.getTickRange());
             List<String> tradePriceList      = new ArrayList<>();
@@ -187,6 +187,7 @@ public abstract class AbstractExchange {
                     bestofferForTrade = targetPriceBigDecimal.add(new BigDecimal(i).multiply(tickRangeDecimal));
                 }
                 boolean isTrade = true;
+                // 이미 해당 가격에 물량이 있을 경우 pass
                 for (int j = 0; j < tickArray.size(); j++) {
                     String tickPrice = tickArray.get(j).getAsJsonObject().get("price").getAsString();
                     BigDecimal existedBestofferInTrade = new BigDecimal(tickPrice);

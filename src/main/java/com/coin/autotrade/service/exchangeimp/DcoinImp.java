@@ -294,10 +294,12 @@ public class DcoinImp extends AbstractExchange {
             //            String openingPrice  = currentTick[0];
             if(resetFlag){
                 realtimeTargetInitRate = currentTick[1];
+                log.info("[DCOIN][REALTIME SYNC TRADE] Set init open rate : {} ", realtimeTargetInitRate);
             }
             String openingPrice  = realtimeTargetInitRate;
-
             String currentPrice  = currentTick[1];
+            log.info("[DCOIN][REALTIME SYNC TRADE] open:{}, current:{} ", openingPrice, currentPrice);
+
             String orderId       = ReturnCode.NO_DATA.getValue();
             String targetPrice   = "";
             String action        = "";
@@ -373,7 +375,6 @@ public class DcoinImp extends AbstractExchange {
         if(SUCCESS.equals(returnCode)){
             returnRes[0] = resObject.get("data").getAsJsonObject().get("open").getAsString();
             returnRes[1] = resObject.get("data").getAsJsonObject().get("close").getAsString();
-            log.info("[DCOIN][GET TODAY TICK] response : {}", Arrays.toString(returnRes));
         }else{
             log.error("[DCOIN][GET TODAY TICK] response : {}", response);
             throw new Exception(response);

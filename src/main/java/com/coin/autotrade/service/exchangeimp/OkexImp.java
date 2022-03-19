@@ -274,7 +274,7 @@ public class OkexImp extends AbstractExchange {
 
     @Override
     public int startRealtimeTrade(JsonObject realtime, boolean resetFlag) {
-        log.info("[BITHUMB][REALTIME SYNC TRADE] START");
+        log.info("[OKEX][REALTIME SYNC TRADE] START");
         int returnCode   = ReturnCode.SUCCESS.getCode();
         String realtimeChangeRate = "signed_change_rate";
 
@@ -286,10 +286,12 @@ public class OkexImp extends AbstractExchange {
             //            String openingPrice  = currentTick[0];
             if(resetFlag){
                 realtimeTargetInitRate = currentTick[1];
+                log.info("[OKEX][REALTIME SYNC TRADE] Set init open rate : {} ", realtimeTargetInitRate);
             }
             String openingPrice  = realtimeTargetInitRate;
-
             String currentPrice  = currentTick[1];
+            log.info("[OKEX][REALTIME SYNC TRADE] open:{}, current:{} ", openingPrice, currentPrice);
+
             String orderId       = ReturnCode.NO_DATA.getValue();
             String targetPrice   = "";
             String action        = "";
@@ -334,17 +336,17 @@ public class OkexImp extends AbstractExchange {
                         String bestofferOrderId = ReturnCode.NO_DATA.getValue();
 
                         if( !(bestofferOrderId = createOrder(action, bestofferPrice, bestofferCnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){
-                            log.info("[BITHUMB][REALTIME SYNC] Bestoffer is setted. price:{}, cnt:{}", bestofferPrice, bestofferCnt);
+                            log.info("[OKEX][REALTIME SYNC] Bestoffer is setted. price:{}, cnt:{}", bestofferPrice, bestofferCnt);
                         }
                     }
                     cancelOrder(orderId, symbol);
                 }
             }
         }catch (Exception e){
-            log.error("[BITHUMB][REALTIME SYNC TRADE] Error :{} ", e.getMessage());
+            log.error("[OKEX][REALTIME SYNC TRADE] Error :{} ", e.getMessage());
             e.printStackTrace();
         }
-        log.info("[BITHUMB][REALTIME SYNC TRADE] END");
+        log.info("[OKEX][REALTIME SYNC TRADE] END");
         return returnCode;
     }
 
@@ -369,13 +371,12 @@ public class OkexImp extends AbstractExchange {
             if(symbol.equals(symbolId)){
                 returnRes[0]    = object.get("sodUtc0").getAsString();
                 returnRes[1]    = object.get("last").getAsString();
-                log.info("[OKEX][GET TODAY TICK] response : {}", Arrays.toString(returnRes));
                 break;
             }
         }
 
         if(returnRes[0] == null && returnRes[1] == null){
-            log.error("[BITHUMB][GET TODAY TICK] response : {}", response);
+            log.error("[OKEX][GET TODAY TICK] response : {}", response);
             throw new Exception(response);
         }
 

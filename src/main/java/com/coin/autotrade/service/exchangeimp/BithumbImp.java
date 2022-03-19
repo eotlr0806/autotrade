@@ -301,10 +301,12 @@ public class BithumbImp extends AbstractExchange {
             //            String openingPrice  = currentTick[0];
             if(resetFlag){
                 realtimeTargetInitRate = currentTick[1];
+                log.info("[BITHUMB][REALTIME SYNC TRADE] Set init open rate : {} ", realtimeTargetInitRate);
             }
             String openingPrice  = realtimeTargetInitRate;
-
             String currentPrice  = currentTick[1];
+            log.info("[BITHUMB][REALTIME SYNC TRADE] open:{}, current:{} ", openingPrice, currentPrice);
+
             String orderId       = ReturnCode.NO_DATA.getValue();
             String targetPrice   = "";
             String action        = "";
@@ -382,7 +384,6 @@ public class BithumbImp extends AbstractExchange {
             JsonObject data = resObject.get("data").getAsJsonObject();
             returnRes[0]    = data.get("prev_closing_price").getAsString();
             returnRes[1]    = data.get("closing_price").getAsString();
-            log.info("[BITHUMB][GET TODAY TICK] response : {}", Arrays.toString(returnRes));
         }else{
             log.error("[BITHUMB][GET TODAY TICK] response : {}", response);
             throw new Exception(response);

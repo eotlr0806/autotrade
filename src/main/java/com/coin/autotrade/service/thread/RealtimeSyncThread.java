@@ -142,6 +142,7 @@ public class RealtimeSyncThread implements Runnable{
                 object.remove("signed_change_rate");
                 object.addProperty("signed_change_rate","0.00");
             }
+            log.info("[REALTIME SYNC THREAD] Set init realtime rate : {} ", initRealTimeRate);
         }else{
             // 시작 -3% 현재 -4%, 이동 -1% = current - start ( start > current )
             // 시작 -3% 현재 -2%, 이동 1%  = current - start ( start < current )
@@ -153,6 +154,7 @@ public class RealtimeSyncThread implements Runnable{
                 object.remove("signed_change_rate");
                 object.addProperty("signed_change_rate",moveRate);
             }
+            log.info("[REALTIME SYNC THREAD] realtime init:{}, now:{}, move:{} ",initRealTimeRate, nowRate, moveRate);
         }
     }
 
@@ -164,7 +166,7 @@ public class RealtimeSyncThread implements Runnable{
         if(realtimeSync.getType() == RealTimeSyncType.NOW){   // 실시간
             url = UtilsData.UPBIT_REALTIME + "?markets=" + coin;
         }else{
-            url = UtilsData.UPBIT_REALTIME_BEFORE + "?markets=" + coin + "&to=" + makeBeforeTime();
+            url = UtilsData.UPBIT_REALTIME_BEFORE + "?market=" + coin + "&to=" + makeBeforeTime();
         }
         log.info("[REALTIME SYNC THREAD] Get realtime data on this url : {}" , url);
 
@@ -193,21 +195,32 @@ public class RealtimeSyncThread implements Runnable{
         }
 
         JsonArray returnArr = Utils.getGson().fromJson(response.toString(), JsonArray.class);
-        return returnArr.get(0).getAsJsonObject();  // [{ ... }] 형식으로, Arr 안에 1개의 Json만있음.
+
+        if(realtimeSync.getType() == RealTimeSyncType.NOW){   // 실시간
+            return returnArr.get(0).getAsJsonObject();  // [{ ... }] 형식으로, Arr 안에 1개의 Json만있음.
+        }else{
+            return makeBeforeRealTime(returnArr.get(0).getAsJsonObject());
+        }
     }
 
     private String makeBeforeTime() throws Exception {
-
-        LocalDateTime now           = LocalDateTime.now();
-        LocalDateTime target        = now.minusHours(realtimeSync.getBeforeTime());
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
-        log.info("[REALTIME SYNC THREAD] target before time : {}" , target.toString());
-        String date = target.format(formatter);
-        String url = URLEncoder.encode(date,"UTF-8");
-        log.info("[REALTIME SYNC THREAD] target before time : {}" , url);
-
+        LocalDateTime target = LocalDateTime.now().minusHours(realtimeSync.getBeforeTime());
+        String date          = target.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        log.info("[REALTIME SYNC THREAD] target before time : {}" , date);
+        String url           = URLEncoder.encode(date,"UTF-8");
         return url;
+    }
+
+    private JsonObject makeBeforeRealTime(JsonObject object) throws Exception{
+        JsonObject returnObj = new JsonObject();
+
+        BigDecimal openingDecimalPrice = new BigDecimal(object.get("opening_price").getAsString());   // 시가
+        BigDecimal currentDecimalPrice = new BigDecimal(object.get("trade_price").getAsString());     // 종가
+        BigDecimal differencePrice     = currentDecimalPrice.subtract(openingDecimalPrice);     // 현재가 - 시가
+        BigDecimal differencePercent   = differencePrice.divide(openingDecimalPrice, 15, BigDecimal.ROUND_CEILING); // 시가 대비 현재가 증가 및 감소율
+
+        returnObj.addProperty("signed_change_rate", differencePercent.toPlainString());
+        return returnObj;
     }
 
 }
