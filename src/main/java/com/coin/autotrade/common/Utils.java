@@ -342,6 +342,8 @@ public class Utils {
             abstractExchange = new XtcomImp();
         } else if(UtilsData.COINSBIT.equals(exchange)){
             abstractExchange = new CoinsBitImp();
+        } else if(UtilsData.MEXC.equals(exchange)){
+            abstractExchange = new MexcImp();
         }
 
         return abstractExchange;

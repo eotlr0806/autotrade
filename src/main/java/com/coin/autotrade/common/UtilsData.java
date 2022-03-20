@@ -28,6 +28,7 @@ public class UtilsData {
     public static String DIGIFINEX      = "DIGIFINEX";
     public static String XTCOM          = "XTCOM";
     public static String COINSBIT       = "COINSBIT";
+    public static String MEXC           = "MEXC";
 
     public static String MODE_RANDOM    = "RANDOM";
     public static String MODE_SELL      = "SELL";
@@ -39,6 +40,7 @@ public class UtilsData {
 
     /************************* DEFINE API URL *************************/
     public static String UPBIT_REALTIME           = "https://api.upbit.com/v1/ticker";  // 실시간 연동 API
+    public static String UPBIT_REALTIME_BEFORE    = "https://api.upbit.com/v1/candles/minutes/1";
 
     public static String COINONE_ORDERBOOK        = "https://api.coinone.co.kr/orderbook";
     public static String COINONE_TICK             = "https://api.coinone.co.kr/ticker_utc";
@@ -91,6 +93,7 @@ public class UtilsData {
     public static String BITHUMB_TICK                   = "https://api.bithumb.com/public/ticker";
     public static String BITHUMB_ENDPOINT_CREATE_ORDER  = "/trade/place";
     public static String BITHUMB_ENDPOINT_CANCEL_ORDER  = "/trade/cancel";
+    public static String BITHUMB_ENDPOINT_BALANCE       = "/info/balance";
 
     public static String BITHUMB_GLOBAL_ORDERBOOK       = "https://global-openapi.bithumb.pro/openapi/v1/spot/orderBook";
     public static String BITHUMB_GLOBAL_TICK            = "https://global-openapi.bithumb.pro/openapi/v1/spot/ticker";
@@ -109,6 +112,13 @@ public class UtilsData {
     public static String COINSBIT_GET_COININFO          = "/api/v1/public/markets";
     public static String COINSBIT_CREATE_ORDER          = "/api/v1/order/new";
     public static String COINSBIT_CANCEL_ORDER          = "/api/v1/order/cancel";
+
+    public static String MEXC_URL                       = "https://www.mexc.com";
+    public static String MEXC_ORDERBOOK                 = "/open/api/v2/market/depth";    // ?symbol=btc_usdt&depth=10
+    public static String MEXC_CREATE_ORDER              = "/open/api/v2/order/place";
+    public static String MEXC_CANCEL_ORDER              = "/open/api/v2/order/cancel";
+    public static String MEXC_TICK                      = "https://www.mexc.com/open/api/v2/market/kline?interval=1d&limit=1";
+    public static String MEXC_GET_COININFO              = "https://www.mexc.com/open/api/v2/market/symbols";
 
     /** Define Variable */
     public static int TIMEOUT_VALUE = 10000;

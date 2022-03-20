@@ -22,16 +22,11 @@ import java.util.*;
 
 @Slf4j
 public class OkexImp extends AbstractExchange {
-
-    final private String ACCESS_TOKEN   = "access_token";
-    final private String SECRET_KEY     = "secret_key";
-    final private String API_PASSWORD   = "apiPassword";
     final private String BUY            = "buy";
     final private String SELL           = "sell";
     final private String ORDERBOOK_SIZE = "100";
     final private String SUCCESS        = "0";
     final private String ALREADY_TRADED = "51402";
-    Map<String, String> keyList         = new HashMap<>();
 
     @Override
     public void initClass(AutoTrade autoTrade) throws Exception{
@@ -65,13 +60,13 @@ public class OkexImp extends AbstractExchange {
 
         for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
             if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1])){
-                keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
+                keyList.put(PUBLIC_KEY, exCoin.getPublicKey());
                 keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
                 keyList.put(API_PASSWORD, exCoin.getApiPassword());
             }
         }
 
-        log.info("[OKEX][SET API KEY] First Key setting in instance API:{}, secret:{}, password:{}",keyList.get(ACCESS_TOKEN), keyList.get(SECRET_KEY), keyList.get(API_PASSWORD));
+        log.info("[OKEX][SET API KEY] First Key setting in instance API:{}, secret:{}, password:{}",keyList.get(PUBLIC_KEY), keyList.get(SECRET_KEY), keyList.get(API_PASSWORD));
         if(keyList.isEmpty()){
             String msg = "There is no match coin. " + Arrays.toString(coinData) + " " + exchange.getExchangeCode();
             throw new Exception(msg);
@@ -126,50 +121,43 @@ public class OkexImp extends AbstractExchange {
     public int startLiquidity(Map list){
         int returnCode = ReturnCode.SUCCESS.getCode();
 
-        Queue<String> sellQueue = (LinkedList) list.get("sell");
-        Queue<String> buyQueue  = (LinkedList) list.get("buy");
-        List<Map<String,String>> CancelList = new ArrayList();
+        Queue<String> sellQueue  = (LinkedList) list.get("sell");
+        Queue<String> buyQueue   = (LinkedList) list.get("buy");
+        Queue<String> cancelList = new LinkedList<>();
 
         try{
             log.info("[OKEX][LIQUIDITY] START");
             String symbol     = getSymbol(Utils.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
 
-            while(!sellQueue.isEmpty() || !buyQueue.isEmpty()){
-                String randomMode = (Utils.getRandomInt(1,2) == 1) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
-                String firstOrderId    = ReturnCode.NO_DATA.getValue();
-                String secondsOrderId  = ReturnCode.NO_DATA.getValue();
-                String firstPrice      = "";
-                String secondsPrice    = "";
-                String firstAction     = "";
-                String secondAction    = "";
-                String firstCnt        = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
-                String secondsCnt      = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
+            while (!sellQueue.isEmpty() || !buyQueue.isEmpty() || !cancelList.isEmpty()) {
+                String mode           = (Utils.getRandomInt(1, 2) == 1) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
+                boolean cancelFlag    = (Utils.getRandomInt(1, 2) == 1) ? true : false;
+                String orderId        = ReturnCode.NO_DATA.getValue();
+                String price          = "";
+                String action         = "";
+                String cnt            = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
 
-                if(!sellQueue.isEmpty() && !buyQueue.isEmpty() && randomMode.equals(UtilsData.MODE_BUY)){
-                    firstPrice   = buyQueue.poll();
-                    secondsPrice = sellQueue.poll();
-                    firstAction  = BUY;
-                    secondAction = SELL;
-                }else if(!buyQueue.isEmpty() && !sellQueue.isEmpty() && randomMode.equals(UtilsData.MODE_SELL)){
-                    firstPrice   = sellQueue.poll();
-                    secondsPrice = buyQueue.poll();
-                    firstAction  = SELL;
-                    secondAction = BUY;
+                if (!buyQueue.isEmpty() && mode.equals(UtilsData.MODE_BUY)) {
+                    price   = buyQueue.poll();
+                    action  = BUY;
+                } else if (!sellQueue.isEmpty() && mode.equals(UtilsData.MODE_SELL)) {
+                    price   = sellQueue.poll();
+                    action  = SELL;
                 }
-                firstOrderId   = createOrder(firstAction, firstPrice, firstCnt, symbol);
-                Thread.sleep(300);
-                secondsOrderId = createOrder(secondAction, secondsPrice, secondsCnt, symbol);
-
-                // first / second 둘 중 하나라도 거래가 성사 되었을 경우
-                if(!firstOrderId.equals(ReturnCode.NO_DATA.getValue())  || !secondsOrderId.equals(ReturnCode.NO_DATA.getValue())){
+                // 매수 로직
+                if(!action.equals("")){
+                    orderId = createOrder(action, price, cnt, symbol);
+                    if(!orderId.equals(ReturnCode.NO_DATA.getValue())){
+                        cancelList.add(orderId);
+                    }
                     Thread.sleep(1000);
-                    if(!firstOrderId.equals(ReturnCode.NO_DATA.getValue())){
-                        cancelOrder(firstOrderId, symbol);
-                    }
-                    if(!secondsOrderId.equals(ReturnCode.NO_DATA.getValue())){
-                        Thread.sleep(300);
-                        cancelOrder(secondsOrderId, symbol);
-                    }
+                }
+
+                // 취소 로직
+                if(!cancelList.isEmpty() && cancelFlag){
+                    String cancelId = cancelList.poll();
+                    cancelOrder(cancelId, symbol);
+                    Thread.sleep(500);
                 }
             }
         }catch (Exception e){
@@ -285,8 +273,8 @@ public class OkexImp extends AbstractExchange {
     }
 
     @Override
-    public int startRealtimeTrade(JsonObject realtime) {
-        log.info("[BITHUMB][REALTIME SYNC TRADE] START");
+    public int startRealtimeTrade(JsonObject realtime, boolean resetFlag) {
+        log.info("[OKEX][REALTIME SYNC TRADE] START");
         int returnCode   = ReturnCode.SUCCESS.getCode();
         String realtimeChangeRate = "signed_change_rate";
 
@@ -295,8 +283,15 @@ public class OkexImp extends AbstractExchange {
             boolean isStart      = false;
             String symbol        = getSymbol(Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
             String[] currentTick = getTodayTick(symbol);
-            String openingPrice  = currentTick[0];
+            //            String openingPrice  = currentTick[0];
+            if(resetFlag){
+                realtimeTargetInitRate = currentTick[1];
+                log.info("[OKEX][REALTIME SYNC TRADE] Set init open rate : {} ", realtimeTargetInitRate);
+            }
+            String openingPrice  = realtimeTargetInitRate;
             String currentPrice  = currentTick[1];
+            log.info("[OKEX][REALTIME SYNC TRADE] open:{}, current:{} ", openingPrice, currentPrice);
+
             String orderId       = ReturnCode.NO_DATA.getValue();
             String targetPrice   = "";
             String action        = "";
@@ -341,17 +336,17 @@ public class OkexImp extends AbstractExchange {
                         String bestofferOrderId = ReturnCode.NO_DATA.getValue();
 
                         if( !(bestofferOrderId = createOrder(action, bestofferPrice, bestofferCnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){
-                            log.info("[BITHUMB][REALTIME SYNC] Bestoffer is setted. price:{}, cnt:{}", bestofferPrice, bestofferCnt);
+                            log.info("[OKEX][REALTIME SYNC] Bestoffer is setted. price:{}, cnt:{}", bestofferPrice, bestofferCnt);
                         }
                     }
                     cancelOrder(orderId, symbol);
                 }
             }
         }catch (Exception e){
-            log.error("[BITHUMB][REALTIME SYNC TRADE] Error :{} ", e.getMessage());
+            log.error("[OKEX][REALTIME SYNC TRADE] Error :{} ", e.getMessage());
             e.printStackTrace();
         }
-        log.info("[BITHUMB][REALTIME SYNC TRADE] END");
+        log.info("[OKEX][REALTIME SYNC TRADE] END");
         return returnCode;
     }
 
@@ -376,13 +371,12 @@ public class OkexImp extends AbstractExchange {
             if(symbol.equals(symbolId)){
                 returnRes[0]    = object.get("sodUtc0").getAsString();
                 returnRes[1]    = object.get("last").getAsString();
-                log.info("[OKEX][GET TODAY TICK] response : {}", Arrays.toString(returnRes));
                 break;
             }
         }
 
         if(returnRes[0] == null && returnRes[1] == null){
-            log.error("[BITHUMB][GET TODAY TICK] response : {}", response);
+            log.error("[OKEX][GET TODAY TICK] response : {}", response);
             throw new Exception(response);
         }
 
@@ -491,7 +485,7 @@ public class OkexImp extends AbstractExchange {
             connection.setRequestProperty("Content-Type", "application/json");
             connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
             // Set Header for OKKE API
-            connection.setRequestProperty("OK-ACCESS-KEY", keyList.get(ACCESS_TOKEN));
+            connection.setRequestProperty("OK-ACCESS-KEY", keyList.get(PUBLIC_KEY));
             connection.setRequestProperty("OK-ACCESS-SIGN", sign);
             connection.setRequestProperty("OK-ACCESS-TIMESTAMP", currentTime);
             connection.setRequestProperty("OK-ACCESS-PASSPHRASE", keyList.get(API_PASSWORD));

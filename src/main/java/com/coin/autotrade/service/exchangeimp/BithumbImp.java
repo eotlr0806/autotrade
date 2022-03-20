@@ -1,6 +1,6 @@
 package com.coin.autotrade.service.exchangeimp;
 
-import com.coin.autotrade.common.HttpRequest;
+import com.coin.autotrade.service.BithumbHttpService;
 import com.coin.autotrade.common.UtilsData;
 import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.common.enumeration.ReturnCode;
@@ -25,16 +25,10 @@ import java.util.*;
 
 @Slf4j
 public class BithumbImp extends AbstractExchange {
-
-    final private String ACCESS_TOKEN     = "access_token";
-    final private String SECRET_KEY       = "secret_key";
     final private String ALREADY_TRADED   = "3000";
     final private String SUCCESS          = "0000";
-
     final private String BUY              = "bid";
     final private String SELL             = "ask";
-    Map<String, String> keyList           = new HashMap<>();
-
 
 
     @Override
@@ -68,7 +62,7 @@ public class BithumbImp extends AbstractExchange {
         // Set token key
         for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
             if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1]) ){
-                keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
+                keyList.put(PUBLIC_KEY, exCoin.getPublicKey());
                 keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
             }
         }
@@ -130,49 +124,47 @@ public class BithumbImp extends AbstractExchange {
 
         Queue<String> sellQueue = (LinkedList) list.get("sell");
         Queue<String> buyQueue  = (LinkedList) list.get("buy");
-        List<Map<String,String>> CancelList = new ArrayList();
+        Queue<Map<String,String>> cancelList = new LinkedList<>();
 
         try{
             log.info("[BITHUMB][LIQUIDITY] START");
             String[] coinData = Utils.splitCoinWithId(liquidity.getCoin());
             String currency   = getCurrency(liquidity.getExchange(), coinData[0], coinData[1]);
 
-            while(!sellQueue.isEmpty() || !buyQueue.isEmpty()){
-                String mode            = (Utils.getRandomInt(1,2) == 1) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
-                String firstOrderId    = ReturnCode.NO_DATA.getValue();
-                String secondsOrderId  = ReturnCode.NO_DATA.getValue();
-                String firstPrice      = "";
-                String secondsPrice    = "";
-                String firstAction     = "";
-                String secondAction    = "";
-                String firstCnt        = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
-                String secondsCnt      = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
+            while (!sellQueue.isEmpty() || !buyQueue.isEmpty() || !cancelList.isEmpty()) {
+                String mode           = (Utils.getRandomInt(1, 2) == 1) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
+                boolean cancelFlag    = (Utils.getRandomInt(1, 2) == 1) ? true : false;
+                String orderId        = ReturnCode.NO_DATA.getValue();
+                String price          = "";
+                String action         = "";
+                String cnt            = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
 
-                if(!sellQueue.isEmpty() && !buyQueue.isEmpty() && mode.equals(UtilsData.MODE_BUY)){
-                    firstPrice   = buyQueue.poll();
-                    secondsPrice = sellQueue.poll();
-                    firstAction  = BUY;
-                    secondAction = SELL;
-                }else if(!buyQueue.isEmpty() && !sellQueue.isEmpty() && mode.equals(UtilsData.MODE_SELL)){
-                    firstPrice   = sellQueue.poll();
-                    secondsPrice = buyQueue.poll();
-                    firstAction  = SELL;
-                    secondAction = BUY;
+                if(!buyQueue.isEmpty() && mode.equals(UtilsData.MODE_BUY)){
+                    price   = buyQueue.poll();
+                    action  = BUY;
+                }else if(!sellQueue.isEmpty() && mode.equals(UtilsData.MODE_SELL)){
+                    price   = sellQueue.poll();
+                    action  = SELL;
                 }
-                firstOrderId   = createOrder(firstAction, firstPrice, firstCnt,  coinData[0],currency);
-                Thread.sleep(300);
-                secondsOrderId = createOrder(secondAction, secondsPrice, secondsCnt,  coinData[0],currency);
 
-                // first / second 둘 중 하나라도 거래가 성사 되었을 경우
-                Thread.sleep(1000);
-                if(!firstOrderId.equals(ReturnCode.NO_DATA.getValue())  || !secondsOrderId.equals(ReturnCode.NO_DATA.getValue())){
-                    if(!firstOrderId.equals(ReturnCode.NO_DATA.getValue())){
-                        cancelOrder(firstAction,  firstOrderId, coinData[0],currency);
+                // 매수 로직
+                if(!action.equals("")){
+                    orderId = createOrder(action, price, cnt, coinData[0], currency);
+                    if(!orderId.equals(ReturnCode.NO_DATA.getValue())){
+                        Map<String, String> cancel = new HashMap<>();
+                        cancel.put("orderId", orderId);
+                        cancel.put("action",  action);
+                        cancelList.add(cancel);
                     }
-                    Thread.sleep(300);
-                    if(!secondsOrderId.equals(ReturnCode.NO_DATA.getValue())){
-                        cancelOrder(secondAction, secondsOrderId,coinData[0],currency);
-                    }
+                    Thread.sleep(1000);
+                }
+                // 취소 로직
+                if(!cancelList.isEmpty() && cancelFlag){
+                    Map<String, String> cancelMap = cancelList.poll();
+                    String cancelId               = cancelMap.get("orderId");
+                    String cancelAction           = cancelMap.get("action");
+                    cancelOrder(cancelAction,  cancelId, coinData[0], currency);
+                    Thread.sleep(500);
                 }
             }
         }catch (Exception e){
@@ -294,7 +286,7 @@ public class BithumbImp extends AbstractExchange {
 
 
     @Override
-    public int startRealtimeTrade(JsonObject realtime) {
+    public int startRealtimeTrade(JsonObject realtime, boolean resetFlag) {
         log.info("[BITHUMB][REALTIME SYNC TRADE] START");
         int returnCode   = ReturnCode.SUCCESS.getCode();
         String realtimeChangeRate = "signed_change_rate";
@@ -306,8 +298,15 @@ public class BithumbImp extends AbstractExchange {
             String currency      = getCurrency(realtimeSync.getExchange(), coinWithId[0], coinWithId[1]);
             String symbol        = getSymbol(coinWithId, realtimeSync.getExchange());
             String[] currentTick = getTodayTick();
-            String openingPrice  = currentTick[0];
+            //            String openingPrice  = currentTick[0];
+            if(resetFlag){
+                realtimeTargetInitRate = currentTick[1];
+                log.info("[BITHUMB][REALTIME SYNC TRADE] Set init open rate : {} ", realtimeTargetInitRate);
+            }
+            String openingPrice  = realtimeTargetInitRate;
             String currentPrice  = currentTick[1];
+            log.info("[BITHUMB][REALTIME SYNC TRADE] open:{}, current:{} ", openingPrice, currentPrice);
+
             String orderId       = ReturnCode.NO_DATA.getValue();
             String targetPrice   = "";
             String action        = "";
@@ -385,7 +384,6 @@ public class BithumbImp extends AbstractExchange {
             JsonObject data = resObject.get("data").getAsJsonObject();
             returnRes[0]    = data.get("prev_closing_price").getAsString();
             returnRes[1]    = data.get("closing_price").getAsString();
-            log.info("[BITHUMB][GET TODAY TICK] response : {}", Arrays.toString(returnRes));
         }else{
             log.error("[BITHUMB][GET TODAY TICK] response : {}", response);
             throw new Exception(response);
@@ -476,7 +474,7 @@ public class BithumbImp extends AbstractExchange {
         String response = ReturnCode.NO_DATA.getValue();
 
         log.info("[BITHUMB][POST HTTP] url : {} , request : {}", targetUrl, rgParams.toString());
-        HttpRequest request = new HttpRequest(targetUrl, "POST");
+        BithumbHttpService request = new BithumbHttpService(targetUrl, "POST");
         request.readTimeout(10000);
         if (httpHeaders != null && !httpHeaders.isEmpty()) {    // setRequestProperty on header
             httpHeaders.put("api-client-type", "2");
@@ -503,7 +501,7 @@ public class BithumbImp extends AbstractExchange {
         String str                    = endpoint + ";"	+ strData + ";" + nNonce;
         String encoded                = asHex(hmacSha512(str, keyList.get(SECRET_KEY)));
 
-        array.put("Api-Key",   keyList.get(ACCESS_TOKEN));
+        array.put("Api-Key",   keyList.get(PUBLIC_KEY));
         array.put("Api-Sign",  encoded);
         array.put("Api-Nonce", nNonce);
 

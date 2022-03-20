@@ -28,12 +28,18 @@ public abstract class AbstractExchange {
     /**##############################################################
      * #################### Declaration variable ####################
      * ############################################################## */
-    AutoTrade autoTrade         = null;
-     Liquidity liquidity         = null;
-     Fishing fishing             = null;
-     RealtimeSync realtimeSync   = null;
-     CoinService coinService     = null; // Fishing 시, 사용하기 위한 coin Service class
-     Gson gson                   = new Gson();
+     final protected String PUBLIC_KEY      = "public_key";
+     final protected String SECRET_KEY      = "secret_key";
+     final protected String MIN_AMOUNT      = "min_amount";
+     final protected String API_PASSWORD    = "apiPassword";
+     protected Map<String, String> keyList  = new HashMap<>();
+     AutoTrade autoTrade                    = null;
+     Liquidity liquidity                    = null;
+     Fishing fishing                        = null;
+     RealtimeSync realtimeSync              = null;
+     CoinService coinService                = null; // Fishing 시, 사용하기 위한 coin Service class
+     String realtimeTargetInitRate          = null; // realtime 에서 사용하는 실시간 동기화 타겟의 최초 현재 값
+     Gson gson                              = new Gson();
 
 
 
@@ -53,14 +59,7 @@ public abstract class AbstractExchange {
     public abstract int startAutoTrade(String price, String cnt);
     public abstract int startLiquidity(Map list);
     public abstract int startFishingTrade(Map<String, List> list, int intervalTime);
-    public abstract int startRealtimeTrade(JsonObject realtime);
-
-    /**
-     * Order book list 를 조회하는 메서드
-     * @param exchange
-     * @param coinWithId
-     * @return 실패 시, ReturnCode.FAIL / 성공 시, 데이터
-     */
+    public abstract int startRealtimeTrade(JsonObject realtime, boolean resetFlag);
     public abstract String getOrderBook(Exchange exchange, String[] coinWithId);
 
 
@@ -110,8 +109,7 @@ public abstract class AbstractExchange {
         BigDecimal syncPercent             = new BigDecimal(realtimeSync.getPricePercent()); // 1~100 까지의 %값
         BigDecimal realtimeTargetPercent   = realtimeDecimalPercent.multiply(syncPercent).divide(new BigDecimal(100),roundUpScale, BigDecimal.ROUND_CEILING); // 실시간 연동 코인 증감률 * 설정 값
 
-        // 소수점 2번째 자리가 같을 경우 패스 ex) 1.9 == 1.1 같은 선상이라고 보고, 패스함.
-        // 추가적으로 -0.3은 -1 로 취급
+        // 소수점 2번째 자리가 같을 경우 패스 ex) 1.009 == 1.001 같은 선상이라고 보고, 패스함.
         BigDecimal realtimeTargetPercentFloor = realtimeTargetPercent.setScale(4, BigDecimal.ROUND_FLOOR);
         BigDecimal differencePercentFloor     = differencePercent.setScale(4, BigDecimal.ROUND_FLOOR);
         if(realtimeTargetPercentFloor.compareTo(differencePercentFloor) != 0){  // 두개의 차이가 같은 구간이 아닐 경우
@@ -177,7 +175,7 @@ public abstract class AbstractExchange {
 
         // 최대매수 호가 혹은 최대 매도 호가와 타겟 가격이 동일해졌다면 베스트 오퍼 예약
         if(expectedTargetTick.compareTo(targetPriceBigDecimal) == 0){
-            log.info("[REALTIME SYNC] Target tick is same to real tick. target:{}, real:{}", targetPriceBigDecimal, expectedTargetTick);
+            log.info("[REALTIME SYNC] Target tick is the same with real tick. So make bestoffer. target:{}, real:{}", targetPriceBigDecimal, expectedTargetTick);
             int limitCheckTick               = realtimeSync.getTickCnt();
             BigDecimal tickRangeDecimal      = new BigDecimal(realtimeSync.getTickRange());
             List<String> tradePriceList      = new ArrayList<>();
@@ -189,6 +187,7 @@ public abstract class AbstractExchange {
                     bestofferForTrade = targetPriceBigDecimal.add(new BigDecimal(i).multiply(tickRangeDecimal));
                 }
                 boolean isTrade = true;
+                // 이미 해당 가격에 물량이 있을 경우 pass
                 for (int j = 0; j < tickArray.size(); j++) {
                     String tickPrice = tickArray.get(j).getAsJsonObject().get("price").getAsString();
                     BigDecimal existedBestofferInTrade = new BigDecimal(tickPrice);
