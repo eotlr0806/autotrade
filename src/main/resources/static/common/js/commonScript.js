@@ -17,7 +17,8 @@ const EXCHANGE_LIST = {
     LBANK: "LBANK",
     DIGIFINEX: "DIGIFINEX",
     XTCOM: "XTCOM",
-    COINSBIT: "COINSBIT"
+    COINSBIT: "COINSBIT",
+    MEXC: "MEXC",
 }
 
 const TRADE_LIST = {

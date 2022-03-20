@@ -26,6 +26,8 @@ dependencies {
     implementation 'com.google.code.gson:gson'
     implementation 'commons-codec:commons-codec:1.10'
     implementation 'org.apache.httpcomponents:httpclient:4.5.2'
+    implementation 'com.squareup.okhttp3:okhttp:3.6.0'
+
     // import libs directory's libraries when building project
     implementation fileTree(dir: 'libs', include: ['*.jar'])
 

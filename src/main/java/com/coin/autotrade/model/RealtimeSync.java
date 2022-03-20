@@ -1,5 +1,6 @@
 package com.coin.autotrade.model;
 
+import com.coin.autotrade.common.enumeration.RealTimeSyncType;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.DynamicUpdate;
@@ -66,4 +67,12 @@ public class RealtimeSync {
 
     @Column
     private String date;
+
+    @Column(name = "type")
+    @Enumerated(EnumType.STRING)
+    private RealTimeSyncType type;
+
+    @Column(name = "before_time")
+    private Integer beforeTime;
+
 }

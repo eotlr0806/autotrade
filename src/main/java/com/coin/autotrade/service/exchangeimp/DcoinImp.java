@@ -23,15 +23,10 @@ import java.util.*;
 
 @Slf4j
 public class DcoinImp extends AbstractExchange {
-
-    final private String ACCESS_TOKEN         = "apiToken";
-    final private String SECRET_KEY           = "secretKey";
     final private String BUY                  = "BUY";
     final private String SELL                 = "SELL";
     final private String SUCCESS              = "0";
     final private String SUCCESS_CANCEL       = "2";
-    private Map<String, String> keyList       = new HashMap<>();
-
 
     @Override
     public void initClass(AutoTrade autoTrade) throws Exception{
@@ -64,7 +59,7 @@ public class DcoinImp extends AbstractExchange {
         // Set token key
         for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
             if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1]) ){
-                keyList.put(ACCESS_TOKEN, exCoin.getPublicKey());
+                keyList.put(PUBLIC_KEY, exCoin.getPublicKey());
                 keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
             }
         }
@@ -121,51 +116,43 @@ public class DcoinImp extends AbstractExchange {
     public int startLiquidity(Map list){
         int returnCode = ReturnCode.SUCCESS.getCode();
 
-        Queue<String> sellQueue = (LinkedList) list.get("sell");
-        Queue<String> buyQueue  = (LinkedList) list.get("buy");
-        List<Map<String,String>> CancelList = new ArrayList();
+        Queue<String> sellQueue  = (LinkedList) list.get("sell");
+        Queue<String> buyQueue   = (LinkedList) list.get("buy");
+        Queue<String> cancelList = new LinkedList<>();
 
         try{
             log.info("[DCOIN][LIQUIDITY] START");
             String symbol = getSymbol(Utils.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
 
-            while(!sellQueue.isEmpty() || !buyQueue.isEmpty()){
-                String mode = (Utils.getRandomInt(1,2) == 1) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
-                String firstOrderId    = ReturnCode.NO_DATA.getValue();
-                String secondsOrderId  = ReturnCode.NO_DATA.getValue();
-                String firstPrice      = "";
-                String secondsPrice    = "";
-                String firstAction     = "";
-                String secondAction    = "";
-                String firstCnt        = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
-                String secondsCnt      = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
+            while (!sellQueue.isEmpty() || !buyQueue.isEmpty() || !cancelList.isEmpty()) {
+                String mode           = (Utils.getRandomInt(1, 2) == 1) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
+                boolean cancelFlag    = (Utils.getRandomInt(1, 2) == 1) ? true : false;
+                String orderId        = ReturnCode.NO_DATA.getValue();
+                String price          = "";
+                String action         = "";
+                String cnt            = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
 
-                if(!sellQueue.isEmpty() && !buyQueue.isEmpty() && mode.equals(UtilsData.MODE_BUY)){
-                    firstPrice   = buyQueue.poll();
-                    secondsPrice = sellQueue.poll();
-                    firstAction  = BUY;
-                    secondAction = SELL;
-                }else if(!buyQueue.isEmpty() && !sellQueue.isEmpty() && mode.equals(UtilsData.MODE_SELL)){
-                    firstPrice   = sellQueue.poll();
-                    secondsPrice = buyQueue.poll();
-                    firstAction  = SELL;
-                    secondAction = BUY;
+                if (!buyQueue.isEmpty() && mode.equals(UtilsData.MODE_BUY)) {
+                    price   = buyQueue.poll();
+                    action  = BUY;
+                } else if (!sellQueue.isEmpty() && mode.equals(UtilsData.MODE_SELL)) {
+                    price   = sellQueue.poll();
+                    action  = SELL;
+                }
+                // 매수 로직
+                if(!action.equals("")){
+                    orderId = createOrder(action, price, cnt, symbol);
+                    if(!orderId.equals(ReturnCode.NO_DATA.getValue())){
+                        cancelList.add(orderId);
+                    }
+                    Thread.sleep(1500);
                 }
 
-                firstOrderId   = createOrder(firstAction,  firstPrice, firstCnt, symbol);
-                Thread.sleep(300);
-                secondsOrderId = createOrder(secondAction, secondsPrice, secondsCnt, symbol);
-
-                // first / second 둘 중 하나라도 거래가 성사 되었을 경우
-                if(!firstOrderId.equals(ReturnCode.NO_DATA.getValue())  || !secondsOrderId.equals(ReturnCode.NO_DATA.getValue())){
-                    Thread.sleep(1000);
-                    if(!firstOrderId.equals(ReturnCode.NO_DATA.getValue())){
-                        cancelOrder(symbol,firstOrderId);
-                    }
-                    Thread.sleep(300);
-                    if(!secondsOrderId.equals(ReturnCode.NO_DATA.getValue())){
-                        cancelOrder(symbol, secondsOrderId);
-                    }
+                // 취소 로직
+                if(!cancelList.isEmpty() && cancelFlag){
+                    String cancelId = cancelList.poll();
+                    cancelOrder(symbol, cancelId);
+                    Thread.sleep(500);
                 }
             }
         }catch (Exception e){
@@ -294,7 +281,7 @@ public class DcoinImp extends AbstractExchange {
      * @param realtime
      * @return
      */
-    public int startRealtimeTrade(JsonObject realtime) {
+    public int startRealtimeTrade(JsonObject realtime, boolean resetFlag) {
         log.info("[DCOIN][REALTIME SYNC TRADE START]");
         int returnCode   = ReturnCode.SUCCESS.getCode();
         String realtimeChangeRate = "signed_change_rate";
@@ -304,8 +291,15 @@ public class DcoinImp extends AbstractExchange {
             boolean isStart      = false;
             String symbol        = getSymbol(Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
             String[] currentTick = getTodayTick(symbol);
-            String openingPrice  = currentTick[0];
+            //            String openingPrice  = currentTick[0];
+            if(resetFlag){
+                realtimeTargetInitRate = currentTick[1];
+                log.info("[DCOIN][REALTIME SYNC TRADE] Set init open rate : {} ", realtimeTargetInitRate);
+            }
+            String openingPrice  = realtimeTargetInitRate;
             String currentPrice  = currentTick[1];
+            log.info("[DCOIN][REALTIME SYNC TRADE] open:{}, current:{} ", openingPrice, currentPrice);
+
             String orderId       = ReturnCode.NO_DATA.getValue();
             String targetPrice   = "";
             String action        = "";
@@ -381,7 +375,6 @@ public class DcoinImp extends AbstractExchange {
         if(SUCCESS.equals(returnCode)){
             returnRes[0] = resObject.get("data").getAsJsonObject().get("open").getAsString();
             returnRes[1] = resObject.get("data").getAsJsonObject().get("close").getAsString();
-            log.info("[DCOIN][GET TODAY TICK] response : {}", Arrays.toString(returnRes));
         }else{
             log.error("[DCOIN][GET TODAY TICK] response : {}", response);
             throw new Exception(response);
@@ -405,7 +398,7 @@ public class DcoinImp extends AbstractExchange {
         try {
             // DCoin 의 경우, property 값들이 오름차순으로 입력되야 해서, 공통 함수로 빼기 어려움.
             JsonObject header = new JsonObject();
-            header.addProperty("api_key", keyList.get(ACCESS_TOKEN));
+            header.addProperty("api_key", keyList.get(PUBLIC_KEY));
             header.addProperty("price",   Double.parseDouble(price));
             header.addProperty("side",    side);
             header.addProperty("symbol",  symbol.toLowerCase());
@@ -439,7 +432,7 @@ public class DcoinImp extends AbstractExchange {
         int returnValue = ReturnCode.FAIL.getCode();
         try {
             JsonObject header = new JsonObject();
-            header.addProperty("api_key",  keyList.get(ACCESS_TOKEN));
+            header.addProperty("api_key",  keyList.get(PUBLIC_KEY));
             header.addProperty("order_id", orderId);
             header.addProperty("symbol",   symbol.toLowerCase());
             header.addProperty("sign",     createSign(gson.toJson(header)));

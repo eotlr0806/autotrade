@@ -18,17 +18,11 @@ import java.util.*;
 
 @Slf4j
 public class LbankImp extends AbstractExchange {
-
     final private String USER_ID          = "user_id";
-    final private String API_KET          = "api_key";
-    final private String SECRET_KEY       = "secret_key";
     final private String ALREADY_TRADED   = "10025";
-
     final private String BUY              = "buy";
     final private String SELL             = "sell";
     private LBankServiceImpl service      = null;
-
-
 
     @Override
     public void initClass(AutoTrade autoTrade) throws Exception{
@@ -114,51 +108,44 @@ public class LbankImp extends AbstractExchange {
     public int startLiquidity(Map list){
         int returnCode = ReturnCode.SUCCESS.getCode();
 
-        Queue<String> sellQueue = (LinkedList) list.get("sell");
-        Queue<String> buyQueue  = (LinkedList) list.get("buy");
-        List<Map<String,String>> CancelList = new ArrayList();
+        Queue<String> sellQueue  = (LinkedList) list.get("sell");
+        Queue<String> buyQueue   = (LinkedList) list.get("buy");
+        Queue<String> cancelList = new LinkedList<>();
 
         try{
             log.info("[LBANK][LIQUIDITY] START");
             String symbol = getSymbol(Utils.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
 
-            while(!sellQueue.isEmpty() || !buyQueue.isEmpty()){
-                String mode            = (Utils.getRandomInt(1,2) == 1) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
-                String firstOrderId    = ReturnCode.NO_DATA.getValue();
-                String secondsOrderId  = ReturnCode.NO_DATA.getValue();
-                String firstPrice      = "";
-                String secondsPrice    = "";
-                String firstAction     = "";
-                String secondAction    = "";
-                String firstCnt        = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
-                String secondsCnt      = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
+            while (!sellQueue.isEmpty() || !buyQueue.isEmpty() || !cancelList.isEmpty()) {
+                String mode           = (Utils.getRandomInt(1, 2) == 1) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
+                boolean cancelFlag    = (Utils.getRandomInt(1, 2) == 1) ? true : false;
+                String orderId        = ReturnCode.NO_DATA.getValue();
+                String price          = "";
+                String action         = "";
+                String cnt            = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
 
-                if(!sellQueue.isEmpty() && !buyQueue.isEmpty() && mode.equals(UtilsData.MODE_BUY)){
-                    firstPrice   = buyQueue.poll();
-                    secondsPrice = sellQueue.poll();
-                    firstAction  = BUY;
-                    secondAction = SELL;
-                }else if(!buyQueue.isEmpty() && !sellQueue.isEmpty() && mode.equals(UtilsData.MODE_SELL)){
-                    firstPrice   = sellQueue.poll();
-                    secondsPrice = buyQueue.poll();
-                    firstAction  = SELL;
-                    secondAction = BUY;
+                if (!buyQueue.isEmpty() && mode.equals(UtilsData.MODE_BUY)) {
+                    price   = buyQueue.poll();
+                    action  = BUY;
+                } else if (!sellQueue.isEmpty() && mode.equals(UtilsData.MODE_SELL)) {
+                    price   = sellQueue.poll();
+                    action  = SELL;
                 }
-                firstOrderId   = createOrder(firstAction, firstPrice, firstCnt, symbol);
-                Thread.sleep(300);
-                secondsOrderId = createOrder(secondAction, secondsPrice, secondsCnt, symbol);
+                // 매수 로직
+                if(!action.equals("")){
+                    orderId = createOrder(action, price, cnt, symbol);
+                    if(!orderId.equals(ReturnCode.NO_DATA.getValue())){
+                        cancelList.add(orderId);
+                    }
+                    Thread.sleep(1000);
+                }
+                // 취소 로직
+                if(!cancelList.isEmpty() && cancelFlag){
+                    String cancelId = cancelList.poll();
+                    cancelOrder(symbol, cancelId);
+                    Thread.sleep(500);
+                }
 
-                // first / second 둘 중 하나라도 거래가 성사 되었을 경우
-                Thread.sleep(1000);
-                if(!firstOrderId.equals(ReturnCode.NO_DATA.getValue())  || !secondsOrderId.equals(ReturnCode.NO_DATA.getValue())){
-                    if(!firstOrderId.equals(ReturnCode.NO_DATA.getValue())){
-                        cancelOrder(symbol, firstOrderId);
-                    }
-                    Thread.sleep(300);
-                    if(!secondsOrderId.equals(ReturnCode.NO_DATA.getValue())){
-                        cancelOrder(symbol, secondsOrderId);
-                    }
-                }
             }
         }catch (Exception e){
             returnCode = ReturnCode.FAIL.getCode();
@@ -276,7 +263,7 @@ public class LbankImp extends AbstractExchange {
 
 
     @Override
-    public int startRealtimeTrade(JsonObject realtime) {
+    public int startRealtimeTrade(JsonObject realtime, boolean resetFlag) {
         log.info("[LBANK][REALTIME SYNC TRADE] START");
         int returnCode   = ReturnCode.SUCCESS.getCode();
         String realtimeChangeRate = "signed_change_rate";
@@ -286,8 +273,15 @@ public class LbankImp extends AbstractExchange {
             boolean isStart      = false;
             String symbol        = getSymbol(Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
             String[] currentTick = getTodayTick();
-            String openingPrice  = currentTick[0];
+            //            String openingPrice  = currentTick[0];
+            if(resetFlag){
+                realtimeTargetInitRate = currentTick[1];
+                log.info("[LBANK][REALTIME SYNC TRADE] Set init open rate : {} ", realtimeTargetInitRate);
+            }
+            String openingPrice  = realtimeTargetInitRate;
             String currentPrice  = currentTick[1];
+            log.info("[LBANK][REALTIME SYNC TRADE] open:{}, current:{} ", openingPrice, currentPrice);
+
             String orderId       = ReturnCode.NO_DATA.getValue();
             String targetPrice   = "";
             String action        = "";
@@ -371,7 +365,6 @@ public class LbankImp extends AbstractExchange {
             returnRes[0] = open.toPlainString();
             returnRes[1] = current.toPlainString();
 
-            log.info("[LBANK][GET TODAY TICK] response : {}", Arrays.toString(returnRes));
         }else{
             log.error("[LBANK][GET TODAY TICK] response : {}", response);
             throw new Exception(response);
