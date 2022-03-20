@@ -139,6 +139,9 @@
     const DELETE             = "DELETE";
     const INSERT             = "INSERT";
     const UPDATE             = "UPDATE";
+    const REALTIME_TYPE_NOW     = "NOW";
+    const REALTIME_TYPE_BEFORE  = "BEFORE";
+
 
     let autotradeColumn = [
         {title: "id",   orderable: true},
@@ -380,7 +383,7 @@
                     innerTrade.push(`${item.minBestofferCnt} ~ ${item.maxBestofferCnt}`);
                     innerTrade.push(item.tickRange);
                     innerTrade.push(item.pricePercent);
-                    innerTrade.push(item.type);
+                    innerTrade.push((item.type == REALTIME_TYPE_BEFORE) ? '과거':'실시간');
                     innerTrade.push(item.beforeTime);
                 }
 

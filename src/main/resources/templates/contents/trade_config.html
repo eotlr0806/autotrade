@@ -1108,6 +1108,8 @@
                 return common.noti("실시간 동기화","최소/최대 거래 수량을 모두 입력해주세요.","error");
             }else if (clickedRealtimeMode == REALTIME_TYPE_BEFORE && $('#sync_before_time_realtime').val() == ''){
                 return common.noti("실시간 동기화","과거 시간 조회 시, 시간을 입력해주세요.","error");
+            }else if (clickedRealtimeMode == REALTIME_TYPE_BEFORE && $('#sync_before_time_realtime').val() < 1){
+                return common.noti("실시간 동기화","과거 시간 조회 시, 시간은 0보다 커야합니다.","error");
             }else if (clickedRealtimeMode == ''){
                 return common.noti("실시간 동기화","모드를 선택해주세요.","error");
             }
