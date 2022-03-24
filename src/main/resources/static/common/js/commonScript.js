@@ -7,18 +7,19 @@ const CODE = {
 }
 
 const EXCHANGE_LIST = {
-    COINONE  : "COINONE",
-    FOBLGATE : "FOBLGATE",
-    DCOIN    : "DCOIN",
-    FLATA    : "FLATA",
+    COINONE      : "COINONE",
+    FOBLGATE     : "FOBLGATE",
+    DCOIN        : "DCOIN",
+    FLATA        : "FLATA",
     BITHUMBGLOBAL: "BITHUMBGLOBAL",
-    KUCOIN: "KUCOIN",
-    OKEX: "OKEX",
-    LBANK: "LBANK",
-    DIGIFINEX: "DIGIFINEX",
-    XTCOM: "XTCOM",
-    COINSBIT: "COINSBIT",
-    MEXC: "MEXC",
+    KUCOIN       : "KUCOIN",
+    OKEX         : "OKEX",
+    LBANK        : "LBANK",
+    DIGIFINEX    : "DIGIFINEX",
+    XTCOM        : "XTCOM",
+    COINSBIT     : "COINSBIT",
+    MEXC         : "MEXC",
+    DEXORCA      : "DEXORCA",
 }
 
 const TRADE_LIST = {

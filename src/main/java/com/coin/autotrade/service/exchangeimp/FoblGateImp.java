@@ -463,7 +463,7 @@ public class FoblGateImp extends AbstractExchange {
             String status        = gson.fromJson(returnVal.get("status"), String.class);
             if(status.equals(SUCCESS)){
                 orderId = gson.fromJson(returnVal.get("data"), String.class);
-                log.info("[FOBLEGATE][CREATE ORDER] Success response : {}", gson.toJson(returnVal));
+                log.info("[FOBLGATE][CREATE ORDER] Success response : {}", gson.toJson(returnVal));
             }else{
                 log.error("[FOBLGATE][CREATE ORDER] Fail response :{}", gson.toJson(returnVal));
             }
