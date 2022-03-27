@@ -1,14 +1,15 @@
 package com.coin.autotrade.service.exchangeimp;
 
 
-import com.coin.autotrade.common.UtilsData;
 import com.coin.autotrade.common.Utils;
+import com.coin.autotrade.common.UtilsData;
 import com.coin.autotrade.common.enumeration.ReturnCode;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.codec.binary.Hex;
 import org.apache.tomcat.util.codec.binary.Base64;
 
 import javax.crypto.Mac;
@@ -23,6 +24,7 @@ import java.math.BigInteger;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 /**
@@ -506,18 +508,29 @@ public class CoinOneImp extends AbstractExchange {
     }
 
     /* HMAC Signature 만드는 method */
-     private String makeHmacSignature(String payload, String secret) throws Exception{
-        String result;
-        Mac hmacSHA512 = Mac.getInstance("HmacSHA512");
-        SecretKeySpec secretKeySpec = new SecretKeySpec(secret.getBytes(), "HmacSHA512");
-        hmacSHA512.init(secretKeySpec);
-        byte[] digest = hmacSHA512.doFinal(payload.getBytes());
-        BigInteger hash = new BigInteger(1, digest);
-        result = hash.toString(16);
-        if ((result.length() % 2) != 0) {
-            result = "0" + result;
-        }
-        return result;
+    // TODO : 안정화 될 경우 삭제.
+//     private String makeHmacSignature(String payload, String secret) throws Exception{
+//        String result;
+//
+//        SecretKeySpec secretKeySpec = new SecretKeySpec(secret.getBytes(), "HmacSHA512");
+//         Mac hmacSHA512 = Mac.getInstance("HmacSHA512");
+//         hmacSHA512.init(secretKeySpec);
+//        byte[] digest = hmacSHA512.doFinal(payload.getBytes());
+//        BigInteger hash = new BigInteger(1, digest);
+//        result = hash.toString(16);
+//        if ((result.length() % 2) != 0) {
+//            result = "0" + result;
+//        }
+//        return result;
+//    }
+
+    private String makeHmacSignature(String value, String secret) throws Exception{
+
+        SecretKeySpec signingKey = new SecretKeySpec(secret.getBytes(), "HmacSHA512");
+        Mac mac = Mac.getInstance("HmacSHA512");
+        mac.init(signingKey);
+        byte[] hexBytes = new Hex().encode(mac.doFinal(value.getBytes()));
+        return new String(hexBytes, "UTF-8");
     }
 
     /* default 로 필요한 데이터를 받아 buy/sell/cancel 메서드에 전달 */
@@ -532,12 +545,12 @@ public class CoinOneImp extends AbstractExchange {
 
     /* default 로 필요한 데이터를 받아 request 전 셋팅 후 반환 */
     private JsonObject setDefaultRequest(String cnt, String currency, String price) throws Exception{
-
-        long nonce = System.currentTimeMillis();;
+        Thread.sleep(300);
+        long nonce = System.currentTimeMillis();
         JsonObject defaultRequest = new JsonObject();
 
         defaultRequest.addProperty("access_token", keyList.get(PUBLIC_KEY));
-        defaultRequest.addProperty("nonce",System.currentTimeMillis());
+        defaultRequest.addProperty("nonce",nonce);
         defaultRequest.addProperty("qty",Double.parseDouble(cnt));
         defaultRequest.addProperty("currency",currency);
         defaultRequest.addProperty("price",price);
@@ -554,6 +567,7 @@ public class CoinOneImp extends AbstractExchange {
         String encodingPayload = Base64.encodeBase64String(payload.getBytes());    // Encoding to base 64
 
         String signature = makeHmacSignature(encodingPayload, keyList.get(SECRET_KEY).toUpperCase());
+
         HttpURLConnection connection = (HttpsURLConnection) url.openConnection();
         connection.setDoOutput(true);
         connection.setDoInput(true);
