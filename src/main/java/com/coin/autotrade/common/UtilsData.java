@@ -42,6 +42,7 @@ public class UtilsData {
     public static String UPBIT_REALTIME_BEFORE    = "https://api.upbit.com/v1/candles/minutes/1";
 
     public static String COINONE_ORDERBOOK        = "https://api.coinone.co.kr/orderbook";
+    public static String COINONE_BALANCE          = "https://api.coinone.co.kr/v2/account/balance";
     public static String COINONE_TICK             = "https://api.coinone.co.kr/ticker_utc";
     public static String COINONE_LIMIT_BUY        = "https://api.coinone.co.kr/v2/order/limit_buy/";
     public static String COINONE_LIMIT_SELL       = "https://api.coinone.co.kr/v2/order/limit_sell/";

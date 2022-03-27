@@ -485,6 +485,26 @@ public class CoinOneImp extends AbstractExchange {
         return returnValue;
     }
 
+    @Override
+    public String getBalance(String[] coinData, Exchange exchange) throws Exception{
+        String returnValue = ReturnCode.NO_DATA.getValue();;
+
+        setCoinToken(coinData, exchange);
+        JsonObject header = new JsonObject();
+        header.addProperty("access_token", keyList.get(PUBLIC_KEY));
+        header.addProperty("nonce",System.currentTimeMillis());
+        JsonObject json   = postHttpMethod(UtilsData.COINONE_BALANCE , gson.toJson(header));
+        String returnCode = json.get("errorCode").getAsString();
+        if(SUCCESS.equals(returnCode)){
+            returnValue = gson.toJson(json);
+            log.info("[COINONE][GET BALANCE] Success Response");
+        }else{
+            log.error("[COINONE][GET BALANCE] Response : {}" , gson.toJson(json));
+            throw new Exception(gson.toJson(json));
+        }
+        return returnValue;
+    }
+
     /* HMAC Signature 만드는 method */
      private String makeHmacSignature(String payload, String secret) throws Exception{
         String result;

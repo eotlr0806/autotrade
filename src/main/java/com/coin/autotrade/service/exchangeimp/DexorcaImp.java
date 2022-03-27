@@ -5,6 +5,7 @@ import com.coin.autotrade.common.UtilsData;
 import com.coin.autotrade.common.enumeration.ReturnCode;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
+import com.fasterxml.jackson.databind.node.BigIntegerNode;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +21,7 @@ import java.security.cert.X509Certificate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.TimeoutException;
 
 @Slf4j
 public class DexorcaImp extends AbstractExchange {
@@ -27,10 +29,24 @@ public class DexorcaImp extends AbstractExchange {
     private String SELL                  = "place_sell";
     private String BUY                   = "place_buy";
     private String SUCCESS               = "0";
-    private String ALREADY_TRADED        = "5004";
+    private String ALREADY_TRADED        = "19414";
     private String noChangedUserId       = "";
     private String ORDER_DATE            = "order_date";
     private String ORDER_ID              = "order_id";
+    private int SLEEP_TIME               = 600000;
+    private long VARIABLE                = 100000000L;
+
+    private enum Error {
+        NO_MONEY(19208,"잔액 부족"),
+        GAS(19212,"가스필요");
+
+        int code;
+        String msg;
+        Error(int code, String msg){
+            this.code = code;
+            this.msg  = msg;
+        }
+    }
 
     /* Foblgate Function initialize for autotrade */
     @Override
@@ -170,7 +186,7 @@ public class DexorcaImp extends AbstractExchange {
                 // 매수 로직
                 if(!action.equals("")){
                     orderMap = createOrder(action, price, cnt, symbol);
-                    if(!(orderMap != null)){
+                    if((orderMap != null)){
                         Map<String, Object> cancel = new HashMap<>();
                         cancel.put("orderMap",orderMap);
                         cancel.put("action",  action);
@@ -232,7 +248,7 @@ public class DexorcaImp extends AbstractExchange {
                     orderMap = createOrder(SELL, tickPriceList.get(i), cnt, symbol);     // 매도
                     action   = SELL;
                 }
-                if(!(orderMap != null)){                                                // 매수/매도가 정상적으로 이뤄졌을 경우 데이터를 list에 담는다
+                if((orderMap != null)){                                                // 매수/매도가 정상적으로 이뤄졌을 경우 데이터를 list에 담는다
                     Map<String, Object> map = new HashMap<>();
                     map.put("orderMap" ,map);
                     map.put("action",  action);
@@ -283,7 +299,7 @@ public class DexorcaImp extends AbstractExchange {
                         orderId = createOrder(BUY, String.valueOf(copiedOrderMap.get("price")), cntForExcution.toPlainString(), symbol);
                     }
 
-                    if(!(orderId != null)){
+                    if((orderId != null)){
                         cnt = cnt.subtract(cntForExcution);
                         Thread.sleep(500);
                         if(UtilsData.MODE_BUY.equals(mode)) {
@@ -450,9 +466,9 @@ public class DexorcaImp extends AbstractExchange {
         if(result.get("rc").getAsString().equals(SUCCESS)){
             returnRes[0] = result.get("open_price").getAsString();
             returnRes[1] = result.get("price").getAsString();
-            log.info("[DEXORCA][GET ORDER BOOK] SUCCESS");
+            log.info("[DEXORCA][GET TODAY TICK] SUCCESS");
         }else{
-            log.error("[DEXORCA][GET ORDER BOOK] Fail Response:{}", gson.toJson(returnVal));
+            log.error("[DEXORCA][GET TODAY TICK] Fail Response:{}", gson.toJson(returnVal));
         }
         return returnRes;
     }
@@ -469,27 +485,43 @@ public class DexorcaImp extends AbstractExchange {
 
         Map<String, String> returnMap = null;
         try{
+            BigDecimal bigCnt   = new BigDecimal(cnt);
+            BigDecimal bigPrice = new BigDecimal(price);
+
             JsonObject object = getOjbect(type);
             JsonObject params = new JsonObject();
             params.addProperty("issue", symbol);//operation
             params.addProperty("operation", "place");//operation
             params.addProperty("account",  getUserId());
-            params.addProperty("volume",  cnt);
-            params.addProperty("price",  price);
+            params.addProperty("volume",  bigCnt.multiply(new BigDecimal(VARIABLE)).toPlainString() );
+            params.addProperty("price",   bigPrice.multiply(new BigDecimal(VARIABLE)).toPlainString() );
             params.addProperty("session_id", UtilsData.DEXORCA_SESSION_KEY.get(getUserId()));
             object.add("params", params);
 
             JsonObject response = postHttpMethod(object);
             JsonObject result    = response.getAsJsonObject("result");
-            if(result.get("rc").getAsString().equals(SUCCESS)){
+            if(result.size() == 0){
+                returnMap = new HashMap<>();
+                log.info("[DEXORCA][CREATE ORDER] Maybe success result is null. {}" , gson.toJson(response));
+            }else if(result.get("rc").getAsString().equals(SUCCESS)){
                 returnMap = new HashMap<>();
                 returnMap.put(ORDER_DATE, result.get(ORDER_DATE).getAsString());
                 returnMap.put(ORDER_ID,   result.get(ORDER_ID).getAsString());
-                log.info("[DEXORCA][GET ORDER BOOK] SUCCESS");
+                log.info("[DEXORCA][CREATE ORDER] CREATE SUCCESS:{}" , gson.toJson(response));
             }else{
-                log.error("[DEXORCA][GET ORDER BOOK] Fail Response:{}", gson.toJson(response));
+                log.error("[DEXORCA][CREATE ORDER] CREATE FAIL:{}", gson.toJson(response));
             }
-
+            Thread.sleep(300);
+        }catch (TimeoutException e){
+            log.error("[DEXORCA][CREATE ORDER] Maybe is locked ");
+            log.error("[DEXORCA][CREATE ORDER] Occur error :{}",e.getMessage());
+            e.printStackTrace();
+            try {
+                Thread.sleep(SLEEP_TIME);
+            }catch (InterruptedException exception){
+                log.error("[DEXORCA][CREATE ORDER] Thread sleep error.");
+                exception.printStackTrace();
+            }
         }catch (Exception e){
             log.error("[DEXORCA][CREATE ORDER] Occur error :{}",e.getMessage());
             e.printStackTrace();
@@ -505,13 +537,20 @@ public class DexorcaImp extends AbstractExchange {
 
         int returnCode = ReturnCode.FAIL.getCode();
         try{
+            if(ordNo == null || ordNo.isEmpty()){
+                log.info("[DEXORCA][CANCEL ORDER] Order Response Map is null. So cancel is not executed.");
+                return returnCode;
+            }
+            BigDecimal bigCnt   = new BigDecimal(cnt);
+            BigDecimal bigPrice = new BigDecimal(price);
+
             JsonObject object = getOjbect(type);
             JsonObject params = new JsonObject();
             params.addProperty("issue", symbol);//operation
             params.addProperty("operation", "void");//operation
             params.addProperty("account",  getUserId());
-            params.addProperty("volume",  cnt);
-            params.addProperty("price",  price);
+            params.addProperty("volume",  bigCnt.multiply(new BigDecimal(VARIABLE)).toPlainString() );
+            params.addProperty("price",   bigPrice.multiply(new BigDecimal(VARIABLE)).toPlainString() );
             params.addProperty("session_id", UtilsData.DEXORCA_SESSION_KEY.get(getUserId()));
             params.addProperty("org_order_date", ordNo.get(ORDER_DATE));
             params.addProperty("org_order_id"  , ordNo.get(ORDER_ID));
@@ -521,9 +560,22 @@ public class DexorcaImp extends AbstractExchange {
             JsonObject result    = response.getAsJsonObject("result");
             if(result.get("rc").getAsString().equals(SUCCESS)){
                 returnCode = ReturnCode.SUCCESS.getCode();
-                log.info("[DEXORCA][GET ORDER BOOK] SUCCESS cancel {}", gson.toJson(response));
+                log.info("[DEXORCA][CANCEL ORDER] CANCEL SUCCESS {}", gson.toJson(response));
+            }else if(result.get("rc").getAsString().equals(ALREADY_TRADED)){
+                log.info("[DEXORCA][CANCEL ORDER] Already Traded {}", gson.toJson(response));
             }else{
-                log.error("[DEXORCA][GET ORDER BOOK] Fail Response:{}", gson.toJson(response));
+                log.error("[DEXORCA][CANCEL ORDER] CANCEL FAIL:{}", gson.toJson(response));
+            }
+            Thread.sleep(300);
+        }catch (TimeoutException e){
+            log.error("[DEXORCA][CANCEL ORDER] Maybe is locked ");
+            log.error("[DEXORCA][CANCEL ORDER] Occur error :{}",e.getMessage());
+            e.printStackTrace();
+            try {
+                Thread.sleep(SLEEP_TIME);
+            }catch (InterruptedException exception){
+                log.error("[DEXORCA][CANCEL ORDER] Thread sleep error.");
+                exception.printStackTrace();
             }
         }catch (Exception e){
             log.error("[DEXORCA][CANCEL ORDER] Error {}",e.getMessage());
@@ -539,7 +591,7 @@ public class DexorcaImp extends AbstractExchange {
 
         disableSslVerification();
         String bodyStr = gson.toJson(body);
-        log.info("[DEXORCA][POST HTTP] body:{}", bodyStr);
+        log.info("[DEXORCA][POST HTTP] request :{}", bodyStr);
         URL url = new URL(UtilsData.DEXORCA_URL);
         HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
         connection.setRequestProperty("Content-Type","application/json;charset=utf-8");
@@ -559,6 +611,7 @@ public class DexorcaImp extends AbstractExchange {
                 ? getResponseMsg(connection.getInputStream()) : getResponseMsg(connection.getErrorStream());
         JsonObject returnObj = gson.fromJson(response, JsonObject.class);
 
+        log.info("[DEXORCA][POST HTTP] response :{}", gson.toJson(returnObj));
         return returnObj;
     }
 

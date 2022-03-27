@@ -45,6 +45,7 @@ const API = {
     EXCHANGE      :"/v1/exchanges",
     COIN          :"/v1/exchanges/coin",
     ORDER_BOOK    :"/v1/orderbook",
+    BALANCE       :"/v1/balance"
 }
 
 const CODE_ERROR         = -1000;
@@ -113,7 +114,8 @@ let common = {
             if (response.data.status === CODE.SUCCESS){
                 returnData = response.data;
             }else{
-                console.log(`[GET API ERROR] url: ${url}, code:${response.data.status}, msg: ${response.data.msg}`);
+
+                console.log(`[GET API ERROR] url: ${url}, response: ${JSON.stringify(response.data)}`);
             }
         }).
         catch(error => {
@@ -131,7 +133,7 @@ let common = {
             if (response.data.status === CODE.SUCCESS){
                 returnData = response.data;
             }else{
-                console.log(`[POST API ERROR] url: ${url}, code:${response.data.status}, msg: ${response.data.msg}`);
+                console.log(`[POST API ERROR] url: ${url}, response: ${JSON.stringify(response.data)}`);
             }
         }).
         catch(error => {
@@ -151,7 +153,7 @@ let common = {
             if (response.data.status === CODE.SUCCESS){
                 returnData = response.data;
             }else{
-                console.log(`[DELETE API ERROR] url: ${url}, code:${response.data.status}, msg: ${response.data.msg}`);
+                console.log(`[DELETE API ERROR] url: ${url}, response: ${JSON.stringify(response.data)}`);
             }
 
         }).
