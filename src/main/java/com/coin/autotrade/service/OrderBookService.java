@@ -8,6 +8,7 @@ import com.coin.autotrade.repository.ExchangeRepository;
 import com.coin.autotrade.service.exchangeimp.AbstractExchange;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -124,6 +125,30 @@ public class OrderBookService {
             }
 
             returnValue = setOrderBookDataByArray(ask,bid,"price","qty");
+
+        } else if(exchange.equals(UtilsData.DEXORCA)){
+
+            JsonArray array   = object.getAsJsonArray("quotes");
+            JsonArray sellArr = new JsonArray();
+            JsonArray buyArr  = new JsonArray();
+            JsonObject resObj = new JsonObject();
+
+            for (JsonElement element : array){
+                JsonObject obj = element.getAsJsonObject();
+                JsonObject sell = new JsonObject();
+                JsonObject buy  = new JsonObject();
+                sell.addProperty("price", obj.get("sell_quote").getAsString());
+                sell.addProperty("qty",   obj.get("sell_left").getAsString());
+                buy.addProperty("price", obj.get("buy_quote").getAsString());
+                buy.addProperty("qty",   obj.get("buy_left").getAsString());
+
+                sellArr.add(sell);
+                buyArr.add(buy);
+            }
+            resObj.add("ask", sellArr);
+            resObj.add("bid", buyArr);
+
+            returnValue = gson.toJson(resObj);
         }
 
         return returnValue;

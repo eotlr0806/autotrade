@@ -26,12 +26,13 @@ public class ExchangeRestController {
             // stack over flow 를 방지하기 위해, expose 어노테이션을 준 필드는 가져오지 않게 설정.
             List<Exchange> exchangeList = service.getExchanges();
             if(!exchangeList.isEmpty()){
-                response.setResponseWithObject(ReturnCode.SUCCESS, exchangeList);
+                response.setBody(ReturnCode.SUCCESS, exchangeList);
             }else{
                 log.info("[GET EXCHANGE] There is no exchages");
                 response.setResponse(ReturnCode.NO_DATA);
             }
         }catch (Exception e){
+            e.printStackTrace();
             log.error("[GET EXCHANGE] {}",e.getMessage());
             response.setResponse(ReturnCode.FAIL);
         }

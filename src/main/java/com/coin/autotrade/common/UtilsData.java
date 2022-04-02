@@ -11,8 +11,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /*** 공통으로 쓰이는 데이터를 담은 클래스 */
 public class UtilsData {
-    /** Common value **/
-    public static Map<String, String> FLATA_SESSION_KEY = new HashMap<String, String>();    // api user , Key
 
     /** Define exchange name */
     public static String COINONE        = "COINONE";
@@ -29,6 +27,7 @@ public class UtilsData {
     public static String XTCOM          = "XTCOM";
     public static String COINSBIT       = "COINSBIT";
     public static String MEXC           = "MEXC";
+    public static String DEXORCA        = "DEXORCA";
 
     public static String MODE_RANDOM    = "RANDOM";
     public static String MODE_SELL      = "SELL";
@@ -43,6 +42,7 @@ public class UtilsData {
     public static String UPBIT_REALTIME_BEFORE    = "https://api.upbit.com/v1/candles/minutes/1";
 
     public static String COINONE_ORDERBOOK        = "https://api.coinone.co.kr/orderbook";
+    public static String COINONE_BALANCE          = "https://api.coinone.co.kr/v2/account/balance";
     public static String COINONE_TICK             = "https://api.coinone.co.kr/ticker_utc";
     public static String COINONE_LIMIT_BUY        = "https://api.coinone.co.kr/v2/order/limit_buy/";
     public static String COINONE_LIMIT_SELL       = "https://api.coinone.co.kr/v2/order/limit_sell/";
@@ -120,6 +120,8 @@ public class UtilsData {
     public static String MEXC_TICK                      = "https://www.mexc.com/open/api/v2/market/kline?interval=1d&limit=1";
     public static String MEXC_GET_COININFO              = "https://www.mexc.com/open/api/v2/market/symbols";
 
+    public static String DEXORCA_URL                    = "https://211.239.119.54:3500/api";
+
     /** Define Variable */
     public static int TIMEOUT_VALUE = 10000;
 
@@ -128,4 +130,9 @@ public class UtilsData {
     public static ConcurrentHashMap<Long, LiquidityTradeThread> liquidityThreadMap   = new ConcurrentHashMap<>();
     public static ConcurrentHashMap<Long, FishingTradeThread> fishingTradeThreadMap  = new ConcurrentHashMap<>();
     public static ConcurrentHashMap<Long, RealtimeSyncThread> realtimeSyncThreadMap  = new ConcurrentHashMap<>();
+
+    /** Common value **/
+    public static ConcurrentHashMap<String, String> FLATA_SESSION_KEY   = new ConcurrentHashMap<String, String>();    // api user , Key
+    public static ConcurrentHashMap<String, String> DEXORCA_SESSION_KEY = new ConcurrentHashMap<String, String>();    // api user , Key
+
 }

@@ -7,18 +7,19 @@ const CODE = {
 }
 
 const EXCHANGE_LIST = {
-    COINONE  : "COINONE",
-    FOBLGATE : "FOBLGATE",
-    DCOIN    : "DCOIN",
-    FLATA    : "FLATA",
+    COINONE      : "COINONE",
+    FOBLGATE     : "FOBLGATE",
+    DCOIN        : "DCOIN",
+    FLATA        : "FLATA",
     BITHUMBGLOBAL: "BITHUMBGLOBAL",
-    KUCOIN: "KUCOIN",
-    OKEX: "OKEX",
-    LBANK: "LBANK",
-    DIGIFINEX: "DIGIFINEX",
-    XTCOM: "XTCOM",
-    COINSBIT: "COINSBIT",
-    MEXC: "MEXC",
+    KUCOIN       : "KUCOIN",
+    OKEX         : "OKEX",
+    LBANK        : "LBANK",
+    DIGIFINEX    : "DIGIFINEX",
+    XTCOM        : "XTCOM",
+    COINSBIT     : "COINSBIT",
+    MEXC         : "MEXC",
+    DEXORCA      : "DEXORCA",
 }
 
 const TRADE_LIST = {
@@ -35,6 +36,11 @@ const TRADE_STATUS = {
     DELETE : "DELETE"
 }
 
+const TRADE_ACTION = {
+    BUY  : "BUY",
+    SELL : "SELL",
+}
+
 const API = {
     AUTO_TRADE    :"/v1/trade/auto",
     LIQUIDITY     :"/v1/trade/liquidity",
@@ -44,6 +50,8 @@ const API = {
     EXCHANGE      :"/v1/exchanges",
     COIN          :"/v1/exchanges/coin",
     ORDER_BOOK    :"/v1/orderbook",
+    BALANCE       :"/v1/balance",
+    TRADE_ACTION  :"/v1/trade/action"
 }
 
 const CODE_ERROR         = -1000;
@@ -112,7 +120,7 @@ let common = {
             if (response.data.status === CODE.SUCCESS){
                 returnData = response.data;
             }else{
-                console.log(`[GET API ERROR] url: ${url}, code:${response.data.status}, msg: ${response.data.msg}`);
+                console.log(`[GET API ERROR] url: ${url}, response: ${JSON.stringify(response.data)}`);
             }
         }).
         catch(error => {
@@ -130,7 +138,7 @@ let common = {
             if (response.data.status === CODE.SUCCESS){
                 returnData = response.data;
             }else{
-                console.log(`[POST API ERROR] url: ${url}, code:${response.data.status}, msg: ${response.data.msg}`);
+                console.log(`[POST API ERROR] url: ${url}, response: ${JSON.stringify(response.data)}`);
             }
         }).
         catch(error => {
@@ -150,7 +158,7 @@ let common = {
             if (response.data.status === CODE.SUCCESS){
                 returnData = response.data;
             }else{
-                console.log(`[DELETE API ERROR] url: ${url}, code:${response.data.status}, msg: ${response.data.msg}`);
+                console.log(`[DELETE API ERROR] url: ${url}, response: ${JSON.stringify(response.data)}`);
             }
 
         }).

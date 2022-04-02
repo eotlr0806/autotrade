@@ -36,7 +36,7 @@ public class RealtimeSyncRestController {
             if(realtimeSyncList.isEmpty()){
                 response.setResponse(ReturnCode.NO_DATA);
             }else{
-                response.setResponseWithObject(ReturnCode.SUCCESS, realtimeSyncList);
+                response.setBody(ReturnCode.SUCCESS, realtimeSyncList);
             }
             log.info("[GET REALTIME SYNC] Success get realtime sync");
         }catch(Exception e){
