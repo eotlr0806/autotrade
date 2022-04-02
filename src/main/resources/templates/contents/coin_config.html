@@ -284,8 +284,8 @@
             }
 
             let exchangeCode    = (exchangesList.filter(item => item.id == exchangeId))[0].exchangeCode;
-            let code            = (exchangeCode == EXCHANGE_LIST.DCOIN) ? $('#modal_coin_code').val().toString().toLowerCase() : $('#modal_coin_code').val().toString().toUpperCase();
-            let currency        = (exchangeCode == EXCHANGE_LIST.DCOIN) ? $('#modal_coin_currency').val().toString().toLowerCase() : $('#modal_coin_currency').val().toString().toUpperCase();
+            let code            = fncObj.validateCoinUpperLower(exchangeCode,$('#modal_coin_code').val());
+            let currency        = fncObj.validateCoinUpperLower(exchangeCode,$('#modal_coin_currency').val());
             let name            = $('#modal_coin_name').val();
             let tick            = $('#modal_coin_tick').val();
             let publicKey       = $('#modal_coin_public_key').val();
@@ -331,6 +331,16 @@
                 $('#modal_coin_info').modal('hide');
             }else{
                 common.noti("코인 등록", "코인 등록에 실패하였습니다.","error");
+            }
+        },
+
+        validateCoinUpperLower : (exchangeCode, coin) => {
+            if(exchangeCode == EXCHANGE_LIST.DCOIN){
+                return coin.toLowerCase();
+            }else if(exchangeCode == EXCHANGE_LIST.DEXORCA){
+                return coin;
+            }else{
+                return coin.toUpperCase();
             }
         },
 

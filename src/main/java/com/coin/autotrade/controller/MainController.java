@@ -97,6 +97,14 @@ public class MainController {
         return mav;
     }
 
+    /* main/account trading */
+    @GetMapping(value = "/main/account")
+    public ModelAndView account(HttpServletRequest request) throws Exception{
+        ModelAndView mav = new ModelAndView();
+        mav.setViewName("contents/account");
+        mav.addObject("userId",request.getSession().getAttribute(SessionKey.USER_ID.toString()));
+        return mav;
+    }
 
 
     /* chekc user id in session */

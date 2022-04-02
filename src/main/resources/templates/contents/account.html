@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ATS - Auto Trading Solution</title>
+
+    <!-- Global stylesheets -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,300,100,500,700,900" rel="stylesheet" type="text/css">
+    <link href="../bootstrap/assets/css/icons/icomoon/styles.css" rel="stylesheet" type="text/css">
+    <link href="../bootstrap/assets/css/bootstrap.css" rel="stylesheet" type="text/css">
+    <link href="../bootstrap/assets/css/core.css" rel="stylesheet" type="text/css">
+    <link href="../bootstrap/assets/css/components.css" rel="stylesheet" type="text/css">
+    <link href="../bootstrap/assets/css/colors.css" rel="stylesheet" type="text/css">
+    <!-- /global stylesheets -->
+</head>
+
+<style>
+    .row {
+        margin-bottom:7px;
+    }
+    
+    .ask-header {
+        background-color: #E6EBFF;
+        color:blue;
+    }
+
+    .ask-body {
+        color:blue;
+    }
+
+    .bid-header {
+        background-color: #FFE7E9;
+        color:red;
+    }
+
+    .bid-body {
+        color : red;
+    }
+</style>
+
+<body>
+    <!-- Page container -->
+    <div class="page-container">
+
+        <!-- Page content -->
+        <div class="page-content">
+            <div class="content-wrapper">
+                <!-- Page header -->
+                <div class="page-header">
+                    <div class="page-header-content">
+                        <div class="page-title">
+                            <h4><i class="icon-arrow-left52 position-left"></i> <span class="text-semibold">운영 관리</span> - 거래 관리</h4>
+                        </div>
+                    </div>
+                </div>
+                <!-- /page header -->
+
+                <!-- Content area -->
+                <div class="content">
+                    <!-- bot field -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="panel">
+                                <div class="panel-heading">
+                                    <h5 class="panel-title text-bold">코인 설정</h5>
+                                    <div class="heading-elements">
+                                        <ul class="icons-list">
+                                            <li><a data-action="collapse"></a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="panel-body">
+                                    <div class="form-inline">
+                                        <div class="form-group">
+                                            <label class="text-bold" for="filter_exchange">거래소</label>
+                                            <select name="fSpot" id="filter_exchange" class="form-control">
+                                                <!--<option value="NONE"> 선택 </option>-->
+                                            </select>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label class="text-bold" for="filter_coin">코인</label>
+                                            <select name="fSpot" id="filter_coin" class="form-control"></select>
+                                            <button onclick="fncObj.onClickBalanceBtn()" class="btn btn-primary" style="margin-left:10px;">자산 조회</button>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- /bot field -->
+
+                    <!-- 2 columns form -->
+                    <div class="row">
+                        <!-- 자전 거래 -->
+                        <div class="col-md-12">
+                            <!-- Basic table -->
+                            <div class="panel panel-flat">
+                                <div class="panel-heading">
+                                    <h5 class="panel-title">자산</h5>
+                                    <div class="heading-elements">
+                                        <ul class="icons-list">
+                                            <li><a data-action="collapse"></a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="panel-body">
+                                </div>
+
+                                <div class="table-responsive">
+                                    <table  class="table">
+                                        <thead>
+                                        <tr>
+                                            <th></th>
+                                            <th>자산 명</th>
+                                            <th>사용 가능 개수</th>
+                                            <th>총 개수</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody id="balance_table">
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <!-- /basic table -->
+                        </div>
+                    </div>
+
+                </div>
+                <!-- /content area -->
+            </div>
+        </div>
+    </div>
+
+</body>
+
+
+
+<!-- Core JS files -->
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/loaders/pace.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/core/libraries/jquery.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/core/libraries/bootstrap.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/loaders/blockui.min.js"></script>
+<!-- /core JS files -->
+
+<!-- Theme JS files -->
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/forms/styling/uniform.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/editors/wysihtml5/wysihtml5.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/editors/wysihtml5/toolbar.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/editors/wysihtml5/parsers.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/editors/wysihtml5/locales/bootstrap-wysihtml5.ua-UA.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/notifications/jgrowl.min.js"></script>
+
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/notifications/pnotify.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/core/app.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/pages/editor_wysihtml5.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/pages/components_notifications_pnotify.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/pages/extension_blockui.js"></script>
+<!-- /theme JS files -->
+
+<!-- Common Lib -->
+<script type="text/javascript" src="../common/js/commonScript.js"></script>
+<!-- /Common Lib -->
+
+<!-- -->
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+
+<script>
+    let exchangesList        = [];
+    let loginUserId          = '';
+    // init page
+    $(document).ready(() => {
+        fncObj.initPage();
+    })
+
+
+    /** Function object **/
+    let fncObj = {
+
+        // 페이지 로드 시 초기값 셋팅을 위한 함수
+        initPage : async () => {
+            loginUserId = $('#server_user_id').val();                   // Set user id
+
+            let response = await common.get(API.EXCHANGE);              // Get excahgne, coin list
+            if(response === null){
+                common.noti("거래소 조회","거래소 조회에 실패했습니다.","error");
+                return;
+            }
+
+            exchangesList = response.data;
+            dataObj.setExchangeCoin();                              // Set exchange
+        },
+
+        // 호가 조회 함수
+        onClickBalanceBtn : async () => {
+            if($('#filter_exchange').val() == 'NONE' || $('#filter_coin').val() == 'NONE'){
+                common.noti("호가 조회", "거래소와 코인을 선택해주세요.","error");
+                return;
+            }
+            await fncObj.setBalanceTable();
+        },
+
+        // 호가 조회 시, 데이터 조회 및 셋팅
+        setBalanceTable : async () => {
+            $('#balance_table').empty();
+
+            // Get Balance
+            let filterExchangeNm = $('#filter_exchange').val();
+            let coin             = $('#filter_coin').val();
+            let url              = API.BALANCE + `?exchange=${filterExchangeNm}&currency=${coin}&userId=${loginUserId}`;
+            let response         = await common.get(url);
+
+            if (!response || response.status !== CODE.SUCCESS){
+                common.noti("자산 조회","해당 코인에 등록된 계좌에 대한 자산 조회가 불가능합니다.","error");
+                return;
+            }
+            fncObj.makeBalanceTable(JSON.parse(response.data));
+        },
+
+        makeBalanceTable: (data) => {
+
+            let row = '';
+            let cnt = 1;
+            for (let i = 0; i < data.length; i++){
+                let item = data[i];
+                let coin = Object.keys(item)[0];
+
+                row +=    `<tr>
+                                <td>${i+1}</td>
+                                <td>${coin}</td>
+                                <td>${item[coin].avail}</td>
+                                <td>${item[coin].balance}</td>
+                           </tr>`;
+            }
+
+            $('#balance_table').append(row);
+        },
+
+
+    };
+    /** Function object **/
+
+    let dataObj = {
+        // 페이지 로드 이후, 거래소 정보 셋팅을 위한 함수
+        setExchangeCoin : () => {
+            $('#filter_exchange').empty();
+            $('#filter_coin').empty();
+            let dynamicText = "<option value='NONE'>선택</option>";
+            exchangesList.forEach(exchange => {
+                dynamicText += `
+                    <option value=${exchange.id}>
+                        ${exchange.exchangeName}
+                    </option>`;
+            });
+            $('#filter_exchange').append(dynamicText);
+        },
+    }
+
+
+    // 거래소 선택 시, 코인 정보 등록
+    $('#filter_exchange').on('change', () => {
+        $('#filter_coin').empty();
+
+        let selectedExchange = $('#filter_exchange').val();
+        if(selectedExchange == 'NONE'){
+            $('#filter_coin').empty();
+        }else{
+            let dynamicText = "<option value='NONE'>선택</option>";
+            exchangesList.forEach(exchange => {
+                if(Object.keys(exchange).length > 0){
+                    if(exchange.id == selectedExchange){
+                    exchange.exchangeCoin.forEach(coin => {
+                        dynamicText += `
+                            <option value=${coin.coinCode};${coin.id}>
+                                ${coin.coinName}
+                            </option>`;
+                        })
+                    }
+                }
+            })
+            $('#filter_coin').append(dynamicText);
+        }
+
+        if(selectedExchange == EXCHANGE_LIST.COINONE){
+            common.noti("거래소","코인원의 경우 모든 서비스는 원화 기준입니다.","success");
+        }else {
+            common.noti("거래소","모든 서비스는 각 코인 등록시 등록한 통화 기준입니다.","success");
+        }
+    })
+    /** Event **/
+
+</script>
+
+
+
+<input type="hidden" id="server_user_id" th:value="${userId}" />
+<!-- TODO :
+ 1. 요청 시 예외 처리-->

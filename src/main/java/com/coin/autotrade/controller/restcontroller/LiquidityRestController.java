@@ -33,7 +33,7 @@ public class LiquidityRestController {
             if(liquidity.isEmpty()){
                 response.setResponse(ReturnCode.NO_DATA);
             }else{
-                response.setResponseWithObject(ReturnCode.SUCCESS, liquidity);
+                response.setBody(ReturnCode.SUCCESS, liquidity);
             }
             log.info("[GET LIQUIDITY] Success get liquidity.");
         }catch(Exception e){

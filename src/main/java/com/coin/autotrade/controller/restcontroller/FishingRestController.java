@@ -33,7 +33,7 @@ public class FishingRestController {
             if(fishingList.isEmpty()){
                 response.setResponse(ReturnCode.NO_DATA);
             }else{
-                response.setResponseWithObject(ReturnCode.SUCCESS, fishingList);
+                response.setBody(ReturnCode.SUCCESS, fishingList);
             }
             log.info("[GET FISHING TRADE] Success get fishingtrade.");
         }catch(Exception e){

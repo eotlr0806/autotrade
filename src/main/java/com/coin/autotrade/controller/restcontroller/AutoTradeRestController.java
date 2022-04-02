@@ -36,7 +36,7 @@ public class AutoTradeRestController {
             if(autoList.isEmpty()){
                 response.setResponse(ReturnCode.NO_DATA);
             }else{
-                response.setResponseWithObject(ReturnCode.SUCCESS, autoList);
+                response.setBody(ReturnCode.SUCCESS, autoList);
             }
             log.info("[GET AUTOTRADE] Success get autotrade.");
         }catch(Exception e){
