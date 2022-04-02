@@ -3,9 +3,9 @@ package com.coin.autotrade.service.exchangeimp;
 import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.common.UtilsData;
 import com.coin.autotrade.common.enumeration.ReturnCode;
+import com.coin.autotrade.common.enumeration.Trade;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
-import com.fasterxml.jackson.databind.node.BigIntegerNode;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
@@ -13,15 +13,13 @@ import lombok.extern.slf4j.Slf4j;
 import javax.net.ssl.*;
 import java.io.*;
 import java.math.BigDecimal;
+import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.concurrent.TimeoutException;
 
 @Slf4j
 public class DexorcaImp extends AbstractExchange {
@@ -138,13 +136,13 @@ public class DexorcaImp extends AbstractExchange {
 
             Map<String, String> firstOrderMap  = null;
             Map<String, String> secondOrderMap = null;
-            if(((firstOrderMap = createOrder(firstAction,price, cnt, symbol)) != null )){
-                secondOrderMap = createOrder(secondAction, price, cnt, symbol);
+            if(((firstOrderMap = parseStringToMap(createOrder(firstAction,price, cnt, coinWithId, autoTrade.getExchange()))) != null )){
+                secondOrderMap = parseStringToMap(createOrder(secondAction, price, cnt, coinWithId, autoTrade.getExchange()));
             }
 
             if(firstOrderMap != null){
                 cancelOrder(firstOrderMap, firstAction,price, cnt, symbol);
-                cancelOrder(secondOrderMap, firstAction,price, cnt, symbol);
+                cancelOrder(secondOrderMap, secondAction,price, cnt, symbol);
             }
         }catch (Exception e){
             returnCode = ReturnCode.FAIL.getCode();
@@ -164,7 +162,8 @@ public class DexorcaImp extends AbstractExchange {
         Queue<Map<String,Object>> cancelList = new LinkedList<>();
 
         try{
-            setApiKey(Utils.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
+            String[] coinWithId = Utils.splitCoinWithId(liquidity.getCoin());
+            setApiKey(coinWithId, liquidity.getExchange());
             log.info("[DEXORCA][LIQUIDITY] START");
             String symbol = getSymbol(Utils.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
 
@@ -185,7 +184,7 @@ public class DexorcaImp extends AbstractExchange {
                 }
                 // 매수 로직
                 if(!action.equals("")){
-                    orderMap = createOrder(action, price, cnt, symbol);
+                    orderMap = parseStringToMap(createOrder(action, price, cnt, coinWithId, liquidity.getExchange()));
                     if((orderMap != null)){
                         Map<String, Object> cancel = new HashMap<>();
                         cancel.put("orderMap",orderMap);
@@ -224,7 +223,8 @@ public class DexorcaImp extends AbstractExchange {
         int returnCode = ReturnCode.SUCCESS.getCode();
 
         try{
-            setApiKey(Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
+            String[] coinWithId = Utils.splitCoinWithId(fishing.getCoin());
+            setApiKey(coinWithId, fishing.getExchange());
             String mode   = "";
             String symbol = getSymbol(Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
 
@@ -242,13 +242,13 @@ public class DexorcaImp extends AbstractExchange {
                 Map<String, String> orderMap = null;
                 String action                = null;
                 if(UtilsData.MODE_BUY.equals(mode)) {
-                    orderMap = createOrder(BUY, tickPriceList.get(i), cnt, symbol);      // 매수
+                    orderMap = parseStringToMap(createOrder(BUY, tickPriceList.get(i), cnt, coinWithId, fishing.getExchange()));      // 매수
                     action   = BUY;
                 }else{
-                    orderMap = createOrder(SELL, tickPriceList.get(i), cnt, symbol);     // 매도
+                    orderMap = parseStringToMap(createOrder(SELL, tickPriceList.get(i), cnt, coinWithId, fishing.getExchange()));     // 매도
                     action   = SELL;
                 }
-                if((orderMap != null)){                                                // 매수/매도가 정상적으로 이뤄졌을 경우 데이터를 list에 담는다
+                if((orderMap != null) ){                                                // 매수/매도가 정상적으로 이뤄졌을 경우 데이터를 list에 담는다
                     Map<String, Object> map = new HashMap<>();
                     map.put("orderMap" ,map);
                     map.put("action",  action);
@@ -294,9 +294,9 @@ public class DexorcaImp extends AbstractExchange {
                     }
 
                     if(UtilsData.MODE_BUY.equals(mode)) {
-                        orderId = createOrder(SELL, String.valueOf(copiedOrderMap.get("price")), cntForExcution.toPlainString(), symbol);
+                        orderId = parseStringToMap(createOrder(SELL, String.valueOf(copiedOrderMap.get("price")), cntForExcution.toPlainString(), coinWithId, fishing.getExchange()));
                     }else{
-                        orderId = createOrder(BUY, String.valueOf(copiedOrderMap.get("price")), cntForExcution.toPlainString(), symbol);
+                        orderId = parseStringToMap(createOrder(BUY, String.valueOf(copiedOrderMap.get("price")), cntForExcution.toPlainString(), coinWithId, fishing.getExchange()));
                     }
 
                     if((orderId != null)){
@@ -370,7 +370,8 @@ public class DexorcaImp extends AbstractExchange {
         String realtimeChangeRate = "signed_change_rate";
 
         try {
-            setApiKey(Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
+            String[] coinWithId = Utils.splitCoinWithId(realtimeSync.getCoin());
+            setApiKey(coinWithId, realtimeSync.getExchange());
             boolean isStart      = false;
             String symbol        = getSymbol(Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
             String[] currentTick = getTodayTick(symbol);
@@ -415,7 +416,7 @@ public class DexorcaImp extends AbstractExchange {
 
             // 2. %를 맞추기 위한 매수/매도 로직
             if(isStart){
-                if((orderId = createOrder(action, targetPrice, cnt, symbol)) != null){    // 매수/OrderId가 있으면 성공
+                if((orderId = parseStringToMap(createOrder(action, targetPrice, cnt, coinWithId, realtimeSync.getExchange()))) != null){    // 매수/OrderId가 있으면 성공
                     Thread.sleep(300);
 
                     // 3. bestoffer set 로직
@@ -426,7 +427,7 @@ public class DexorcaImp extends AbstractExchange {
                         String bestofferCnt     = object.get("cnt").getAsString();
                         Map<String, String> bestofferOrderId = null;
 
-                        if((bestofferOrderId = createOrder(action, bestofferPrice, bestofferCnt, symbol)) != null){
+                        if((bestofferOrderId = parseStringToMap(createOrder(action, bestofferPrice, bestofferCnt, coinWithId, realtimeSync.getExchange()))) != null){
                             log.info("[DEXORCA][REALTIME SYNC] Bestoffer is setted. price:{}, cnt:{}", bestofferPrice, bestofferCnt);
                         }
                     }
@@ -435,8 +436,6 @@ public class DexorcaImp extends AbstractExchange {
                     cancelOrder(orderId, action, targetPrice, cnt, symbol);
                 }
             }
-
-
 
         }catch (Exception e){
             log.error("[DEXORCA][REALTIME SYNC TRADE] Error :{} ", e.getMessage());
@@ -481,16 +480,21 @@ public class DexorcaImp extends AbstractExchange {
      * 매수/매도 로직
      * @return 성공 시, order Id. 실패 시, ReturnCode.NO_DATA
      */
-    public Map<String, String> createOrder(String type, String price, String cnt, String symbol){
+    @Override
+    public String createOrder(String type, String price, String cnt, String[] coinData, Exchange exchange){
 
-        Map<String, String> returnMap = null;
+        String returnMsg        = ReturnCode.NO_DATA.getValue();
+        StringBuilder builder   = new StringBuilder();
+
         try{
+            setApiKey(coinData, exchange);
+            String action       = parseAction(type);
             BigDecimal bigCnt   = new BigDecimal(cnt);
             BigDecimal bigPrice = new BigDecimal(price);
 
-            JsonObject object = getOjbect(type);
+            JsonObject object = getOjbect(action);
             JsonObject params = new JsonObject();
-            params.addProperty("issue", symbol);//operation
+            params.addProperty("issue", getSymbol(coinData, exchange));//operation
             params.addProperty("operation", "place");//operation
             params.addProperty("account",  getUserId());
             params.addProperty("volume",  bigCnt.multiply(new BigDecimal(VARIABLE)).toPlainString() );
@@ -501,18 +505,19 @@ public class DexorcaImp extends AbstractExchange {
             JsonObject response = postHttpMethod(object);
             JsonObject result    = response.getAsJsonObject("result");
             if(result.size() == 0){
-                returnMap = new HashMap<>();
                 log.info("[DEXORCA][CREATE ORDER] Maybe success result is null. {}" , gson.toJson(response));
             }else if(result.get("rc").getAsString().equals(SUCCESS)){
-                returnMap = new HashMap<>();
-                returnMap.put(ORDER_DATE, result.get(ORDER_DATE).getAsString());
-                returnMap.put(ORDER_ID,   result.get(ORDER_ID).getAsString());
+                builder.append(result.get(ORDER_DATE).getAsString())
+                        .append(",")
+                        .append(result.get(ORDER_ID).getAsString());
+                returnMsg = builder.toString();
+
                 log.info("[DEXORCA][CREATE ORDER] CREATE SUCCESS:{}" , gson.toJson(response));
             }else{
                 log.error("[DEXORCA][CREATE ORDER] CREATE FAIL:{}", gson.toJson(response));
             }
-            Thread.sleep(300);
-        }catch (TimeoutException e){
+            Thread.sleep(500);
+        }catch (SocketTimeoutException e){
             log.error("[DEXORCA][CREATE ORDER] Maybe is locked ");
             log.error("[DEXORCA][CREATE ORDER] Occur error :{}",e.getMessage());
             e.printStackTrace();
@@ -526,7 +531,19 @@ public class DexorcaImp extends AbstractExchange {
             log.error("[DEXORCA][CREATE ORDER] Occur error :{}",e.getMessage());
             e.printStackTrace();
         }
-        return returnMap;
+        return returnMsg;
+    }
+
+    private Map<String, String> parseStringToMap(String msg) throws Exception {
+        Map<String, String> map = new HashMap<>();
+        String[] msgArr         = msg.split(",");
+        if(msgArr.length > 1){
+            map.put(ORDER_DATE, msgArr[0]);
+            map.put(ORDER_ID,   msgArr[1]);
+            return map;
+        }else{
+            return null;
+        }
     }
 
     /**
@@ -544,7 +561,7 @@ public class DexorcaImp extends AbstractExchange {
             BigDecimal bigCnt   = new BigDecimal(cnt);
             BigDecimal bigPrice = new BigDecimal(price);
 
-            JsonObject object = getOjbect(type);
+            JsonObject object = getOjbect(parseAction(type));
             JsonObject params = new JsonObject();
             params.addProperty("issue", symbol);//operation
             params.addProperty("operation", "void");//operation
@@ -556,7 +573,7 @@ public class DexorcaImp extends AbstractExchange {
             params.addProperty("org_order_id"  , ordNo.get(ORDER_ID));
             object.add("params", params);
 
-            JsonObject response = postHttpMethod(object);
+            JsonObject response  = postHttpMethod(object);
             JsonObject result    = response.getAsJsonObject("result");
             if(result.get("rc").getAsString().equals(SUCCESS)){
                 returnCode = ReturnCode.SUCCESS.getCode();
@@ -567,7 +584,7 @@ public class DexorcaImp extends AbstractExchange {
                 log.error("[DEXORCA][CANCEL ORDER] CANCEL FAIL:{}", gson.toJson(response));
             }
             Thread.sleep(300);
-        }catch (TimeoutException e){
+        }catch (SocketTimeoutException e){
             log.error("[DEXORCA][CANCEL ORDER] Maybe is locked ");
             log.error("[DEXORCA][CANCEL ORDER] Occur error :{}",e.getMessage());
             e.printStackTrace();
@@ -700,5 +717,24 @@ public class DexorcaImp extends AbstractExchange {
     }
     private String getUserId(){
         return this.noChangedUserId;
+    }
+
+    private String parseAction(String action){
+        if(isExternalAction(action)){
+            if(Trade.BUY.equals(action)){
+                return BUY;
+            }else{
+                return SELL;
+            }
+        }
+        return action;
+    }
+
+    private boolean isExternalAction(String action){
+        if(!action.equals(BUY) && !action.equals(SELL)){
+            return true;
+        }else{
+            return false;
+        }
     }
 }

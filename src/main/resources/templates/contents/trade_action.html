@@ -85,7 +85,6 @@
                                             <label class="text-bold" for="filter_coin">코인</label>
                                             <select name="fSpot" id="filter_coin" class="form-control"></select>
                                             <button onclick="fncObj.onClickRealPriceBtn()" class="btn btn-primary" style="margin-left:10px;">호가 조회</button>
-                                            <button class="btn btn-warning" style="margin-left:10px;">자산 조회</button>
                                         </div>
 
                                     </div>
@@ -116,7 +115,7 @@
                                                 <div class="form-group">
                                                     <label class="control-label col-sm-2">주문 가격</label>
                                                     <div class="radio col-sm-8" style="margin-top:0px;">
-                                                        <input id="trade_price" type="text" placeholder="100" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                        <input id="trade_price" type="text" placeholder="100" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
                                                     </div>
                                                 </div>
                                             </div>
@@ -124,14 +123,14 @@
                                                 <div class="form-group">
                                                     <label class="control-label col-sm-2">주문 수량</label>
                                                     <div class="radio col-sm-8" style="margin-top:0px;">
-                                                        <input id="trade_cnt" type="text" placeholder="100" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                        <input id="trade_cnt" type="text" placeholder="100" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
                                                     </div>
                                                 </div>
                                             </div>
 
                                             <div class="text-right">
-                                                <button   type="submit" class="btn btn-danger">매 수</button>
-                                                <button   type="submit" class="btn btn-primary">매 도</button>
+                                                <button onclick="fncObj.postTrade(TRADE_ACTION.BUY)" type="submit" class="btn btn-danger">매 수</button>
+                                                <button onclick="fncObj.postTrade(TRADE_ACTION.SELL)" type="submit" class="btn btn-primary">매 도</button>
 <!--                                                <button onclick="fncObj.postTrade(TRADE_LIST.AUTOTRADE);" type="submit" class="btn btn-primary">저 장</button>-->
                                             </div>
                                         </div>
@@ -308,280 +307,55 @@
 
         postTrade : async (mode) => {
             // check mode
-            let title;
-            let params;
-            if (mode === TRADE_LIST.AUTOTRADE){
-                title  = "자전거래";
-                params = fncObj.setDataBeforeAutoTradeRun();
-            }else if (mode === TRADE_LIST.LIQUIDITY){
-                title  = "호가 유동성";
-                params = fncObj.setDataBeforeLiquidityTrade();
-            }else if (mode === TRADE_LIST.FISHING){
-                title  = "매매 긁기";
-                params = fncObj.setDataBeforeFishingTrade();
-            }else if (mode === TRADE_LIST.REALTIME){
-                title  = "실시간 동기화";
-                params = fncObj.setDataBeforeRealtimeSyncTrade();
-            }
+            let params = fncObj.setDataBeforePost(mode);
 
             if(params != CODE_ERROR){
-                let returnVal = await common.post(API.SAVE_TRADE, params);
-                if (returnVal != null){
-                    common.noti(title,"해당 내역으로 거래가 저장됩니다.","success");
+                let returnVal = await common.post(API.TRADE_ACTION, params);
+                if (!returnVal || returnVal.status !== CODE.SUCCESS){
+                    common.noti("기본 거래","해당 코인에 대해 기본 거래가 불가능합니다.","error");
+                    return;
                 }else{
-                    common.noti(title,"해당 거래가 정상적으로 저장되지 않았습니다.\n로그아웃 후 다시 시도해주세요.","error");
+                    common.noti("기본 거래","거래 요청 완료","success");
+                    return;
                 }
             }
         },
 
         // 자전 거래 데이터 셋팅
-        setDataBeforeAutoTradeRun : () => {
-            
-            if(!fncObj.validateCommon() || !fncObj.validateAutoTrade()){
+        setDataBeforePost : (mode) => {
+            if(!fncObj.validateParam()){
                 return CODE_ERROR;
             }
 
             let body = {
-                minCnt      : $('#min_cnt').val(),
-                maxCnt      : $('#max_cnt').val(),
-                minSeconds  : $('#min_seconds').val(),
-                maxSeconds  : $('#max_seconds').val(),
-                exchange    : {id:$('#filter_exchange').val()},
-                coin        : $('#filter_coin').val(),
-                mode        : clickedAutoMode,
-                status      : STOP,
-                userId      : loginUserId,
-                tradeType   : TRADE_LIST.AUTOTRADE,
+                type       : mode,
+                price      : dataObj.validateDot($('#trade_price').val()),
+                cnt        : dataObj.validateDot($('#trade_cnt').val()),
+                exchangeId : $('#filter_exchange').val(),
+                coinWithId : $('#filter_coin').val(),
+                userId     : loginUserId,
             };
-        
             return body;
         },
 
-        // 호가유동성 데이터 셋팅
-        setDataBeforeLiquidityTrade : () => {
-            if(!fncObj.validateCommon() || !fncObj.validateLiquidityTrade()){
-                return CODE_ERROR
-            }
 
-            let body = {
-                minCnt      : $('#min_cnt_liquidity').val(),
-                maxCnt      : $('#max_cnt_liquidity').val(),
-                minSeconds  : $('#min_seconds_liquidity').val(),
-                maxSeconds  : $('#max_seconds_liquidity').val(),
-                randomTick  : $('#random_tick_liquidity').val(),
-                rangeTick   : $('#range_tick_liquidity').val(),
-                selfTick    : liquiditySelfTick.toString(),
-                status      : STOP,
-                mode        : clickedLiquidityMode,
-                exchange    : {id:$('#filter_exchange').val()},
-                coin        : $('#filter_coin').val(),
-                userId      : loginUserId,
-                tradeType   : TRADE_LIST.LIQUIDITY,
-            }
-
-            return body;
-        },
-
-        // 매매 긁기 데이터 셋팅
-        setDataBeforeFishingTrade : () => {
-            if(!fncObj.validateCommon() || !fncObj.validateFishingTrade()){
-                return CODE_ERROR
-            }
-
-            let body = {
-                minContractCnt     : $('#min_contract_fishing').val(),
-                maxContractCnt     : $('#max_contract_fishing').val(),
-                minExecuteCnt      : $('#min_execute_fishing').val(),
-                maxExecuteCnt      : $('#max_execute_fishing').val(),
-                minSeconds         : $('#min_seconds_fishing').val(),
-                maxSeconds         : $('#max_seconds_fishing').val(),
-                rangeTick          : $('#range_tick_fishing').val(),
-                tickCnt            : $('#tick_cnt_fishing').val(),
-                status             : STOP,
-                mode               : (clickedFishingMode === 'RANDOM_FISHING_L') ? 'RANDOM' : ((clickedFishingMode === 'SELL_FISHING_L') ? 'SELL' : 'BUY'),
-                exchange           : {id:$('#filter_exchange').val()},
-                coin               : $('#filter_coin').val(),
-                userId             : loginUserId,
-                tradeType          : TRADE_LIST.FISHING,
-            }
-
-            return body;
-        },
-
-        // 실시간 동기화 데이터 셋팅
-        setDataBeforeRealtimeSyncTrade : () => {
-            if(!fncObj.validateCommon() || !fncObj.validateRealtimeSyncTrade()){
-                return CODE_ERROR
-            }
-
-            let body = {
-                syncCoin           : $('#sync_coin_realtime').val(),
-                pricePercent       : $('#price_percent_realtime').val(),
-                syncTime           : $('#sync_time_realtime').val(),
-                minPrice           : $('#min_price_realtime').val(),
-                maxPrice           : $('#max_price_realtime').val(),
-                minBestofferCnt    : $('#min_bestoffer_realtime').val(),
-                maxBestofferCnt    : $('#max_bestoffer_realtime').val(),
-                tickCnt            : $('#tick_cnt_bestoffer_realtime').val(),
-                tickRange          : $('#tick_range_bestoffer_realtime').val(),
-                minTradeCnt        : $('#min_trade_realtime').val(),
-                maxTradeCnt        : $('#max_trade_realtime').val(),
-                status             : STOP,
-                exchange           : {id:$('#filter_exchange').val()},
-                coin               : $('#filter_coin').val(),
-                userId             : loginUserId,
-                tradeType          : TRADE_LIST.REALTIME_SYNC,
-            }
-
-            return body;
-        },
-
-        // setDataBeforeAutoTrade 에서 값이 유효한지 체크하는 로직
-        validateAutoTrade : () => {
-            
-            if($('#min_cnt').val() == "" || $('#max_cnt').val() == ""){
-                return common.noti("자전거래","수량을 모두 입력해주세요.","error");
-            }else if(Number($('#min_cnt').val()) > Number($('#max_cnt').val())){
-                return common.noti("자전거래","최소 수량이 최대보다 큽니다.","error");
-            }else if($('#min_seconds').val() == "" || $('#max_seconds').val() == ""){
-                return common.noti("자전거래","시간을 모두 입력해주세요.","error");
-            }else if(Number($('#min_seconds').val()) > Number($('#max_seconds').val())){
-                return common.noti("자전거래","최소 시간이 최대보다 큽니다.","error");
-            } else if(clickedAutoMode == "" || clickedAutoMode == undefined){
-                return common.noti("자전거래","모드를 설정해주세요.","error");
-            }else if(loginUserId == "" || loginUserId == undefined){
-                return common.noti("자전거래","세션 정보가 없습니다. \n다시 로그인해주세요.","error");
-            }
-
-            return true;
-        },
-
-        // liquidityTrade 유효성 검사
-        validateLiquidityTrade : () => {
-
-            if($('#range_tick_liquidity').val() == ""){
-                return common.noti("호가 유동성","틱 간격을 입력해주세요.","error");
-            }else if($('#min_cnt_liquidity').val() == "" || $('#max_cnt_liquidity').val() == ""){
-                return common.noti("호가 유동성","수량을 모두 입력해주세요.","error");
-            }else if(Number($('#min_cnt_liquidity').val()) > Number($('#max_cnt_liquidity').val())){
-                return common.noti("호가 유동성","최소 수량이 최대보다 큽니다.","error");
-            }else if($('#min_seconds_liquidity').val() == "" || $('#max_seconds_liquidity').val() == ""){
-                return common.noti("호가 유동성","시간을 모두 입력해주세요.","error");
-            }else if(Number($('#min_seconds_liquidity').val()) > Number($('#max_seconds_liquidity').val())){
-                return common.noti("호가 유동성","최소 시간이 최대보다 큽니다.","error");
-            }else if(clickedLiquidityMode == "" || clickedLiquidityMode == undefined){
-                return common.noti("호가 유동성","모드를 설정해주세요.","error");
-            }else if(loginUserId == "" || loginUserId == undefined){
-                return common.noti("호가 유동성","세션 정보가 없습니다. \n다시 로그인해주세요.","error");
-            }
-
-            // 모드가 무작위일 경우, 랜덤 틱수 필수 값
-            if(clickedLiquidityMode == "RANDOM_L" && $('#random_tick_liquidity').val() == ""){
-                return common.noti("호가 유동성","무작위 모드에서는 랜덤 틱수 값이 필수입니다.","error");
-            }
-            if(clickedLiquidityMode == "SELF_L" && liquiditySelfTick.length < 1){
-                return common.noti("호가 유동성","수동 모드에서는 수동 틱 선택이 필수입니다.","error");
-            }
-
-            return true;
-        },
-
-        // fishingTrade 유효성 검사
-        validateFishingTrade : () => {
-            
-            if($('#tick_cnt_fishing').val() == ""){
-                return common.noti("호가 긁기","활성 틱수를 입력해주세요.","error");
-            }else if($('#range_tick_fishing').val() == ""){
-                return common.noti("호가 긁기","틱 간격을 입력해주세요.","error");
-            }else if($('#min_contract_fishing').val() == "" || $('#max_contract_fishing').val() == ""){
-                return common.noti("호가 긁기","주문 범위를 모두 입력해주세요.","error");
-            }else if(Number($('#min_contract_fishing').val()) > Number($('#max_contract_fishing').val())){
-                return common.noti("호가 긁기","최소 수량이 최대보다 큽니다.","error");
-            }else if($('#min_execute_fishing').val() == "" || $('#max_execute_fishing').val() == ""){
-                return common.noti("호가 긁기","체결 범위를 모두 입력해주세요.","error");
-            }else if(Number($('#min_execute_fishing').val()) > Number($('#max_execute_fishing').val())){
-                return common.noti("호가 긁기","최소 체결 수량이 최대보다 큽니다.","error");
-            }else if($('#min_seconds_fishing').val() == "" || $('#max_seconds_fishing').val() == ""){
-                return common.noti("호가 긁기","시간을 모두 입력해주세요.","error");
-            }else if(Number($('#min_seconds_fishing').val()) > Number($('#max_seconds_fishing').val())){
-                return common.noti("호가 긁기","최소 시간이 최대보다 큽니다.","error");
-            }else if(clickedFishingMode == "" || clickedFishingMode == undefined){
-                return common.noti("호가 긁기","모드를 설정해주세요.","error");
-            }else if(loginUserId == "" || loginUserId == undefined){
-                return common.noti("호가 긁기","세션 정보가 없습니다. \n다시 로그인해주세요.","error");
-            }
-            return true;
-        },
-
-        // realtimeSync 유효성 검사
-        validateRealtimeSyncTrade : () => {
-            
-            if($('#sync_coin_realtime').val() == ""){
-                return common.noti("실시간 동기화","실시간 연동을 하고자 하는 코인을 입력하세요.","error");
-            }else if($('#price_percent_realtime').val() == ""){
-                return common.noti("실시간 동기화","가격변동 퍼센테이지를 입력해주세요.","error");
-            }else if(Number($('#price_percent_realtime').val()) < 1){
-                return common.noti("실시간 동기화","퍼센트는 1 이상이어야 합니다","error");
-            }else if($('#sync_time_realtime').val() == ""){
-                return common.noti("실시간 동기화","동기화 변동 주기를 입력해주세요.","error");
-            }else if(Number($('#min_price_realtime').val()) > Number($('#max_price_realtime').val())){
-                return common.noti("실시간 동기화","최소 가격이 최대보다 큽니다.","error");
-            }else if($('#min_price_realtime').val() == "" || $('#max_price_realtime').val() == ""){
-                return common.noti("실시간 동기화","최소/최대 가격을 모두 입력해주세요.","error");
-            }else if(Number($('#min_bestoffer_realtime').val()) > Number($('#max_bestoffer_realtime').val())){
-                return common.noti("실시간 동기화","최소 베스트 오퍼 수량이 최대보다 큽니다.","error");
-            }else if($('#min_bestoffer_realtime').val() == "" || $('#max_bestoffer_realtime').val() == ""){
-                return common.noti("실시간 동기화","베스트오퍼 최소/최대 물량을 모두 입력해주세요.","error");
-            }else if($('#tick_cnt_bestoffer_realtime').val() == ""){
-                return common.noti("실시간 동기화","베스트오퍼 틱 수를 입력해주세요.","error");
-            }else if($('#tick_range_bestoffer_realtime').val() == ""){
-                return common.noti("실시간 동기화","베스트오퍼 틱 간격을 입력해주세요.","error");
-            }else if(Number($('#min_trade_realtime').val()) > Number($('#max_trade_realtime').val())){
-                return common.noti("실시간 동기화","최소 거래 수량이 최대보다 큽니다.","error");
-            }else if($('#min_trade_realtime').val() == "" || $('#max_trade_realtime').val() == ""){
-                return common.noti("실시간 동기화","최소/최대 거래 수량을 모두 입력해주세요.","error");
-            }
-            
-            return true;
-        },
-
-        // realtimeSync 가능한 코인인지 검사
-        validateCoinForRealtime : () => {
-            let coinWithCurrency = $('#sync_coin_realtime').val();
-            let url = UPBIT_URL + coinWithCurrency;
-            axios.get(url).
-                then(response => {
-                    common.noti("실시간 연동",`해당 코인은 실시간 동기화가 가능합니다.`,"success");
-                    $('#save_button_realtime').prop('disabled',false);
-                }).
-                catch(error => {
-                    $('#save_button_realtime').prop('disabled',true);
-                    common.noti("실시간 연동",`해당 코인의 경우 업비트에서 제공하지 않습니다. 코인 : ${coinWithCurrency}`,"error");
-                    console.log(`[GET API ERROR] url: ${url}, error: ${error}`);
-                })
-        },
 
 
         // 공통 부분
-        validateCommon : () => {
+        validateParam : () => {
             if($('#filter_exchange').val() == '' || $('#filter_exchange').val() == undefined || $('#filter_exchange').val() == 'NONE'){
-                return common.noti("거래 저장","상단의 거래소를 선택해주세요.","error");
+                return common.noti("수동 거래","상단의 거래소를 선택해주세요.","error");
             }else if($('#filter_coin').val() == '' || $('#filter_coin').val() == undefined || $('#filter_coin').val() == 'NONE'){
-                return common.noti("거래 저장","상단의 코인을 선택해주세요.","error");
+                return common.noti("수동 거래","상단의 코인을 선택해주세요.","error");
+            }else if ($('#trade_price').val() == ''){
+                return common.noti("수동 거래","가격을 입력해주세요.","error");
+            }else if ($('#trade_cnt').val() == ''){
+                return common.noti("수동 거래","수량을 입력해주세요.","error");
             }
             return true;
         },
     };
     /** Function object **/
-
-
-
-
-
-
-
-
-
 
 
 
@@ -592,9 +366,7 @@
             let dynamicText = "";
             try{
                 let limitCnt = 10;  // 기존에 10개
-                if(exchange == 6){  // TODO : 빗썸아이디.
-                    limitCnt = 30;  // 빗썸의 경우 30개(최대가 30개임)
-                }
+
                 ask = data.ask.slice(0,limitCnt).reverse() || []   // sell
                 bid = data.bid.slice(0,limitCnt) || []             // buy
 
@@ -636,6 +408,16 @@
             });
             $('#filter_exchange').append(dynamicText);
         },
+
+        validateDot : target => {
+            if (target.indexOf('.') == 0){
+                return `0${target}`;
+            }else if (target.indexOf('.') == target.length -1){
+                return `${target}0`;
+            }else{
+                return target;
+            }
+        }
 
         
     }

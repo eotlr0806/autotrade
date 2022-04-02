@@ -36,6 +36,11 @@ const TRADE_STATUS = {
     DELETE : "DELETE"
 }
 
+const TRADE_ACTION = {
+    BUY  : "BUY",
+    SELL : "SELL",
+}
+
 const API = {
     AUTO_TRADE    :"/v1/trade/auto",
     LIQUIDITY     :"/v1/trade/liquidity",
@@ -45,7 +50,8 @@ const API = {
     EXCHANGE      :"/v1/exchanges",
     COIN          :"/v1/exchanges/coin",
     ORDER_BOOK    :"/v1/orderbook",
-    BALANCE       :"/v1/balance"
+    BALANCE       :"/v1/balance",
+    TRADE_ACTION  :"/v1/trade/action"
 }
 
 const CODE_ERROR         = -1000;
@@ -114,7 +120,6 @@ let common = {
             if (response.data.status === CODE.SUCCESS){
                 returnData = response.data;
             }else{
-
                 console.log(`[GET API ERROR] url: ${url}, response: ${JSON.stringify(response.data)}`);
             }
         }).
