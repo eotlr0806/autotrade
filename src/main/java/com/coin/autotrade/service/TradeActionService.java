@@ -45,7 +45,7 @@ public class TradeActionService {
                 }
             }
         }catch(Exception e){
-            log.error("[GET BALANCE] Occur error : {}",e.getMessage());
+            log.error("[TRADE ACTION] Occur error : {}",e.getMessage());
             e.printStackTrace();
             response.setResponse(ReturnCode.FAIL, e.getMessage());
         }

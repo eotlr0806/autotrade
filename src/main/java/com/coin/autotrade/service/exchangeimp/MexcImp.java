@@ -128,8 +128,12 @@ public class MexcImp extends AbstractExchange {
                 secondOrderId = createOrder(secondAction, price, downCnt, symbol);
             }
             Thread.sleep(500);
-            cancelOrder(firstOrderId);
-            cancelOrder(secondOrderId);
+            if(!firstOrderId.equals(ReturnCode.NO_DATA.getValue())){
+                cancelOrder(firstOrderId);
+            }
+            if(!secondOrderId.equals(ReturnCode.NO_DATA.getValue())){
+                cancelOrder(secondOrderId);
+            }
 
         } catch (Exception e) {
             returnCode = ReturnCode.FAIL.getCode();

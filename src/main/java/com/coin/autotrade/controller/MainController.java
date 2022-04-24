@@ -79,20 +79,29 @@ public class MainController {
     }
 
     /* main/trade_config trading */
-    @GetMapping(value = "/main/trade_action")
-    public ModelAndView tradeAction(HttpServletRequest request) throws Exception{
+    @GetMapping(value = "/main/trade_basic")
+    public ModelAndView tradeBasic(HttpServletRequest request) throws Exception{
         ModelAndView mav = new ModelAndView();
-        mav.setViewName("contents/trade_action");
+        mav.setViewName("contents/trade_basic");
+        mav.addObject("userId",request.getSession().getAttribute(SessionKey.USER_ID.toString()));
+        return mav;
+    }
+
+    /* main/trade_config trading */
+    @GetMapping(value = "/main/trade_immediate")
+    public ModelAndView tradeImmediate(HttpServletRequest request) throws Exception{
+        ModelAndView mav = new ModelAndView();
+        mav.setViewName("contents/trade_immediate");
         mav.addObject("userId",request.getSession().getAttribute(SessionKey.USER_ID.toString()));
         return mav;
     }
 
 
     /* main/trade trading */
-    @GetMapping(value = "/main/trade")
+    @GetMapping(value = "/main/trade_schedule")
     public ModelAndView trade(HttpServletRequest request) throws Exception{
         ModelAndView mav = new ModelAndView();
-        mav.setViewName("contents/trade");
+        mav.setViewName("contents/trade_schedule");
         mav.addObject("userId",request.getSession().getAttribute(SessionKey.USER_ID.toString()));
         return mav;
     }

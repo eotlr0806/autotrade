@@ -51,7 +51,7 @@
                 <div class="page-header">
                     <div class="page-header-content">
                         <div class="page-title">
-                            <h4><i class="icon-arrow-left52 position-left"></i> <span class="text-semibold">운영 관리</span> - 거래 관리</h4>
+                            <h4><i class="icon-arrow-left52 position-left"></i> <span class="text-semibold">트레이딩</span> - 즉시 거래</h4>
                         </div>
                     </div>
                 </div>
@@ -97,10 +97,10 @@
                     <!-- 2 columns form -->
                     <div class="row">
                         <!-- 자전 거래 -->
-                        <div class="col-md-12">
+                        <div class="col-md-6">
                             <div class="panel panel-flat">
                                 <div class="panel-heading">
-                                    <h5 class="panel-title text-bold">거래</h5>
+                                    <h5 class="panel-title text-bold">호가 채우기</h5>
                                     <div class="heading-elements">
                                         <ul class="icons-list">
                                             <li><a data-action="collapse"></a></li>
@@ -113,25 +113,66 @@
                                         <div class="col-md-12">
                                             <div class="row">
                                                 <div class="form-group">
-                                                    <label class="control-label col-sm-2">주문 가격</label>
+                                                    <label class="control-label col-sm-2">베스트 기준 몇 틱</label>
                                                     <div class="radio col-sm-8" style="margin-top:0px;">
-                                                        <input id="trade_price" type="text" placeholder="100" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                        <input id="add_tick_standard" type="text" placeholder="100" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
                                                     </div>
                                                 </div>
                                             </div>
                                             <div class="row">
                                                 <div class="form-group">
-                                                    <label class="control-label col-sm-2">주문 수량</label>
-                                                    <div class="radio col-sm-8" style="margin-top:0px;">
-                                                        <input id="trade_cnt" type="text" placeholder="100" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    <label class="control-label col-sm-2">수량 범위</label>
+                                                    <div class="row sol-sm-8">
+                                                        <div class="col-sm-3">
+                                                            <input id="add_tick_min_cnt" type="text" placeholder="0" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                        </div>
+                                                        <div class="col-sm-3">
+                                                            <input id="add_tick_max_cnt" type="text" placeholder="100" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="form-group">
+                                                    <label class="control-label col-sm-2">틱 단위</label>
+                                                    <div class="radio col-sm-3" style="margin-top:0px;">
+                                                        <input id="add_tick_per" type="text" placeholder="100" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
                                                     </div>
                                                 </div>
                                             </div>
 
+                                            <div class="row">
+                                                <div class="form-group">
+                                                    <label class="control-label col-sm-2">호가 생성 개수</label>
+                                                    <div class="radio col-sm-3" style="margin-top:0px;">
+                                                        <input id="trade_tick_per_cnt" type="text" placeholder="100" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="row">
+                                                <div class="form-group">
+                                                    <label class="control-label col-sm-2">모드 설정</label>
+                                                    <div class="radio col-sm-8" style="margin-top:0px;">
+                                                        <div class="radio">
+                                                            <div>
+                                                                <input id="SELL" type="radio" name="addTick" class="custom-radio">
+                                                                <span style="padding-left:25px; font-size:12px; color:#999999;">매도 채우기</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="radio">
+                                                            <div>
+                                                                <input id="BUY" type="radio" name="addTick" class="custom-radio">
+                                                                <span style="padding-left:25px; font-size:12px; color:#999999;">매수 채우기</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+
                                             <div class="text-right">
-                                                <button onclick="fncObj.postTrade(TRADE_ACTION.BUY)" type="submit" class="btn btn-danger">매 수</button>
-                                                <button onclick="fncObj.postTrade(TRADE_ACTION.SELL)" type="submit" class="btn btn-primary">매 도</button>
-<!--                                                <button onclick="fncObj.postTrade(TRADE_LIST.AUTOTRADE);" type="submit" class="btn btn-primary">저 장</button>-->
+                                                <button onclick="fncObj.postTrade(ADDTICK)" type="submit" class="btn btn-danger">시 작</button>
                                             </div>
                                         </div>
                                     </div>
@@ -224,14 +265,10 @@
 <script>
 
     const STOP               = "STOP";
-    const UPBIT_URL          = "https://api.upbit.com/v1/ticker?markets=";
-
-    let clickedAutoMode      = '';
-    let clickedLiquidityMode = '';
-    let clickedFishingMode   = '';
+    const ADDTICK            = "addTick";
+    let clickedAddTickMode   = '';
     let exchangesList        = [];
     let loginUserId          = '';
-    let liquiditySelfTick    = [];
 
     // init page
     $(document).ready(() => {
@@ -262,15 +299,6 @@
                     let str   = item.currentTarget.id.toString();
                     let index = str.indexOf('-') + 1;
                     let id    = str.substring(index);
-
-                    // 값이있다면
-                    if(liquiditySelfTick.includes(id)){
-                        liquiditySelfTick = liquiditySelfTick.filter(item => item != id);
-                    }
-                    // 값이 없다면
-                    else{
-                        liquiditySelfTick.push(id);
-                    }
                 });
             },1000);
         },
@@ -305,12 +333,20 @@
             $('#modal_coin_price_body').append(dynamicText);
         },
 
-        postTrade : async (mode) => {
-            // check mode
-            let params = fncObj.setDataBeforePost(mode);
+        postTrade : async (type) => {
+
+            // 거래소 및 기본 사항 체크
+            if(!fncObj.validateParam()){
+                return;
+            }
+
+            let params = CODE_ERROR;
+            if (type === ADDTICK){
+                params = fncObj.setDataAddTick();
+            }
 
             if(params != CODE_ERROR){
-                let returnVal = await common.post(API.TRADE_ACTION, params);
+                let returnVal = await common.post(API.ADD_TICK, params);
                 if (!returnVal || returnVal.status !== CODE.SUCCESS){
                     common.noti("기본 거래","해당 코인에 대해 기본 거래가 불가능합니다.","error");
                     return;
@@ -321,37 +357,52 @@
             }
         },
 
-        // 자전 거래 데이터 셋팅
-        setDataBeforePost : (mode) => {
-            if(!fncObj.validateParam()){
+        // 공통 부분
+        validateParam : () => {
+            if($('#filter_exchange').val() == '' || $('#filter_exchange').val() == undefined || $('#filter_exchange').val() == 'NONE'){
+                return common.noti("즉시 거래","상단의 거래소를 선택해주세요.","error");
+            }else if($('#filter_coin').val() == '' || $('#filter_coin').val() == undefined || $('#filter_coin').val() == 'NONE'){
+                return common.noti("즉시 거래","상단의 코인을 선택해주세요.","error");
+            }else if ($('#trade_price').val() == ''){
+                return common.noti("즉시 거래","가격을 입력해주세요.","error");
+            }else if ($('#trade_cnt').val() == ''){
+                return common.noti("즉시 거래","수량을 입력해주세요.","error");
+            }
+            return true;
+        },
+
+        setDataAddTick : (mode) => {
+            if (!fncObj.validateAddTick()){
                 return CODE_ERROR;
             }
 
             let body = {
-                type       : mode,
-                price      : dataObj.validateDot($('#trade_price').val()),
-                cnt        : dataObj.validateDot($('#trade_cnt').val()),
-                exchangeId : $('#filter_exchange').val(),
-                coinWithId : $('#filter_coin').val(),
-                userId     : loginUserId,
+                mode         : clickedAddTickMode,
+                tickStandard : $('#add_tick_standard').val(),
+                minCnt       : $('#add_tick_min_cnt').val(),
+                maxCnt       : $('#add_tick_max_cnt').val(),
+                tick         : $('#add_tick_per').val(),
+                tickCnt      : $('#trade_tick_per_cnt').val(),
+                exchangeId   : $('#filter_exchange').val(),
+                coinWithId   : $('#filter_coin').val(),
+                userId       : loginUserId,
             };
             return body;
         },
 
-
-
-
-        // 공통 부분
-        validateParam : () => {
-            if($('#filter_exchange').val() == '' || $('#filter_exchange').val() == undefined || $('#filter_exchange').val() == 'NONE'){
-                return common.noti("수동 거래","상단의 거래소를 선택해주세요.","error");
-            }else if($('#filter_coin').val() == '' || $('#filter_coin').val() == undefined || $('#filter_coin').val() == 'NONE'){
-                return common.noti("수동 거래","상단의 코인을 선택해주세요.","error");
-            }else if ($('#trade_price').val() == ''){
-                return common.noti("수동 거래","가격을 입력해주세요.","error");
-            }else if ($('#trade_cnt').val() == ''){
-                return common.noti("수동 거래","수량을 입력해주세요.","error");
+        validateAddTick :  () => {
+            if($('#add_tick_standard').val() == ''){
+                return common.noti("호가 채우기","베스트 기준 몇 틱 값을 입력해주세요.","error");
+            }else if($('#add_tick_min_cnt').val() == '' || $('#add_tick_max_cnt').val() == ''){
+                return common.noti("호가 채우기","수량 범위를 모두 입력해주세요.","error");
+            }else if ($('#add_tick_per').val() == ''){
+                return common.noti("호가 채우기","틱 단위를 입력해주세요.","error");
+            }else if (clickedAddTickMode == ''){
+                return common.noti("호가 채우기","모드를 선택해주세요.","error");
+            }else if (Number($('#add_tick_min_cnt').val()) > Number($('#add_tick_max_cnt').val())){
+                return common.noti("호가 채우기","최소 수량이 최대 수량보다 큽니다.","error");
             }
+
             return true;
         },
     };
@@ -392,7 +443,6 @@
 
 
             return dynamicText;
-            
         },
           
         // 페이지 로드 이후, 거래소 정보 셋팅을 위한 함수
@@ -426,16 +476,12 @@
 
 
 
-
-    /** Event **/
+    /** Start event **/
+    // Radio button event
     $('.custom-radio').on('click', event => {
         let name = event.currentTarget.name;
-        if(name == 'autotrade'){
-            clickedAutoMode      = event.currentTarget.id;
-        }else if(name == 'liquidity'){
-            clickedLiquidityMode = event.currentTarget.id;
-        }else if(name = 'fishing'){
-            clickedFishingMode   = event.currentTarget.id;
+        if(name == ADDTICK){
+            clickedAddTickMode = event.currentTarget.id;
         }
     })
 
@@ -469,12 +515,10 @@
             common.noti("거래소","모든 서비스는 각 코인 등록시 등록한 통화 기준입니다.","success");
         }
     })
-    /** Event **/
+    /** End event **/
 
 </script>
 
 
 
 <input type="hidden" id="server_user_id" th:value="${userId}" />
-<!-- TODO :
- 1. 요청 시 예외 처리-->
