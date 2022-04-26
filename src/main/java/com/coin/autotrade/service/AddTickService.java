@@ -54,7 +54,9 @@ public class AddTickService {
                                                               coinWithId,
                                                               exchange);
                     String msg = "price:" + price + " cnt:" + cnt + " orderId:" + orderId;
+                    Thread.sleep(150);
                     msgList.add(msg);
+
                     if(orderId.equals(ReturnCode.NO_DATA.getValue())){
                         success = false;
                     }
@@ -86,7 +88,10 @@ public class AddTickService {
         JsonObject targetObj = (mode == Trade.BUY) ?
                 orderJson.getAsJsonArray("ask").get(0).getAsJsonObject() :
                 orderJson.getAsJsonArray("bid").get(0).getAsJsonObject();
-        return targetObj.get("price").getAsString();
+        String returnVal = targetObj.get("price").getAsString();
+        log.info("[ADD TICK SERVICE] Book Price : {}", returnVal);
+
+        return returnVal;
     }
     
     private List<String> makeTargetPrice(String bookPrice, AddTick addTick) throws Exception{
