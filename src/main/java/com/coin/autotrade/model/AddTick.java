@@ -10,8 +10,6 @@ import lombok.ToString;
 @Setter
 @ToString
 public class AddTick {
-
-    private String   tickStandard;  // 베스트 기준 몇 틱
     private Integer  minCnt;        // 최소 개수
     private Integer  maxCnt;        // 최대 개수
     private String   tick;          // 틱 단위

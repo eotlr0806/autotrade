@@ -87,7 +87,6 @@ public class BithumbGlobalImp extends AbstractExchange {
             String symbol       = getSymbol(coinWithId, autoTrade.getExchange());
             String firstAction  = "";
             String secondAction = "";
-            cnt                 = setCutCoinCnt(symbol, cnt);
 
             // mode 처리
             String mode = autoTrade.getMode();
@@ -110,8 +109,6 @@ public class BithumbGlobalImp extends AbstractExchange {
                     cancelOrder(orderId, symbol);                      // 매도 실패 시, 매수 취소
                 }
             }
-
-
 
         }catch (Exception e){
             returnCode = ReturnCode.FAIL.getCode();
@@ -143,7 +140,7 @@ public class BithumbGlobalImp extends AbstractExchange {
                 String orderId        = ReturnCode.NO_DATA.getValue();
                 String price          = "";
                 String action         = "";
-                String cnt            = setCutCoinCnt(symbol, Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt()));
+                String cnt            = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
 
                 if (!buyQueue.isEmpty() && mode.equals(UtilsData.MODE_BUY)) {
                     price   = buyQueue.poll();
@@ -203,7 +200,6 @@ public class BithumbGlobalImp extends AbstractExchange {
             log.info("[BITHUMBGLOBAL][FISHINGTRADE][START BUY OR SELL TARGET ALL COIN]");
             for (int i = 0; i < tickPriceList.size(); i++) {
                 String cnt = Utils.getRandomString(fishing.getMinContractCnt(), fishing.getMaxContractCnt());
-                cnt        = setCutCoinCnt(symbol, cnt);
                 String orderId = ReturnCode.NO_DATA.getValue();
                 if(UtilsData.MODE_BUY.equals(mode)) {
                     orderId = createOrder(BUY,  tickPriceList.get(i), cnt, coinWithId, fishing.getExchange());
@@ -224,14 +220,12 @@ public class BithumbGlobalImp extends AbstractExchange {
             for (int i = orderList.size() - 1; i >= 0; i--) {
                 Map<String, String> copiedOrderMap = Utils.deepCopy(orderList.get(i));
                 BigDecimal cnt                     = new BigDecimal(copiedOrderMap.get("cnt"));
-                cnt                                = new BigDecimal(setCutCoinCnt(symbol, cnt.toPlainString()));
 
                 while (cnt.compareTo(new BigDecimal("0")) > 0) {
                     if (!noMatchFirstTick) break;                   // 최신 매도/매수 건 값이 다를경우 돌 필요 없음.
                     if (noIntervalFlag) Thread.sleep(intervalTime); // intervalTime 만큼 휴식 후 매수 시작
                     String orderId            = ReturnCode.NO_DATA.getValue();
                     BigDecimal cntForExcution = new BigDecimal(Utils.getRandomString(fishing.getMinExecuteCnt(), fishing.getMaxExecuteCnt()));
-                    cntForExcution            = new BigDecimal(setCutCoinCnt(symbol, cntForExcution.toPlainString()));
 
                     // 남은 코인 수와 매도/매수할 코인수를 비교했을 때, 남은 코인 수가 더 적다면.
                     if (cnt.compareTo(cntForExcution) < 0) {
@@ -307,7 +301,6 @@ public class BithumbGlobalImp extends AbstractExchange {
             String action        = "";
             String mode          = "";
             String cnt           = Utils.getRandomString(realtimeSync.getMinTradeCnt(), realtimeSync.getMaxTradeCnt());
-            cnt                  = setCutCoinCnt(symbol, cnt);
             int isInRange = isMoreOrLessPrice(currentPrice);
 
             if(isInRange != 0){              // 구간 밖일 경우
@@ -343,7 +336,6 @@ public class BithumbGlobalImp extends AbstractExchange {
                         JsonObject object       = array.get(i).getAsJsonObject();
                         String bestofferPrice   = object.get("price").getAsString();
                         String bestofferCnt     = object.get("cnt").getAsString();
-                        bestofferCnt            = setCutCoinCnt(symbol, bestofferCnt);
                         String bestofferOrderId = ReturnCode.NO_DATA.getValue();
 
                         if( !(bestofferOrderId = createOrder(action, bestofferPrice, bestofferCnt, coinWithId, realtimeSync.getExchange())).equals(ReturnCode.NO_DATA.getValue())){
@@ -416,13 +408,14 @@ public class BithumbGlobalImp extends AbstractExchange {
         String response = ReturnCode.NO_DATA.getValue();
 
         try{
+            String cutCnt = setCutCoinCnt(getSymbol(coinData, exchange), cnt);
             setCoinToken(coinData, exchange);
             String action     = parseAction(type);
             JsonObject header = new JsonObject();
             header.addProperty("apiKey",    keyList.get(PUBLIC_KEY));
             header.addProperty("msgNo",     System.currentTimeMillis());
             header.addProperty("price",     price);
-            header.addProperty("quantity",  cnt);
+            header.addProperty("quantity",  cutCnt);
             header.addProperty("side",      action);
             header.addProperty("symbol",    getSymbol(coinData, exchange));
             header.addProperty("timestamp", System.currentTimeMillis());

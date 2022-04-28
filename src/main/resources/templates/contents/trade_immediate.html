@@ -113,14 +113,6 @@
                                         <div class="col-md-12">
                                             <div class="row">
                                                 <div class="form-group">
-                                                    <label class="control-label col-sm-2">베스트 기준 몇 틱</label>
-                                                    <div class="radio col-sm-8" style="margin-top:0px;">
-                                                        <input id="add_tick_standard" type="text" placeholder="100" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="row">
-                                                <div class="form-group">
                                                     <label class="control-label col-sm-2">수량 범위</label>
                                                     <div class="row sol-sm-8">
                                                         <div class="col-sm-3">
@@ -348,11 +340,9 @@
             if(params != CODE_ERROR){
                 let returnVal = await common.post(API.ADD_TICK, params);
                 if (!returnVal || returnVal.status !== CODE.SUCCESS){
-                    common.noti("기본 거래","해당 코인에 대해 기본 거래가 불가능합니다.","error");
-                    return;
+                    common.noti("기본 거래","거래 요청 실패.","error");
                 }else{
                     common.noti("기본 거래","거래 요청 완료","success");
-                    return;
                 }
             }
         },
@@ -378,7 +368,6 @@
 
             let body = {
                 mode         : clickedAddTickMode,
-                tickStandard : $('#add_tick_standard').val(),
                 minCnt       : $('#add_tick_min_cnt').val(),
                 maxCnt       : $('#add_tick_max_cnt').val(),
                 tick         : $('#add_tick_per').val(),
@@ -391,9 +380,7 @@
         },
 
         validateAddTick :  () => {
-            if($('#add_tick_standard').val() == ''){
-                return common.noti("호가 채우기","베스트 기준 몇 틱 값을 입력해주세요.","error");
-            }else if($('#add_tick_min_cnt').val() == '' || $('#add_tick_max_cnt').val() == ''){
+            if($('#add_tick_min_cnt').val() == '' || $('#add_tick_max_cnt').val() == ''){
                 return common.noti("호가 채우기","수량 범위를 모두 입력해주세요.","error");
             }else if ($('#add_tick_per').val() == ''){
                 return common.noti("호가 채우기","틱 단위를 입력해주세요.","error");
