@@ -108,7 +108,6 @@ public class DexorcaImp extends AbstractExchange {
         }
     }
 
-    /* 포블게이트 자전거래 로직 */
     @Override
     public int startAutoTrade(String price, String cnt){
         log.info("[DEXORCA][AUTOTRADE START]");
@@ -116,33 +115,21 @@ public class DexorcaImp extends AbstractExchange {
 
         try{
             String[] coinWithId = Utils.splitCoinWithId(autoTrade.getCoin());
-            setApiKey(coinWithId, autoTrade.getExchange());
-            String symbol = getSymbol(coinWithId, autoTrade.getExchange());
-            // mode 처리
-            String firstAction  = "";
-            String secondAction = "";
-            String mode         = autoTrade.getMode();
-            if(UtilsData.MODE_RANDOM.equals(mode)){    // Trade Mode 가 랜덤일 경우 생성
-                mode = (Utils.getRandomInt(0,1) == 0) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
-            }
-            // Trade 모드에 맞춰 순서에 맞게 거래 타입 생성
-            if(UtilsData.MODE_BUY.equals(mode)){
-                firstAction  = BUY;
-                secondAction = SELL;
-            }else if(UtilsData.MODE_SELL.equals(mode)){
-                firstAction  = SELL;
-                secondAction = BUY;
-            }
+            Exchange exchange   = autoTrade.getExchange();
+            setApiKey(coinWithId, exchange);
+            String symbol = getSymbol(coinWithId, exchange);
 
-            Map<String, String> firstOrderMap  = null;
-            Map<String, String> secondOrderMap = null;
-            if(((firstOrderMap = parseStringToMap(createOrder(firstAction,price, cnt, coinWithId, autoTrade.getExchange()))) != null )){
-                secondOrderMap = parseStringToMap(createOrder(secondAction, price, cnt, coinWithId, autoTrade.getExchange()));
-            }
+            Trade mode          = getMode(autoTrade.getMode());
+            String firstAction  = (mode == Trade.BUY) ? BUY : SELL;
+            String secondAction = (mode == Trade.BUY) ? SELL : BUY;
 
+            Map<String, String> firstOrderMap  = parseStringToMap(createOrder(firstAction,price, cnt, coinWithId, exchange));
             if(firstOrderMap != null){
-                cancelOrder(firstOrderMap, firstAction,price, cnt, symbol);
-                cancelOrder(secondOrderMap, secondAction,price, cnt, symbol);
+                Map<String, String> secondOrderMap = parseStringToMap(createOrder(secondAction, price, cnt, coinWithId, exchange));
+                cancelOrder(firstOrderMap,  firstAction, price, cnt, symbol);
+                if(secondOrderMap != null){
+                    cancelOrder(secondOrderMap, secondAction,price, cnt, symbol);
+                }
             }
         }catch (Exception e){
             returnCode = ReturnCode.FAIL.getCode();
@@ -474,12 +461,6 @@ public class DexorcaImp extends AbstractExchange {
 
 
 
-    /** 포블게이트 매수/매도 로직 */
-
-    /**
-     * 매수/매도 로직
-     * @return 성공 시, order Id. 실패 시, ReturnCode.NO_DATA
-     */
     @Override
     public String createOrder(String type, String price, String cnt, String[] coinData, Exchange exchange){
 

@@ -75,7 +75,7 @@ public class AddTickService {
                     Thread.sleep(150);
                     msgList.put(price.toPlainString(),makeResponse(params.getMode().getVal(), cnt, orderId));
 
-                    if(orderId.equals(ReturnCode.NO_DATA.getValue())){
+                    if(Utils.isSuccessOrder(orderId)){
                         success = false;
                     }
                 }

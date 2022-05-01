@@ -84,35 +84,28 @@ public class CoinOneImp extends AbstractExchange {
 
     @Override
     public int startAutoTrade(String price, String cnt){
-
         log.info("[COINONE][AUTOTRADE] START");
 
-        int returnCode      = ReturnCode.SUCCESS.getCode();
-        String firstAction  = "";
-        String secondAction = "";
-
+        int returnCode = ReturnCode.SUCCESS.getCode();
         try{
             // mode 처리
-            String mode       = autoTrade.getMode();
-            String[] coinData = Utils.splitCoinWithId(autoTrade.getCoin());
-            if(UtilsData.MODE_RANDOM.equals(mode)){
-                mode = (Utils.getRandomInt(0,1) == 0) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
-            }
+            String[] coinData            = Utils.splitCoinWithId(autoTrade.getCoin());
+            Exchange exchange            = autoTrade.getExchange();
             Map<String, String> orderMap = setDefaultMap(cnt, coinData[0], price);
-            // Trade 모드에 맞춰 순서에 맞게 거래 타입 생성
-            if(UtilsData.MODE_BUY.equals(mode)){
+
+            Trade mode          = getMode(autoTrade.getMode());
+            String firstAction  = (mode == Trade.BUY) ? BUY : SELL;
+            String secondAction = (mode == Trade.BUY) ? SELL : BUY;
+            if(mode == Trade.BUY){
                 orderMap.put("is_ask","0"); // 1 if order is sell
-                firstAction  = BUY;
-                secondAction = SELL;
-            }else if(UtilsData.MODE_SELL.equals(mode)){
+            }else{
                 orderMap.put("is_ask","1"); // 0 if order is sell
-                firstAction  = SELL;
-                secondAction = BUY;
             }
-            String orderId = ReturnCode.NO_DATA.getValue();
-            if(!(orderId = createOrder(firstAction,price, cnt, coinData, autoTrade.getExchange())).equals(ReturnCode.NO_DATA.getValue())){
+
+            String orderId = createOrder(firstAction, price, cnt, coinData, exchange);
+            if(hasOrderId(orderId)){
                 orderMap.put("order_id", orderId);
-                if(createOrder(secondAction,price, cnt, coinData, autoTrade.getExchange()).equals(ReturnCode.NO_DATA.getValue())){          // SELL 모드가 실패 시,
+                if(!hasOrderId(createOrder(secondAction,price, cnt, coinData,exchange))){          // SELL 모드가 실패 시,
                     cancelOrder(orderMap);
                 }
             }
@@ -127,11 +120,6 @@ public class CoinOneImp extends AbstractExchange {
     }
 
 
-    /**
-     * 호가 유동성
-     * @param list
-     * @return
-     */
     @Override
     public int startLiquidity(Map list) {
         int returnCode = ReturnCode.SUCCESS.getCode();

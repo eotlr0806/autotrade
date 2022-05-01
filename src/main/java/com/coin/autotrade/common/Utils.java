@@ -351,5 +351,19 @@ public class Utils {
         return abstractExchange;
     }
 
+    /**
+     * 매수/매도 성공 실패 시, ReturnCode.NO_DATA.getValue() 를 전달하는데,
+     * 매수/매도가 성공했는지 체크하기위해 사용하는 메서드.
+     * @param orderId
+     * @return
+     */
+    public static boolean isSuccessOrder(String orderId) {
+        if(!ReturnCode.FAIL_CREATE.getValue().equals(orderId)){
+            return true;
+        }else{
+            return false;
+        }
+    }
+
 }
 

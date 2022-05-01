@@ -1,8 +1,9 @@
 package com.coin.autotrade.service.exchangeimp;
 
-import com.coin.autotrade.common.UtilsData;
 import com.coin.autotrade.common.Utils;
+import com.coin.autotrade.common.UtilsData;
 import com.coin.autotrade.common.enumeration.ReturnCode;
+import com.coin.autotrade.common.enumeration.Trade;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
 import com.google.gson.JsonArray;
@@ -55,17 +56,18 @@ public class DcoinImp extends AbstractExchange {
     }
 
     private void setApiKey(String[] coinData, Exchange exchange) throws Exception{
-
         // Set token key
-        for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
-            if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1]) ){
-                keyList.put(PUBLIC_KEY, exCoin.getPublicKey());
-                keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
-            }
-        }
         if(keyList.isEmpty()){
-            String msg = "There is no match coin. " + Arrays.toString(coinData) + " " + exchange.getExchangeCode();
-            throw new Exception(msg);
+            for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
+                if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1]) ){
+                    keyList.put(PUBLIC_KEY, exCoin.getPublicKey());
+                    keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
+                }
+            }
+            if(keyList.isEmpty()){
+                String msg = "There is no match coin. " + Arrays.toString(coinData) + " " + exchange.getExchangeCode();
+                throw new Exception(msg);
+            }
         }
     }
 
@@ -80,26 +82,20 @@ public class DcoinImp extends AbstractExchange {
 
         int returnCode = ReturnCode.SUCCESS.getCode();
         try{
-            String     symbol   = getSymbol(Utils.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
-            String firstAction  = "";
-            String secondAction = "";
-            // mode 처리
-            String mode = autoTrade.getMode();
-            if(UtilsData.MODE_RANDOM.equals(mode)){
-                mode = (Utils.getRandomInt(0,1) == 0) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
-            }
-            // Trade 모드에 맞춰 순서에 맞게 거래 타입 생성
-            if(UtilsData.MODE_BUY.equals(mode)){
-                firstAction  = BUY;
-                secondAction = SELL;
-            }else if(UtilsData.MODE_SELL.equals(mode)){
-                firstAction  = SELL;
-                secondAction = BUY;
-            }
-            String orderId = ReturnCode.NO_DATA.getValue();
-            if(!(orderId = createOrder(firstAction,price, cnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){
-                if(createOrder(secondAction,price, cnt, symbol).equals(ReturnCode.NO_DATA.getValue())){          // SELL 모드가 실패 시,
-                    cancelOrder(symbol, orderId);
+            String[] coinWithId = Utils.splitCoinWithId(autoTrade.getCoin());
+            Exchange exchange   = autoTrade.getExchange();
+            String     symbol   = getSymbol(coinWithId, exchange);
+
+            Trade mode          = getMode(autoTrade.getMode());
+            String firstAction  = (mode == Trade.BUY) ? BUY : SELL;
+            String secondAction = (mode == Trade.BUY) ? SELL : BUY;
+
+            String firstOrderId  = createOrder(firstAction,price, cnt, coinWithId, exchange);
+            if(hasOrderId(firstOrderId)){
+                String secondOrderId = createOrder(secondAction, price, cnt, coinWithId, exchange);
+                cancelOrder(symbol, firstOrderId);
+                if(hasOrderId(secondOrderId)){
+                    cancelOrder(symbol, secondOrderId);
                 }
             }
         }catch (Exception e){
@@ -141,7 +137,7 @@ public class DcoinImp extends AbstractExchange {
                 }
                 // 매수 로직
                 if(!action.equals("")){
-                    orderId = createOrder(action, price, cnt, symbol);
+                    orderId = createOrder(action, price, cnt, Utils.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
                     if(!orderId.equals(ReturnCode.NO_DATA.getValue())){
                         cancelList.add(orderId);
                     }
@@ -187,9 +183,9 @@ public class DcoinImp extends AbstractExchange {
                 String cnt     = Utils.getRandomString(fishing.getMinContractCnt(), fishing.getMaxContractCnt());
                 String orderId = ReturnCode.NO_DATA.getValue();
                 if(mode.equals(UtilsData.MODE_BUY)) {
-                    orderId = createOrder(BUY, tickPriceList.get(i), cnt, symbol);
+                    orderId = createOrder(BUY, tickPriceList.get(i), cnt, Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
                 }else{
-                    orderId = createOrder(SELL, tickPriceList.get(i), cnt, symbol);
+                    orderId = createOrder(SELL, tickPriceList.get(i), cnt, Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
                 }
                 if(!orderId.equals(ReturnCode.NO_DATA.getValue())){                                                // 매수/매도가 정상적으로 이뤄졌을 경우 데이터를 list에 담는다
                     Map<String, String> orderMap = new HashMap<>();
@@ -234,9 +230,9 @@ public class DcoinImp extends AbstractExchange {
                     }
 
                     if(UtilsData.MODE_BUY.equals(mode)) {
-                        orderId = createOrder(SELL, copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol);
+                        orderId = createOrder(SELL, copiedOrderMap.get("price"), cntForExcution.toPlainString(), Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
                     }else{
-                        orderId = createOrder(BUY, copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol);
+                        orderId = createOrder(BUY, copiedOrderMap.get("price"), cntForExcution.toPlainString(), Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
                     }
 
                     if(!orderId.equals(ReturnCode.NO_DATA.getValue())){
@@ -330,7 +326,7 @@ public class DcoinImp extends AbstractExchange {
             }
 
             if(isStart){
-                if( !(orderId = createOrder(action, targetPrice, cnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){    // 매수/OrderId가 있으면 성공
+                if( !(orderId = createOrder(action, targetPrice, cnt, Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange())).equals(ReturnCode.NO_DATA.getValue())){    // 매수/OrderId가 있으면 성공
                     Thread.sleep(300);
 
                     // 3. bestoffer set 로직
@@ -341,7 +337,7 @@ public class DcoinImp extends AbstractExchange {
                         String bestofferCnt     = object.get("cnt").getAsString();
                         String bestofferOrderId = ReturnCode.NO_DATA.getValue();
 
-                        if( !(bestofferOrderId = createOrder(action, bestofferPrice, bestofferCnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){
+                        if( !(bestofferOrderId = createOrder(action, bestofferPrice, bestofferCnt, Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange())).equals(ReturnCode.NO_DATA.getValue())){
                             log.info("[DCOIN][REALTIME SYNC] Bestoffer is setted. price:{}, cnt:{}", bestofferPrice, bestofferCnt);
                         }
                     }
@@ -383,26 +379,22 @@ public class DcoinImp extends AbstractExchange {
         return returnRes;
     }
 
-
-
-
-    /**
-     * 매수 매도 로직
-     * @param side   - SELL, BUY
-     * @param symbol - coin + currency
-     */
-    public String createOrder(String side, String price, String cnt, String symbol) {
+    // String type, String price, String cnt , String[] coinData, Exchange exchange
+    @Override
+    public String createOrder(String type, String price, String cnt, String[] coinData, Exchange exchange) {
 
         String orderId   = ReturnCode.NO_DATA.getValue();
 
         try {
+            setApiKey(coinData, exchange);
             // DCoin 의 경우, property 값들이 오름차순으로 입력되야 해서, 공통 함수로 빼기 어려움.
             JsonObject header = new JsonObject();
+            String symbol     = getSymbol(coinData, exchange);
             header.addProperty("api_key", keyList.get(PUBLIC_KEY));
             header.addProperty("price",   Double.parseDouble(price));
-            header.addProperty("side",    side);
+            header.addProperty("side",    parseAction(type));
             header.addProperty("symbol",  symbol.toLowerCase());
-            header.addProperty("type", 1);
+            header.addProperty("type", 1);              // 1: 지정가, 2:시장가
             header.addProperty("volume",  Double.parseDouble(cnt));
             header.addProperty("sign",    createSign(gson.toJson(header)));
 
@@ -532,5 +524,24 @@ public class DcoinImp extends AbstractExchange {
     // 거래소에 맞춰 심볼 반환
     private String getSymbol(String[] coinData, Exchange exchange) throws Exception {
         return coinData[0].toLowerCase() + getCurrency(exchange,coinData[0], coinData[1]);
+    }
+
+    private String parseAction(String action){
+        if(isExternalAction(action)){
+            if(Trade.BUY.equals(action)){
+                return BUY;
+            }else{
+                return SELL;
+            }
+        }
+        return action;
+    }
+
+    private boolean isExternalAction(String action){
+        if(!action.equals(BUY) && !action.equals(SELL)){
+            return true;
+        }else{
+            return false;
+        }
     }
 }

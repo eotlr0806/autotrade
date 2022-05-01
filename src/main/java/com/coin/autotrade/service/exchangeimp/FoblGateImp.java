@@ -1,8 +1,9 @@
 package com.coin.autotrade.service.exchangeimp;
 
-import com.coin.autotrade.common.UtilsData;
 import com.coin.autotrade.common.Utils;
+import com.coin.autotrade.common.UtilsData;
 import com.coin.autotrade.common.enumeration.ReturnCode;
+import com.coin.autotrade.common.enumeration.Trade;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
 import com.google.gson.JsonArray;
@@ -61,18 +62,20 @@ public class FoblGateImp extends AbstractExchange {
     /** 해당 정보를 이용해 API 키를 셋팅한다 */
     private void setApiKey(String[] coinData, Exchange exchange) throws Exception{
 
-        for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
-            if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1])){
-                keyList.put(USER_ID,     exCoin.getExchangeUserId());
-                keyList.put(PUBLIC_KEY,     exCoin.getPublicKey());
-                keyList.put(SECRET_KEY,  exCoin.getPrivateKey());
-            }
-        }
-        log.info("[FOBLGATE][SET API KEY] First Key setting in instance API:{}, secret:{}",keyList.get(PUBLIC_KEY), keyList.get(SECRET_KEY));
-
         if(keyList.isEmpty()){
-            String msg = "There is no match coin. " + Arrays.toString(coinData) + " " + exchange.getExchangeCode();
-            throw new Exception(msg);
+            for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
+                if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1])){
+                    keyList.put(USER_ID,     exCoin.getExchangeUserId());
+                    keyList.put(PUBLIC_KEY,     exCoin.getPublicKey());
+                    keyList.put(SECRET_KEY,  exCoin.getPrivateKey());
+                }
+            }
+            log.info("[FOBLGATE][SET API KEY] First Key setting in instance API:{}, secret:{}",keyList.get(PUBLIC_KEY), keyList.get(SECRET_KEY));
+
+            if(keyList.isEmpty()){
+                String msg = "There is no match coin. " + Arrays.toString(coinData) + " " + exchange.getExchangeCode();
+                throw new Exception(msg);
+            }
         }
     }
 
@@ -83,29 +86,22 @@ public class FoblGateImp extends AbstractExchange {
         int returnCode = ReturnCode.SUCCESS.getCode();
 
         try{
-            String symbol = getSymbol(Utils.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
-            // mode 처리
-            String firstAction  = "";
-            String secondAction = "";
-            String mode         = autoTrade.getMode();
-            if(UtilsData.MODE_RANDOM.equals(mode)){    // Trade Mode 가 랜덤일 경우 생성
-                mode = (Utils.getRandomInt(0,1) == 0) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
-            }
-            // Trade 모드에 맞춰 순서에 맞게 거래 타입 생성
-            if(UtilsData.MODE_BUY.equals(mode)){
-                firstAction  = BUY;
-                secondAction = SELL;
-            }else if(UtilsData.MODE_SELL.equals(mode)){
-                firstAction  = SELL;
-                secondAction = BUY;
-            }
+            String[] coinWithId = Utils.splitCoinWithId(autoTrade.getCoin());
+            Exchange exchange   = autoTrade.getExchange();
+            String symbol = getSymbol(coinWithId, exchange);
 
-            String orderId    = "";
-            if( !(orderId  = createOrder(firstAction, price, cnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){    // 매수/OrderId가 있으면 성공
+            Trade mode          = getMode(autoTrade.getMode());
+            String firstAction  = (mode == Trade.BUY) ? BUY : SELL;
+            String secondAction = (mode == Trade.BUY) ? SELL : BUY;
+
+            String firstOrderId  = createOrder(firstAction,price, cnt, coinWithId, exchange);
+            if(hasOrderId(firstOrderId)){
                 Thread.sleep(300);
-                if(createOrder(secondAction,price,cnt,symbol).equals(ReturnCode.NO_DATA.getValue())){                   // 매도/OrderId가 없으면 실패
-                    Thread.sleep(300);
-                    cancelOrder(orderId,firstAction, price, symbol);                      // 매도 실패 시, 매수 취소
+                String secondOrderId = createOrder(secondAction, price, cnt, coinWithId, exchange);
+                Thread.sleep(300);
+                cancelOrder(firstOrderId, firstAction, price, symbol);
+                if(hasOrderId(secondOrderId)){
+                    cancelOrder(secondOrderId, secondAction, price, symbol);
                 }
             }
         }catch (Exception e){
@@ -146,7 +142,7 @@ public class FoblGateImp extends AbstractExchange {
                 }
                 // 매수 로직
                 if(!action.equals("")){
-                    orderId = createOrder(action, price, cnt, symbol);
+                    orderId = createOrder(action, price, cnt, Utils.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
                     if(!orderId.equals(ReturnCode.NO_DATA.getValue())){
                         Map<String, String> cancel = new HashMap<>();
                         cancel.put("orderId", orderId);
@@ -199,9 +195,9 @@ public class FoblGateImp extends AbstractExchange {
                 String cnt     = Utils.getRandomString(fishing.getMinContractCnt(), fishing.getMaxContractCnt());
                 String orderId = ReturnCode.NO_DATA.getValue();
                 if(UtilsData.MODE_BUY.equals(mode)) {
-                    orderId = createOrder(BUY, tickPriceList.get(i), cnt, symbol);      // 매수
+                    orderId = createOrder(BUY, tickPriceList.get(i), cnt, Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());      // 매수
                 }else{
-                    orderId = createOrder(SELL, tickPriceList.get(i), cnt, symbol);     // 매도
+                    orderId = createOrder(SELL, tickPriceList.get(i), cnt, Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());     // 매도
                 }
                 if(!orderId.equals(ReturnCode.NO_DATA.getValue())){                                                // 매수/매도가 정상적으로 이뤄졌을 경우 데이터를 list에 담는다
                     Map<String, String> orderMap = new HashMap<>();
@@ -249,9 +245,9 @@ public class FoblGateImp extends AbstractExchange {
                     }
 
                     if(UtilsData.MODE_BUY.equals(mode)) {
-                        orderId = createOrder(SELL, copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol);
+                        orderId = createOrder(SELL, copiedOrderMap.get("price"), cntForExcution.toPlainString(), Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
                     }else{
-                        orderId = createOrder(BUY, copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol);
+                        orderId = createOrder(BUY, copiedOrderMap.get("price"), cntForExcution.toPlainString(), Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
                     }
 
                     if(!orderId.equals(ReturnCode.NO_DATA.getValue())){
@@ -372,7 +368,7 @@ public class FoblGateImp extends AbstractExchange {
 
             // 2. %를 맞추기 위한 매수/매도 로직
             if(isStart){
-                if( !(orderId = createOrder(action, targetPrice, cnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){    // 매수/OrderId가 있으면 성공
+                if( !(orderId = createOrder(action, targetPrice, cnt, Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange())).equals(ReturnCode.NO_DATA.getValue())){    // 매수/OrderId가 있으면 성공
                     Thread.sleep(300);
 
                     // 3. bestoffer set 로직
@@ -383,7 +379,7 @@ public class FoblGateImp extends AbstractExchange {
                         String bestofferCnt     = object.get("cnt").getAsString();
                         String bestofferOrderId = ReturnCode.NO_DATA.getValue();
 
-                        if( !(bestofferOrderId = createOrder(action, bestofferPrice, bestofferCnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){
+                        if( !(bestofferOrderId = createOrder(action, bestofferPrice, bestofferCnt, Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange())).equals(ReturnCode.NO_DATA.getValue())){
                             log.info("[FOBLGATE][REALTIME SYNC] Bestoffer is setted. price:{}, cnt:{}", bestofferPrice, bestofferCnt);
                         }
                     }
@@ -442,21 +438,16 @@ public class FoblGateImp extends AbstractExchange {
         return returnRes;
     }
 
-
-
-    /** 포블게이트 매수/매도 로직 */
-
-    /**
-     * 매수/매도 로직
-     * @return 성공 시, order Id. 실패 시, ReturnCode.NO_DATA
-     */
-    public String createOrder(String type, String price, String cnt, String symbol){
+    public String createOrder(String type, String price, String cnt, String[] coinData, Exchange exchange){
 
         String orderId = ReturnCode.NO_DATA.getValue();
         try{
+            setApiKey(coinData, exchange);
+            String symbol = getSymbol(coinData, exchange);
+
             Map<String, String> header = setDefaultRequest(keyList.get(USER_ID), symbol,type,keyList.get(PUBLIC_KEY));
-            header.put("price",     price);   // price
-            header.put("amount",    cnt);     // cnt
+            header.put("price",  price);   // price
+            header.put("amount", cnt);     // cnt
             String secretHash = makeApiHash(keyList.get(PUBLIC_KEY) + keyList.get(USER_ID) + symbol + type + price+ cnt+ keyList.get(SECRET_KEY));
 
             JsonObject returnVal = postHttpMethod(UtilsData.FOBLGATE_CREATE_ORDER, secretHash, header);
@@ -606,5 +597,24 @@ public class FoblGateImp extends AbstractExchange {
     // 거래소에 맞춰 심볼 반환
     private String getSymbol(String[] coinData, Exchange exchange) throws Exception {
         return coinData[0] + "/" + getCurrency(exchange, coinData[0], coinData[1]);
+    }
+
+    private String parseAction(String action){
+        if(isExternalAction(action)){
+            if(Trade.BUY.equals(action)){
+                return BUY;
+            }else{
+                return SELL;
+            }
+        }
+        return action;
+    }
+
+    private boolean isExternalAction(String action){
+        if(!action.equals(BUY) && !action.equals(SELL)){
+            return true;
+        }else{
+            return false;
+        }
     }
 }

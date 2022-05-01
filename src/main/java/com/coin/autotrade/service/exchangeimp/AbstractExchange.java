@@ -3,6 +3,7 @@ package com.coin.autotrade.service.exchangeimp;
 import com.coin.autotrade.common.UtilsData;
 import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.common.enumeration.ReturnCode;
+import com.coin.autotrade.common.enumeration.Trade;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
 import com.google.gson.Gson;
@@ -282,4 +283,24 @@ public abstract class AbstractExchange {
         return response.toString();
     }
 
+    /**
+     * mode 값을 받아서 RANDOM일 경우 RANDOM값을 전달
+     * @param mode
+     * @return
+     */
+    protected Trade getMode(Trade mode){
+        if(mode == Trade.RANDOM){
+            return (Utils.getRandomInt(0,1) == 0) ? Trade.BUY : Trade.SELL;
+        }else{
+            return mode;
+        }
+    }
+
+    /**
+     * Random하게 BUY / SELL 중 하나의 모드를 반환.
+     * @return
+     */
+    protected Trade getMode(){
+        return (Utils.getRandomInt(0,1) == 0) ? Trade.BUY : Trade.SELL;
+    }
 }

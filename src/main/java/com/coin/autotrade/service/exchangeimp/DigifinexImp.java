@@ -3,6 +3,7 @@ package com.coin.autotrade.service.exchangeimp;
 import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.common.UtilsData;
 import com.coin.autotrade.common.enumeration.ReturnCode;
+import com.coin.autotrade.common.enumeration.Trade;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
 import com.google.gson.JsonArray;
@@ -54,51 +55,41 @@ public class DigifinexImp extends AbstractExchange {
     /** 코인 토큰 정보 셋팅 **/
     private void setCoinToken(String[] coinData, Exchange exchange) throws Exception{
         // Set token key
-        for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
-            if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1])){
-                keyList.put(PUBLIC_KEY, exCoin.getPublicKey());
-                keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
-
-            }
-        }
-        log.info("[DIGIFINEX][SET API KEY] First Key setting in instance API:{}, secret:{}",keyList.get(PUBLIC_KEY), keyList.get(SECRET_KEY));
         if(keyList.isEmpty()){
-            String msg = "There is no match coin. " + Arrays.toString(coinData) + " " + exchange.getExchangeCode();
-            throw new Exception(msg);
+            for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
+                if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1])){
+                    keyList.put(PUBLIC_KEY, exCoin.getPublicKey());
+                    keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
+
+                }
+            }
+            log.info("[DIGIFINEX][SET API KEY] First Key setting in instance API:{}, secret:{}",keyList.get(PUBLIC_KEY), keyList.get(SECRET_KEY));
+            if(keyList.isEmpty()){
+                String msg = "There is no match coin. " + Arrays.toString(coinData) + " " + exchange.getExchangeCode();
+                throw new Exception(msg);
+            }
         }
     }
 
-    /**
-     * gateio global 자전 거래
-     * @param symbol coin + "_" + symbol
-     */
     @Override
     public int startAutoTrade(String price, String cnt){
         log.info("[DIGIFINEX][AUTOTRADE] START");
         int returnCode = ReturnCode.SUCCESS.getCode();
 
         try{
-            String symbol       = getSymbol(Utils.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
-            String firstAction  = "";
-            String secondAction = "";
+            Exchange exchange   = autoTrade.getExchange();
+            String[] coinWithId = Utils.splitCoinWithId(autoTrade.getCoin());
+            String symbol       = getSymbol(coinWithId, exchange);
+            Trade mode          = getMode(autoTrade.getMode());
+            String firstAction  = (mode == Trade.BUY) ? BUY : SELL;
+            String secondAction = (mode == Trade.BUY) ? SELL : BUY;
 
-            // mode 처리
-            String mode = autoTrade.getMode();
-            if(UtilsData.MODE_RANDOM.equals(mode)){
-                mode = (Utils.getRandomInt(0,1) == 0) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
-            }
-            // Trade 모드에 맞춰 순서에 맞게 거래 타입 생성
-            if(UtilsData.MODE_BUY.equals(mode)){
-                firstAction  = BUY;
-                secondAction = SELL;
-            }else if(UtilsData.MODE_SELL.equals(mode)){
-                firstAction  = SELL;
-                secondAction = BUY;
-            }
-            String orderId = ReturnCode.NO_DATA.getValue();
-            if(!(orderId = createOrder(firstAction,price, cnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){
-                if(createOrder(secondAction,price, cnt, symbol).equals(ReturnCode.NO_DATA.getValue())){          // SELL 모드가 실패 시,
-                    cancelOrder(orderId);
+            String firstOrderId  = createOrder(firstAction,price, cnt, coinWithId, exchange);
+            if(hasOrderId(firstOrderId)){
+                String secondOrderId = createOrder(secondAction, price, cnt, coinWithId, exchange);
+                cancelOrder(firstOrderId);
+                if(hasOrderId(secondOrderId)){
+                    cancelOrder(secondOrderId);
                 }
             }
         }catch (Exception e){
@@ -140,7 +131,7 @@ public class DigifinexImp extends AbstractExchange {
                 }
                 // 매수 로직
                 if(!action.equals("")){
-                    orderId = createOrder(action, price, cnt, symbol);
+                    orderId = createOrder(action, price, cnt, Utils.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
                     if(!orderId.equals(ReturnCode.NO_DATA.getValue())){
                         cancelList.add(orderId);
                     }
@@ -192,9 +183,9 @@ public class DigifinexImp extends AbstractExchange {
 
                 String orderId = ReturnCode.NO_DATA.getValue();
                 if(UtilsData.MODE_BUY.equals(mode)) {
-                    orderId = createOrder(BUY,  tickPriceList.get(i), cnt, symbol);
+                    orderId = createOrder(BUY,  tickPriceList.get(i), cnt, Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
                 }else{
-                    orderId = createOrder(SELL, tickPriceList.get(i), cnt, symbol);
+                    orderId = createOrder(SELL, tickPriceList.get(i), cnt, Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
                 }
                 if(!orderId.equals(ReturnCode.NO_DATA.getValue())){     // 매수/매도가 정상적으로 이뤄졌을 경우 데이터를 list에 담는다
                     Map<String, String> orderMap = new HashMap<>();
@@ -240,9 +231,9 @@ public class DigifinexImp extends AbstractExchange {
                     }
 
                     if(UtilsData.MODE_BUY.equals(mode)) {
-                        orderId = createOrder(SELL, copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol);
+                        orderId = createOrder(SELL, copiedOrderMap.get("price"), cntForExcution.toPlainString(), Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
                     }else{
-                        orderId = createOrder(BUY,  copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol);
+                        orderId = createOrder(BUY,  copiedOrderMap.get("price"), cntForExcution.toPlainString(), Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
                     }
 
                     if(!orderId.equals(ReturnCode.NO_DATA.getValue())){
@@ -321,7 +312,7 @@ public class DigifinexImp extends AbstractExchange {
 
             // 2. %를 맞추기 위한 매수/매도 로직
             if(isStart){
-                if( !(orderId = createOrder(action, targetPrice, cnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){    // 매수/OrderId가 있으면 성공
+                if( !(orderId = createOrder(action, targetPrice, cnt, Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange())).equals(ReturnCode.NO_DATA.getValue())){    // 매수/OrderId가 있으면 성공
                     Thread.sleep(300);
 
                     // 3. bestoffer set 로직
@@ -332,7 +323,7 @@ public class DigifinexImp extends AbstractExchange {
                         String bestofferCnt     = object.get("cnt").getAsString();
                         String bestofferOrderId = ReturnCode.NO_DATA.getValue();
 
-                        if( !(bestofferOrderId = createOrder(action, bestofferPrice, bestofferCnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){
+                        if( !(bestofferOrderId = createOrder(action, bestofferPrice, bestofferCnt, Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange())).equals(ReturnCode.NO_DATA.getValue())){
                             log.info("[DIGIFINEX][REALTIME SYNC] Bestoffer is setted. price:{}, cnt:{}", bestofferPrice, bestofferCnt);
                         }
                     }
@@ -393,24 +384,18 @@ public class DigifinexImp extends AbstractExchange {
         return returnRes;
     }
 
-
-
-    /**
-     * @param type buy or sell
-     * @param price
-     * @param cnt amount
-     * @param symbol
-     * @return
-     */
-    private String createOrder(String type, String price, String cnt, String symbol){
+    @Override
+    public String createOrder(String type, String price, String cnt, String[] coinData, Exchange exchange){
         String orderId = ReturnCode.NO_DATA.getValue();
         try {
+            setCoinToken(coinData,exchange);
+            String symbol = getSymbol(coinData, exchange);
             JsonObject params = new JsonObject();
             params.addProperty("market","spot");
             params.addProperty("symbol",symbol);
-            params.addProperty("type",type);
+            params.addProperty("type",  parseAction(type));
             params.addProperty("amount",cnt);
-            params.addProperty("price",price);
+            params.addProperty("price", price);
             JsonObject returnRes = postHttpMethod(UtilsData.DIGIFINEX_CREATE_ORDER, params);
             if(returnRes.get("code").getAsString().equals(SUCCESS)){
                 orderId = returnRes.get("order_id").getAsString();
@@ -542,6 +527,25 @@ public class DigifinexImp extends AbstractExchange {
     // 거래소에 맞춰 심볼 반환
     private String getSymbol(String[] coinData, Exchange exchange) throws Exception {
         return coinData[0] + "_" + getCurrency(exchange, coinData[0], coinData[1]);
+    }
+
+    private String parseAction(String action){
+        if(isExternalAction(action)){
+            if(Trade.BUY.equals(action)){
+                return BUY;
+            }else{
+                return SELL;
+            }
+        }
+        return action;
+    }
+
+    private boolean isExternalAction(String action){
+        if(!action.equals(BUY) && !action.equals(SELL)){
+            return true;
+        }else{
+            return false;
+        }
     }
 
 }
