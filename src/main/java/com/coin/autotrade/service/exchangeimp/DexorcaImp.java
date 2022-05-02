@@ -311,6 +311,7 @@ public class DexorcaImp extends AbstractExchange {
      * @param realtime
      * @return
      */
+    @Override
     public int startRealtimeTrade(JsonObject realtime, boolean resetFlag) {
         log.info("[DEXORCA][REALTIME SYNC TRADE START]");
         int returnCode   = ReturnCode.SUCCESS.getCode();
