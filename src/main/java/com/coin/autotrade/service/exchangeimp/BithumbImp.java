@@ -176,20 +176,15 @@ public class BithumbImp extends AbstractExchange {
             String currency     = getCurrency(exchange, coinWithId[0], coinWithId[1]);
 
             // mode 처리
-            String mode = fishing.getMode();
-            if(UtilsData.MODE_RANDOM.equals(mode)){
-                mode = (Utils.getRandomInt(0,1) == 0) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
-            }
-
-            for(String temp : list.keySet()){  mode = temp; }
-            ArrayList<String> tickPriceList = (ArrayList) list.get(mode);
+            Trade mode = Trade.valueOf(String.valueOf(list.keySet().toArray()[0]));
+            ArrayList<String> tickPriceList = (ArrayList) list.get(mode.getVal());
             ArrayList<Map<String, String>> orderList = new ArrayList<>();
 
             /* Start */
             log.info("[BITHUMB][FISHINGTRADE][START BUY OR SELL TARGET ALL COIN]");
             for (int i = 0; i < tickPriceList.size(); i++) {
                 String cnt     = Utils.getRandomString(fishing.getMinContractCnt(), fishing.getMaxContractCnt());
-                String orderId = (UtilsData.MODE_BUY.equals(mode)) ?
+                String orderId = (mode == Trade.BUY) ?
                                     createOrder(BUY,  tickPriceList.get(i), cnt, coinWithId, exchange) :
                                     createOrder(SELL, tickPriceList.get(i), cnt, coinWithId, exchange);
 
@@ -198,7 +193,7 @@ public class BithumbImp extends AbstractExchange {
                     orderMap.put("price" ,tickPriceList.get(i));
                     orderMap.put("cnt" ,cnt);
                     orderMap.put("order_id" ,orderId);
-                    if(UtilsData.MODE_BUY.equals(mode)){
+                    if(mode == Trade.BUY){
                         orderMap.put("type", BUY);
                     }else{
                         orderMap.put("type", SELL);
@@ -225,7 +220,7 @@ public class BithumbImp extends AbstractExchange {
                     executionCnt            = (cnt.compareTo(executionCnt) < 0) ? cnt : executionCnt;    // 남은 코인 수와 매도/매수할 코인수를 비교했을 때, 남은 코인 수가 더 적다면 남은 cnt만큼 매수/매도
 
                     // 매도/매수 날리기전에 최신 매도/매수값이 내가 건 값이 맞는지 확인
-                    String nowFirstTick = (UtilsData.MODE_BUY.equals(mode)) ?
+                    String nowFirstTick = (mode == Trade.BUY) ?
                             coinService.getFirstTick(fishing.getCoin(), exchange).get(UtilsData.MODE_BUY) :
                             coinService.getFirstTick(fishing.getCoin(), exchange).get(UtilsData.MODE_SELL);
 
@@ -236,7 +231,7 @@ public class BithumbImp extends AbstractExchange {
                         break;
                     }
 
-                    String orderId = (UtilsData.MODE_BUY.equals(mode)) ?
+                    String orderId = (mode == Trade.BUY) ?
                                     createOrder(SELL, copiedOrderMap.get("price"), executionCnt.toPlainString(), coinWithId, exchange) :
                                     createOrder(BUY,  copiedOrderMap.get("price"), executionCnt.toPlainString(), coinWithId, exchange);
 
@@ -342,13 +337,6 @@ public class BithumbImp extends AbstractExchange {
     }
 
 
-
-    /**
-     * 현재 Tick 가져오기
-     * @param exchange
-     * @param coinWithId
-     * @return [ 시가 , 종가 ] String Array
-     */
     private String[] getTodayTick() throws Exception{
 
         String[] returnRes   = new String[2];
@@ -398,9 +386,9 @@ public class BithumbImp extends AbstractExchange {
             rgParams.put("price", price);
             rgParams.put("type", action);
 
-            String api_host                     = UtilsData.BITHUMB_URL + UtilsData.BITHUMB_ENDPOINT_CREATE_ORDER;
+            String apiHost                      = UtilsData.BITHUMB_URL + UtilsData.BITHUMB_ENDPOINT_CREATE_ORDER;
             HashMap<String, String> httpHeaders = getHttpHeaders(UtilsData.BITHUMB_ENDPOINT_CREATE_ORDER, rgParams);
-            String rgResultDecode               = postHttpMethod(api_host,  rgParams, httpHeaders);
+            String rgResultDecode               = postHttpMethod(apiHost,  rgParams, httpHeaders);
 
             JsonObject returnVal = gson.fromJson(rgResultDecode, JsonObject.class);
             String status        = returnVal.get("status").getAsString();

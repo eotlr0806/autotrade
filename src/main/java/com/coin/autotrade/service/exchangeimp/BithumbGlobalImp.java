@@ -105,7 +105,6 @@ public class BithumbGlobalImp extends AbstractExchange {
         return returnCode;
     }
 
-    /** 호가유동성 function */
     @Override
     public int startLiquidity(Map list){
         int returnCode = ReturnCode.SUCCESS.getCode();
@@ -170,20 +169,15 @@ public class BithumbGlobalImp extends AbstractExchange {
             String symbol       = getSymbol(coinWithId, exchange);
 
             // mode 처리
-            String mode = fishing.getMode();
-            if(UtilsData.MODE_RANDOM.equals(mode)){
-                mode = (Utils.getRandomInt(0,1) == 0) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
-            }
-
-            for(String temp : list.keySet()){  mode = temp; }
-            ArrayList<String> tickPriceList = (ArrayList) list.get(mode);
+            Trade mode = Trade.valueOf(String.valueOf(list.keySet().toArray()[0]));
+            ArrayList<String> tickPriceList = (ArrayList) list.get(mode.getVal());
             ArrayList<Map<String, String>> orderList = new ArrayList<>();
 
             /* Start */
             log.info("[BITHUMBGLOBAL][FISHINGTRADE][START BUY OR SELL TARGET ALL COIN]");
             for (int i = 0; i < tickPriceList.size(); i++) {
                 String cnt     = Utils.getRandomString(fishing.getMinContractCnt(), fishing.getMaxContractCnt());
-                String orderId = (UtilsData.MODE_BUY.equals(mode)) ?
+                String orderId = (mode == Trade.BUY) ?
                                     createOrder(BUY,  tickPriceList.get(i), cnt, coinWithId, exchange) :
                                     createOrder(SELL, tickPriceList.get(i), cnt, coinWithId, exchange);
 
@@ -218,7 +212,7 @@ public class BithumbGlobalImp extends AbstractExchange {
                     executionCnt            = (cnt.compareTo(executionCnt) < 0) ? cnt : executionCnt;    // 남은 코인 수와 매도/매수할 코인수를 비교했을 때, 남은 코인 수가 더 적다면 남은 cnt만큼 매수/매도
 
                     // 매도/매수 날리기전에 최신 매도/매수값이 내가 건 값이 맞는지 확인
-                    String nowFirstTick = (UtilsData.MODE_BUY.equals(mode)) ?
+                    String nowFirstTick = (mode == Trade.BUY) ?
                                             coinService.getFirstTick(fishing.getCoin(), exchange).get(UtilsData.MODE_BUY) :
                                             coinService.getFirstTick(fishing.getCoin(), exchange).get(UtilsData.MODE_SELL);
 
@@ -229,7 +223,7 @@ public class BithumbGlobalImp extends AbstractExchange {
                         break;
                     }
 
-                    String orderId = (UtilsData.MODE_BUY.equals(mode)) ?
+                    String orderId = (mode == Trade.BUY) ?
                                 createOrder(SELL, copiedOrderMap.get("price"), executionCnt.toPlainString(), coinWithId, exchange) :
                                 createOrder(BUY,  copiedOrderMap.get("price"), executionCnt.toPlainString(), coinWithId, exchange);
 

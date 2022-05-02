@@ -85,16 +85,15 @@ public class DcoinImp extends AbstractExchange {
             String[] coinWithId = Utils.splitCoinWithId(autoTrade.getCoin());
             Exchange exchange   = autoTrade.getExchange();
             String     symbol   = getSymbol(coinWithId, exchange);
-
             Trade mode          = getMode(autoTrade.getMode());
             String firstAction  = (mode == Trade.BUY) ? BUY : SELL;
             String secondAction = (mode == Trade.BUY) ? SELL : BUY;
 
             String firstOrderId  = createOrder(firstAction,price, cnt, coinWithId, exchange);
-            if(hasOrderId(firstOrderId)){
+            if(Utils.isSuccessOrder(firstOrderId)){
                 String secondOrderId = createOrder(secondAction, price, cnt, coinWithId, exchange);
                 cancelOrder(symbol, firstOrderId);
-                if(hasOrderId(secondOrderId)){
+                if(Utils.isSuccessOrder(secondOrderId)){
                     cancelOrder(symbol, secondOrderId);
                 }
             }
@@ -118,27 +117,28 @@ public class DcoinImp extends AbstractExchange {
 
         try{
             log.info("[DCOIN][LIQUIDITY] START");
-            String symbol = getSymbol(Utils.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
+            String[] coinWithId = Utils.splitCoinWithId(liquidity.getCoin());
+            Exchange exchange   = liquidity.getExchange();
+            String symbol       = getSymbol(coinWithId, exchange);
 
             while (!sellQueue.isEmpty() || !buyQueue.isEmpty() || !cancelList.isEmpty()) {
-                String mode           = (Utils.getRandomInt(1, 2) == 1) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
-                boolean cancelFlag    = (Utils.getRandomInt(1, 2) == 1) ? true : false;
-                String orderId        = ReturnCode.NO_DATA.getValue();
-                String price          = "";
-                String action         = "";
-                String cnt            = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
+                Trade mode         = getMode();
+                boolean cancelFlag = (Utils.getRandomInt(1, 2) == 1) ? true : false;
+                String orderId     = ReturnCode.FAIL_CREATE.getValue();
+                String action      = (mode == Trade.BUY) ? BUY : SELL;
+                String cnt         = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
+                String price       = null;
 
-                if (!buyQueue.isEmpty() && mode.equals(UtilsData.MODE_BUY)) {
-                    price   = buyQueue.poll();
-                    action  = BUY;
-                } else if (!sellQueue.isEmpty() && mode.equals(UtilsData.MODE_SELL)) {
-                    price   = sellQueue.poll();
-                    action  = SELL;
+                if (!buyQueue.isEmpty() && mode == Trade.BUY) {
+                    price = buyQueue.poll();
+                } else if (!sellQueue.isEmpty() && mode == Trade.SELL) {
+                    price = sellQueue.poll();
                 }
+
                 // 매수 로직
-                if(!action.equals("")){
-                    orderId = createOrder(action, price, cnt, Utils.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
-                    if(!orderId.equals(ReturnCode.NO_DATA.getValue())){
+                if(price != null){
+                    orderId = createOrder(action, price, cnt, coinWithId, exchange);
+                    if(Utils.isSuccessOrder(orderId)){
                         cancelList.add(orderId);
                     }
                     Thread.sleep(1500);
@@ -167,27 +167,25 @@ public class DcoinImp extends AbstractExchange {
         int returnCode = ReturnCode.SUCCESS.getCode();
 
         try{
-            String mode   = "";
-            String symbol = getSymbol(Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
+            String[] coinWithId = Utils.splitCoinWithId(fishing.getCoin());
+            Exchange exchange   = fishing.getExchange();
+            String symbol       = getSymbol(coinWithId, exchange);
 
-            boolean noIntervalFlag   = true;    // 해당 플래그를 이용해 마지막 매도/매수 후 바로 intervalTime 없이 바로 다음 매수/매도 진행
-            boolean noMatchFirstTick = true;    // 해당 플래그를 이용해 매수/매도를 올린 가격이 현재 최상위 값이 맞는지 다른 사람의 코인을 사지 않게 방지
-
-            for(String temp : list.keySet()){  mode = temp; }
-            ArrayList<String> tickPriceList = (ArrayList) list.get(mode);
+            // mode 처리
+            Trade mode = Trade.valueOf(String.valueOf(list.keySet().toArray()[0]));
+            ArrayList<String> tickPriceList = (ArrayList) list.get(mode.getVal());
             ArrayList<Map<String, String>> orderList = new ArrayList<>();
+
 
             /* Start */
             log.info("[DCOIN][FISHINGTRADE][START BUY OR SELL TARGET ALL COIN]");
             for (int i = 0; i < tickPriceList.size(); i++) {
                 String cnt     = Utils.getRandomString(fishing.getMinContractCnt(), fishing.getMaxContractCnt());
-                String orderId = ReturnCode.NO_DATA.getValue();
-                if(mode.equals(UtilsData.MODE_BUY)) {
-                    orderId = createOrder(BUY, tickPriceList.get(i), cnt, Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
-                }else{
-                    orderId = createOrder(SELL, tickPriceList.get(i), cnt, Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
-                }
-                if(!orderId.equals(ReturnCode.NO_DATA.getValue())){                                                // 매수/매도가 정상적으로 이뤄졌을 경우 데이터를 list에 담는다
+                String orderId = (mode == Trade.BUY) ?
+                        createOrder(BUY,  tickPriceList.get(i), cnt, coinWithId, exchange) :
+                        createOrder(SELL, tickPriceList.get(i), cnt, coinWithId, exchange);
+
+                if(Utils.isSuccessOrder(orderId)){
                     Map<String, String> orderMap = new HashMap<>();
                     orderMap.put("price" ,tickPriceList.get(i));
                     orderMap.put("cnt" ,cnt);
@@ -199,44 +197,39 @@ public class DcoinImp extends AbstractExchange {
 
             /* Sell Start */
             log.info("[DCOIN][FISHINGTRADE][START BUY OR SELL TARGET PIECE COIN ]");
+            boolean isSameFirstTick = true;    // 해당 플래그를 이용해 매수/매도를 올린 가격이 현재 최상위 값이 맞는지 다른 사람의 코인을 사지 않게 방지
             for (int i = orderList.size() - 1; i >= 0; i--) {
                 Map<String, String> copiedOrderMap = Utils.deepCopy(orderList.get(i));
                 BigDecimal cnt                     = new BigDecimal(copiedOrderMap.get("cnt"));
 
-                while (cnt.compareTo(new BigDecimal("0")) > 0) {
-                    if (!noMatchFirstTick) break;                   // 최신 매도/매수 건 값이 다를경우 돌 필요 없음.
-                    if (noIntervalFlag) Thread.sleep(intervalTime); // intervalTime 만큼 휴식 후 매수 시작
-                    String orderId = ReturnCode.NO_DATA.getValue();
-                    BigDecimal cntForExcution = new BigDecimal(Utils.getRandomString(fishing.getMinExecuteCnt(), fishing.getMaxExecuteCnt()));
-                    // 남은 코인 수와 매도/매수할 코인수를 비교했을 때, 남은 코인 수가 더 적다면.
-                    if (cnt.compareTo(cntForExcution) < 0) {
-                        cntForExcution = cnt;
-                        noIntervalFlag = false;
-                    } else {
-                        noIntervalFlag = true;
+                while (cnt.compareTo(BigDecimal.ZERO) > 0) {
+                    if (!isSameFirstTick) break;                   // 최신 매도/매수 건 값이 다를경우 돌 필요 없음.
+                    if(cnt.compareTo(new BigDecimal(copiedOrderMap.get("cnt"))) != 0){
+                        Thread.sleep(intervalTime); // intervalTime 만큼 휴식 후 매수 시작
                     }
+
+                    BigDecimal executionCnt = new BigDecimal(Utils.getRandomString(fishing.getMinExecuteCnt(), fishing.getMaxExecuteCnt()));  // 실행 코인
+                    executionCnt            = (cnt.compareTo(executionCnt) < 0) ? cnt : executionCnt;    // 남은 코인 수와 매도/매수할 코인수를 비교했을 때, 남은 코인 수가 더 적다면 남은 cnt만큼 매수/매도
+
                     // 매도/매수 날리기전에 최신 매도/매수값이 내가 건 값이 맞는지 확인
-                    String nowFirstTick = "";
-                    if(UtilsData.MODE_BUY.equals(mode)) {
-                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(UtilsData.MODE_BUY);
-                    }else{
-                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(UtilsData.MODE_SELL);
-                    }
+                    String nowFirstTick = (mode == Trade.BUY) ?
+                            coinService.getFirstTick(fishing.getCoin(), exchange).get(UtilsData.MODE_BUY) :
+                            coinService.getFirstTick(fishing.getCoin(), exchange).get(UtilsData.MODE_SELL);
+
+
                     String orderPrice = copiedOrderMap.get("price");
                     if (!orderPrice.equals(nowFirstTick)) {
-                        log.info("[DCOIN][FISHINGTRADE] Not Match First Tick. All Trade will be canceled RequestTick : {}, realTick : {}", copiedOrderMap.get("price"), nowFirstTick);
-                        noMatchFirstTick = false;
+                        log.info("[BITHUMBGLOBAL][FISHINGTRADE] Not Match First Tick. All Trade will be canceled RequestTick : {}, realTick : {}", copiedOrderMap.get("price"), nowFirstTick);
+                        isSameFirstTick = false;
                         break;
                     }
 
-                    if(UtilsData.MODE_BUY.equals(mode)) {
-                        orderId = createOrder(SELL, copiedOrderMap.get("price"), cntForExcution.toPlainString(), Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
-                    }else{
-                        orderId = createOrder(BUY, copiedOrderMap.get("price"), cntForExcution.toPlainString(), Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
-                    }
+                    String orderId = (mode == Trade.BUY) ?
+                            createOrder(SELL, copiedOrderMap.get("price"), executionCnt.toPlainString(), coinWithId, exchange) :
+                            createOrder(BUY,  copiedOrderMap.get("price"), executionCnt.toPlainString(), coinWithId, exchange);
 
-                    if(!orderId.equals(ReturnCode.NO_DATA.getValue())){
-                        cnt = cnt.subtract(cntForExcution);
+                    if(Utils.isSuccessOrder(orderId)){
+                        cnt = cnt.subtract(executionCnt);
                     }else{
                         break;
                     }
@@ -256,27 +249,8 @@ public class DcoinImp extends AbstractExchange {
         return returnCode;
     }
 
+
     @Override
-    public String getOrderBook(Exchange exchange, String[] coinWithId) {
-        String returnRes = ReturnCode.FAIL.getValue();
-        try{
-            String symbol      = getSymbol(coinWithId, exchange);
-            String encodedData = "symbol=" + URLEncoder.encode(symbol) + "&type=" + URLEncoder.encode("step0");
-            returnRes          = getHttpMethod(UtilsData.DCOIN_ORDERBOOK + "?" + encodedData);
-        }catch (Exception e){
-            log.error("[DCOIN][ORDER BOOK] {}",e.getMessage());
-            e.printStackTrace();
-        }
-
-        return returnRes;
-    }
-
-
-    /**
-     * Realtime Sync 거래
-     * @param realtime
-     * @return
-     */
     public int startRealtimeTrade(JsonObject realtime, boolean resetFlag) {
         log.info("[DCOIN][REALTIME SYNC TRADE START]");
         int returnCode   = ReturnCode.SUCCESS.getCode();
@@ -285,7 +259,9 @@ public class DcoinImp extends AbstractExchange {
         try {
 
             boolean isStart      = false;
-            String symbol        = getSymbol(Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
+            String[] coinWithId  = Utils.splitCoinWithId(realtimeSync.getCoin());
+            Exchange exchange    = realtimeSync.getExchange();
+            String symbol        = getSymbol(coinWithId, realtimeSync.getExchange());
             String[] currentTick = getTodayTick(symbol);
             //            String openingPrice  = currentTick[0];
             if(resetFlag){
@@ -296,7 +272,6 @@ public class DcoinImp extends AbstractExchange {
             String currentPrice  = currentTick[1];
             log.info("[DCOIN][REALTIME SYNC TRADE] open:{}, current:{} ", openingPrice, currentPrice);
 
-            String orderId       = ReturnCode.NO_DATA.getValue();
             String targetPrice   = "";
             String action        = "";
             String mode          = "";
@@ -326,7 +301,8 @@ public class DcoinImp extends AbstractExchange {
             }
 
             if(isStart){
-                if( !(orderId = createOrder(action, targetPrice, cnt, Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange())).equals(ReturnCode.NO_DATA.getValue())){    // 매수/OrderId가 있으면 성공
+                String orderId = createOrder(action, targetPrice, cnt, coinWithId, exchange);
+                if(Utils.isSuccessOrder(orderId)){    // 매수/OrderId가 있으면 성공
                     Thread.sleep(300);
 
                     // 3. bestoffer set 로직
@@ -335,13 +311,11 @@ public class DcoinImp extends AbstractExchange {
                         JsonObject object       = array.get(i).getAsJsonObject();
                         String bestofferPrice   = object.get("price").getAsString();
                         String bestofferCnt     = object.get("cnt").getAsString();
-                        String bestofferOrderId = ReturnCode.NO_DATA.getValue();
-
-                        if( !(bestofferOrderId = createOrder(action, bestofferPrice, bestofferCnt, Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange())).equals(ReturnCode.NO_DATA.getValue())){
+                        String bestofferOrderId = createOrder(action, bestofferPrice, bestofferCnt, coinWithId, exchange);
+                        if(Utils.isSuccessOrder(bestofferOrderId)){
                             log.info("[DCOIN][REALTIME SYNC] Bestoffer is setted. price:{}, cnt:{}", bestofferPrice, bestofferCnt);
                         }
                     }
-
                     Thread.sleep(300);
                     cancelOrder(symbol, orderId);
                 }
@@ -379,11 +353,26 @@ public class DcoinImp extends AbstractExchange {
         return returnRes;
     }
 
-    // String type, String price, String cnt , String[] coinData, Exchange exchange
+    @Override
+    public String getOrderBook(Exchange exchange, String[] coinWithId) {
+        String returnRes = ReturnCode.FAIL.getValue();
+        try{
+            String symbol      = getSymbol(coinWithId, exchange);
+            String encodedData = "symbol=" + URLEncoder.encode(symbol) + "&type=" + URLEncoder.encode("step0");
+            returnRes          = getHttpMethod(UtilsData.DCOIN_ORDERBOOK + "?" + encodedData);
+        }catch (Exception e){
+            log.error("[DCOIN][ORDER BOOK] {}",e.getMessage());
+            e.printStackTrace();
+        }
+
+        return returnRes;
+    }
+
+
     @Override
     public String createOrder(String type, String price, String cnt, String[] coinData, Exchange exchange) {
 
-        String orderId   = ReturnCode.NO_DATA.getValue();
+        String orderId   = ReturnCode.FAIL_CREATE.getValue();
 
         try {
             setApiKey(coinData, exchange);

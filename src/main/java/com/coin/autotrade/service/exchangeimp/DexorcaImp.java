@@ -150,28 +150,28 @@ public class DexorcaImp extends AbstractExchange {
 
         try{
             String[] coinWithId = Utils.splitCoinWithId(liquidity.getCoin());
-            setApiKey(coinWithId, liquidity.getExchange());
+            Exchange exchange   = liquidity.getExchange();
+            String symbol       = getSymbol(coinWithId, exchange);
+
+            setApiKey(coinWithId, exchange);
             log.info("[DEXORCA][LIQUIDITY] START");
-            String symbol = getSymbol(Utils.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
-
             while (!sellQueue.isEmpty() || !buyQueue.isEmpty() || !cancelList.isEmpty()) {
-                String mode                  = (Utils.getRandomInt(1, 2) == 1) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
+                Trade mode                   = getMode();
                 boolean cancelFlag           = (Utils.getRandomInt(1, 2) == 1) ? true : false;
-                Map<String,String> orderMap  = null;
-                String price                 = "";
-                String action                = "";
+                String action                = (mode == Trade.BUY) ? BUY : SELL;
                 String cnt                   = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
+                String price                 = null;
+                Map<String,String> orderMap  = null;
 
-                if(!buyQueue.isEmpty() && mode.equals(UtilsData.MODE_BUY)){
-                    price   = buyQueue.poll();
-                    action  = BUY;
-                }else if(!sellQueue.isEmpty() && mode.equals(UtilsData.MODE_SELL)){
-                    price   = sellQueue.poll();
-                    action  = SELL;
+                if (!buyQueue.isEmpty() && mode == Trade.BUY) {
+                    price = buyQueue.poll();
+                } else if (!sellQueue.isEmpty() && mode == Trade.SELL) {
+                    price = sellQueue.poll();
                 }
+
                 // 매수 로직
-                if(!action.equals("")){
-                    orderMap = parseStringToMap(createOrder(action, price, cnt, coinWithId, liquidity.getExchange()));
+                if(price != null){
+                    orderMap = parseStringToMap(createOrder(action, price, cnt, coinWithId, exchange));
                     if((orderMap != null)){
                         Map<String, Object> cancel = new HashMap<>();
                         cancel.put("orderMap",orderMap);
@@ -211,36 +211,32 @@ public class DexorcaImp extends AbstractExchange {
 
         try{
             String[] coinWithId = Utils.splitCoinWithId(fishing.getCoin());
-            setApiKey(coinWithId, fishing.getExchange());
-            String mode   = "";
-            String symbol = getSymbol(Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
+            Exchange exchange   = fishing.getExchange();
+            String symbol       = getSymbol(coinWithId, exchange);
+            setApiKey(coinWithId, exchange);
 
-            boolean noIntervalFlag   = true;    // 해당 플래그를 이용해 마지막 매도/매수 후 바로 intervalTime 없이 바로 다음 매수/매도 진행
-            boolean noMatchFirstTick = true;    // 해당 플래그를 이용해 매수/매도를 올린 가격이 현재 최상위 값이 맞는지 다른 사람의 코인을 사지 않게 방지
-
-            for(String temp : list.keySet()){  mode = temp; }
-            ArrayList<String> tickPriceList = (ArrayList) list.get(mode);
+            // mode 처리
+            Trade mode = Trade.valueOf(String.valueOf(list.keySet().toArray()[0]));
+            ArrayList<String> tickPriceList = (ArrayList) list.get(mode.getVal());
             ArrayList<Map<String, Object>> orderList = new ArrayList<>();
 
             /* Buy Start */
             log.info("[DEXORCA][FISHINGTRADE][START BUY OR SELL TARGET ALL COIN]");
             for (int i = 0; i < tickPriceList.size(); i++) {
                 String cnt                   = Utils.getRandomString(fishing.getMinContractCnt(), fishing.getMaxContractCnt());
-                Map<String, String> orderMap = null;
-                String action                = null;
-                if(UtilsData.MODE_BUY.equals(mode)) {
-                    orderMap = parseStringToMap(createOrder(BUY, tickPriceList.get(i), cnt, coinWithId, fishing.getExchange()));      // 매수
-                    action   = BUY;
-                }else{
-                    orderMap = parseStringToMap(createOrder(SELL, tickPriceList.get(i), cnt, coinWithId, fishing.getExchange()));     // 매도
-                    action   = SELL;
-                }
+                String action                = (mode == Trade.BUY) ? BUY : SELL;
+
+
+                Map<String, String> orderMap = (mode == Trade.BUY) ?
+                        parseStringToMap(createOrder(BUY, tickPriceList.get(i), cnt, coinWithId, exchange)) :
+                        parseStringToMap(createOrder(SELL, tickPriceList.get(i), cnt, coinWithId, exchange));
+
                 if((orderMap != null) ){                                                // 매수/매도가 정상적으로 이뤄졌을 경우 데이터를 list에 담는다
                     Map<String, Object> map = new HashMap<>();
                     map.put("orderMap" ,map);
                     map.put("action",  action);
                     map.put("price",   tickPriceList.get(i));
-                    map.put("cnt",      cnt);
+                    map.put("cnt",     cnt);
                     orderList.add(map);
                 }
                 Thread.sleep(500);
@@ -250,49 +246,42 @@ public class DexorcaImp extends AbstractExchange {
 
             /* Sell Start */
             log.info("[DEXORCA][FISHINGTRADE][START BUY OR SELL TARGET PIECE COIN ]");
+            boolean isSameFirstTick = true;    // 해당 플래그를 이용해 매수/매도를 올린 가격이 현재 최상위 값이 맞는지 다른 사람의 코인을 사지 않게 방지
             for (int i = orderList.size() - 1; i >= 0; i--) {
                 Map<String, Object> copiedOrderMap = orderList.get(i);
                 BigDecimal cnt                     = new BigDecimal(String.valueOf(copiedOrderMap.get("cnt")));
 
-                while (cnt.compareTo(new BigDecimal("0")) > 0) {
-                    if (!noMatchFirstTick) break;                   // 최신 매도/매수 건 값이 다를경우 돌 필요 없음.
-                    if (noIntervalFlag) Thread.sleep(intervalTime); // intervalTime 만큼 휴식 후 매수 시작
-                    Map<String, String> orderId = null;
-                    BigDecimal cntForExcution = new BigDecimal(Utils.getRandomString(fishing.getMinExecuteCnt(), fishing.getMaxExecuteCnt()));
-                    // 남은 코인 수와 매도/매수할 코인수를 비교했을 때, 남은 코인 수가 더 적다면.
-                    if (cnt.compareTo(cntForExcution) < 0) {
-                        cntForExcution = cnt;
-                        noIntervalFlag = false;
-                    } else {
-                        noIntervalFlag = true;
+                while (cnt.compareTo(BigDecimal.ZERO) > 0) {
+                    if (!isSameFirstTick) break;                   // 최신 매도/매수 건 값이 다를경우 돌 필요 없음.
+                    if(cnt.compareTo(new BigDecimal(String.valueOf(copiedOrderMap.get("cnt")))) != 0){
+                        Thread.sleep(intervalTime); // intervalTime 만큼 휴식 후 매수 시작
                     }
+
+                    BigDecimal executionCnt = new BigDecimal(Utils.getRandomString(fishing.getMinExecuteCnt(), fishing.getMaxExecuteCnt()));  // 실행 코인
+                    executionCnt            = (cnt.compareTo(executionCnt) < 0) ? cnt : executionCnt;    // 남은 코인 수와 매도/매수할 코인수를 비교했을 때, 남은 코인 수가 더 적다면 남은 cnt만큼 매수/매도
+
                     // 매도/매수 날리기전에 최신 매도/매수값이 내가 건 값이 맞는지 확인
-                    String nowFirstTick = "";
-                    if(UtilsData.MODE_BUY.equals(mode)) {
-                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(UtilsData.MODE_BUY);
-                    }else{
-                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(UtilsData.MODE_SELL);
-                    }
+                    String nowFirstTick = (mode == Trade.BUY) ?
+                            coinService.getFirstTick(fishing.getCoin(), exchange).get(UtilsData.MODE_BUY) :
+                            coinService.getFirstTick(fishing.getCoin(), exchange).get(UtilsData.MODE_SELL);
 
                     if (!String.valueOf(copiedOrderMap.get("price")).equals(nowFirstTick)) {
                         log.info("[DEXORCA][FISHINGTRADE] Not Match First Tick. All Trade will be canceled RequestTick : {}, realTick : {}", copiedOrderMap.get("price"), nowFirstTick);
-                        noMatchFirstTick = false;
+                        isSameFirstTick = false;
                         break;
                     }
 
-                    if(UtilsData.MODE_BUY.equals(mode)) {
-                        orderId = parseStringToMap(createOrder(SELL, String.valueOf(copiedOrderMap.get("price")), cntForExcution.toPlainString(), coinWithId, fishing.getExchange()));
-                    }else{
-                        orderId = parseStringToMap(createOrder(BUY, String.valueOf(copiedOrderMap.get("price")), cntForExcution.toPlainString(), coinWithId, fishing.getExchange()));
-                    }
+                    Map<String, String> orderId = (mode == Trade.BUY) ?
+                            parseStringToMap(createOrder(SELL, String.valueOf(copiedOrderMap.get("price")), executionCnt.toPlainString(), coinWithId, exchange)) :
+                            parseStringToMap(createOrder(BUY, String.valueOf(copiedOrderMap.get("price")), executionCnt.toPlainString(), coinWithId, exchange));
 
                     if((orderId != null)){
-                        cnt = cnt.subtract(cntForExcution);
+                        cnt = cnt.subtract(executionCnt);
                         Thread.sleep(500);
-                        if(UtilsData.MODE_BUY.equals(mode)) {
-                            cancelOrder(orderId, SELL, String.valueOf(copiedOrderMap.get("price")) ,cntForExcution.toPlainString(), symbol );
+                        if(Trade.BUY == mode) {
+                            cancelOrder(orderId, SELL, String.valueOf(copiedOrderMap.get("price")) ,executionCnt.toPlainString(), symbol );
                         }else{
-                            cancelOrder(orderId, BUY, String.valueOf(copiedOrderMap.get("price")), cntForExcution.toPlainString(), symbol );
+                            cancelOrder(orderId, BUY, String.valueOf(copiedOrderMap.get("price")), executionCnt.toPlainString(), symbol );
                         }
                     }else{
                         break;
@@ -300,7 +289,7 @@ public class DexorcaImp extends AbstractExchange {
                 }
                 // 무조건 취소
                 Thread.sleep(500);
-                if(UtilsData.MODE_BUY.equals(mode)) {
+                if(Trade.BUY == mode) {
                     cancelOrder((Map<String, String>) orderList.get(i).get("order_id"), BUY, String.valueOf(orderList.get(i).get("price")),  String.valueOf(orderList.get(i).get("cnt")) ,symbol);
                 }else{
                     cancelOrder((Map<String, String>) orderList.get(i).get("order_id"), SELL, String.valueOf(orderList.get(i).get("price")), String.valueOf(orderList.get(i).get("cnt")) ,symbol);
@@ -317,35 +306,6 @@ public class DexorcaImp extends AbstractExchange {
         return returnCode;
     }
 
-    @Override
-    public String getOrderBook(Exchange exchange, String[] coinWithId) {
-
-        String returnRes = ReturnCode.FAIL.getValue();
-        try{
-            // SET API KEY
-            setApiKey(coinWithId, exchange);
-
-            JsonObject body   = getOjbect("quote_enquiry");
-            JsonObject params = new JsonObject();
-            params.addProperty("issue", getSymbol(coinWithId, exchange));
-            body.add("params", params);
-
-            JsonObject returnVal = postHttpMethod(body);
-            JsonObject result    = returnVal.getAsJsonObject("result");
-            if(result.get("rc").getAsString().equals(SUCCESS)){
-                returnRes = gson.toJson(result);
-                log.info("[DEXORCA][GET ORDER BOOK] SUCCESS");
-            }else{
-                log.error("[DEXORCA][GET ORDER BOOK] Fail Response:{}", gson.toJson(returnVal));
-            }
-        }catch (Exception e){
-            log.error("[DEXORCA][GET ORDER BOOK] Error : {}",e.getMessage());
-            e.printStackTrace();
-        }
-        return returnRes;
-    }
-
-
     /**
      * Realtime Sync 거래
      * @param realtime
@@ -357,10 +317,11 @@ public class DexorcaImp extends AbstractExchange {
         String realtimeChangeRate = "signed_change_rate";
 
         try {
-            String[] coinWithId = Utils.splitCoinWithId(realtimeSync.getCoin());
-            setApiKey(coinWithId, realtimeSync.getExchange());
             boolean isStart      = false;
-            String symbol        = getSymbol(Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
+            String[] coinWithId  = Utils.splitCoinWithId(realtimeSync.getCoin());
+            Exchange exchange    = realtimeSync.getExchange();
+            setApiKey(coinWithId, exchange);
+            String symbol        = getSymbol(coinWithId, exchange);
             String[] currentTick = getTodayTick(symbol);
             //            String openingPrice  = currentTick[0];
             if(resetFlag){
@@ -371,7 +332,6 @@ public class DexorcaImp extends AbstractExchange {
             String currentPrice  = currentTick[1];
             log.info("[DEXORCA][REALTIME SYNC TRADE] open:{}, current:{} ", openingPrice, currentPrice);
 
-            Map<String,String> orderId = null;
             String targetPrice   = "";
             String action        = "";
             String mode          = "";
@@ -403,7 +363,8 @@ public class DexorcaImp extends AbstractExchange {
 
             // 2. %를 맞추기 위한 매수/매도 로직
             if(isStart){
-                if((orderId = parseStringToMap(createOrder(action, targetPrice, cnt, coinWithId, realtimeSync.getExchange()))) != null){    // 매수/OrderId가 있으면 성공
+                Map<String,String> orderId = parseStringToMap(createOrder(action, targetPrice, cnt, coinWithId, exchange));
+                if(orderId != null){    // 매수/OrderId가 있으면 성공
                     Thread.sleep(300);
 
                     // 3. bestoffer set 로직
@@ -412,9 +373,8 @@ public class DexorcaImp extends AbstractExchange {
                         JsonObject object       = array.get(i).getAsJsonObject();
                         String bestofferPrice   = object.get("price").getAsString();
                         String bestofferCnt     = object.get("cnt").getAsString();
-                        Map<String, String> bestofferOrderId = null;
-
-                        if((bestofferOrderId = parseStringToMap(createOrder(action, bestofferPrice, bestofferCnt, coinWithId, realtimeSync.getExchange()))) != null){
+                        Map<String, String> bestofferOrderId = parseStringToMap(createOrder(action, bestofferPrice, bestofferCnt, coinWithId, exchange));
+                        if((bestofferOrderId  != null)){
                             log.info("[DEXORCA][REALTIME SYNC] Bestoffer is setted. price:{}, cnt:{}", bestofferPrice, bestofferCnt);
                         }
                     }
@@ -459,12 +419,39 @@ public class DexorcaImp extends AbstractExchange {
         return returnRes;
     }
 
+    @Override
+    public String getOrderBook(Exchange exchange, String[] coinWithId) {
+
+        String returnRes = ReturnCode.FAIL.getValue();
+        try{
+            // SET API KEY
+            setApiKey(coinWithId, exchange);
+
+            JsonObject body   = getOjbect("quote_enquiry");
+            JsonObject params = new JsonObject();
+            params.addProperty("issue", getSymbol(coinWithId, exchange));
+            body.add("params", params);
+
+            JsonObject returnVal = postHttpMethod(body);
+            JsonObject result    = returnVal.getAsJsonObject("result");
+            if(result.get("rc").getAsString().equals(SUCCESS)){
+                returnRes = gson.toJson(result);
+                log.info("[DEXORCA][GET ORDER BOOK] SUCCESS");
+            }else{
+                log.error("[DEXORCA][GET ORDER BOOK] Fail Response:{}", gson.toJson(returnVal));
+            }
+        }catch (Exception e){
+            log.error("[DEXORCA][GET ORDER BOOK] Error : {}",e.getMessage());
+            e.printStackTrace();
+        }
+        return returnRes;
+    }
 
 
     @Override
     public String createOrder(String type, String price, String cnt, String[] coinData, Exchange exchange){
 
-        String returnMsg        = ReturnCode.NO_DATA.getValue();
+        String returnMsg        = ReturnCode.FAIL_CREATE.getValue();
         StringBuilder builder   = new StringBuilder();
 
         try{
