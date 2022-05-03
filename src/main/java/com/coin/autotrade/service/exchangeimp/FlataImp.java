@@ -440,7 +440,7 @@ public class FlataImp extends AbstractExchange {
     @Override
     public String createOrder(String type, String price, String cnt, String[] coinData, Exchange exchange){
 
-        String orderId = ReturnCode.NO_DATA.getValue();
+        String orderId = ReturnCode.FAIL_CREATE.getValue();
         try{
             String sessionKey       = getSessionKey(coinData, exchange);
             String symbol           = getSymbol(coinData, exchange);
@@ -472,7 +472,7 @@ public class FlataImp extends AbstractExchange {
                 log.error("[FLATA][CREATE ORDER] response :{}", gson.toJson(response));
             }
         }catch (Exception e){
-            orderId = ReturnCode.NO_DATA.getValue();
+            orderId = ReturnCode.FAIL_CREATE.getValue();
             log.error("[FLATA][CREATE ORDER] {}",e.getMessage());
             e.printStackTrace();
         }
