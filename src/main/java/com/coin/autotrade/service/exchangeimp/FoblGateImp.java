@@ -88,19 +88,18 @@ public class FoblGateImp extends AbstractExchange {
         try{
             String[] coinWithId = Utils.splitCoinWithId(autoTrade.getCoin());
             Exchange exchange   = autoTrade.getExchange();
-            String symbol = getSymbol(coinWithId, exchange);
-
+            String symbol       = getSymbol(coinWithId, exchange);
             Trade mode          = getMode(autoTrade.getMode());
             String firstAction  = (mode == Trade.BUY) ? BUY : SELL;
             String secondAction = (mode == Trade.BUY) ? SELL : BUY;
 
             String firstOrderId  = createOrder(firstAction,price, cnt, coinWithId, exchange);
-            if(hasOrderId(firstOrderId)){
+            if(Utils.isSuccessOrder(firstOrderId)){
                 Thread.sleep(300);
                 String secondOrderId = createOrder(secondAction, price, cnt, coinWithId, exchange);
                 Thread.sleep(300);
                 cancelOrder(firstOrderId, firstAction, price, symbol);
-                if(hasOrderId(secondOrderId)){
+                if(Utils.isSuccessOrder(secondOrderId)){
                     cancelOrder(secondOrderId, secondAction, price, symbol);
                 }
             }
@@ -123,27 +122,28 @@ public class FoblGateImp extends AbstractExchange {
 
         try{
             log.info("[FOBLGATE][LIQUIDITY] START");
-            String symbol = getSymbol(Utils.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
+            String[] coinWithId = Utils.splitCoinWithId(liquidity.getCoin());
+            Exchange exchange   = liquidity.getExchange();
+            String symbol       = getSymbol(coinWithId, exchange);
 
             while (!sellQueue.isEmpty() || !buyQueue.isEmpty() || !cancelList.isEmpty()) {
-                String mode           = (Utils.getRandomInt(1, 2) == 1) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
-                boolean cancelFlag    = (Utils.getRandomInt(1, 2) == 1) ? true : false;
-                String orderId        = ReturnCode.NO_DATA.getValue();
-                String price          = "";
-                String action         = "";
-                String cnt            = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
+                Trade mode         = getMode();
+                boolean cancelFlag = (Utils.getRandomInt(1, 2) == 1) ? true : false;
+                String orderId     = ReturnCode.FAIL_CREATE.getValue();
+                String action      = (mode == Trade.BUY) ? BUY : SELL;
+                String cnt         = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
+                String price       = null;
 
-                if(!buyQueue.isEmpty() && mode.equals(UtilsData.MODE_BUY)){
-                    price   = buyQueue.poll();
-                    action  = BUY;
-                }else if(!sellQueue.isEmpty() && mode.equals(UtilsData.MODE_SELL)){
-                    price   = sellQueue.poll();
-                    action  = SELL;
+                if (!buyQueue.isEmpty() && mode == Trade.BUY) {
+                    price = buyQueue.poll();
+                } else if (!sellQueue.isEmpty() && mode == Trade.SELL) {
+                    price = sellQueue.poll();
                 }
+
                 // 매수 로직
-                if(!action.equals("")){
-                    orderId = createOrder(action, price, cnt, Utils.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
-                    if(!orderId.equals(ReturnCode.NO_DATA.getValue())){
+                if(price != null){
+                    orderId = createOrder(action, price, cnt, coinWithId, exchange);
+                    if(Utils.isSuccessOrder(orderId)){
                         Map<String, String> cancel = new HashMap<>();
                         cancel.put("orderId", orderId);
                         cancel.put("action",  action);
@@ -179,27 +179,24 @@ public class FoblGateImp extends AbstractExchange {
         int returnCode = ReturnCode.SUCCESS.getCode();
 
         try{
-            String mode   = "";
-            String symbol = getSymbol(Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
+            String[] coinWithId = Utils.splitCoinWithId(fishing.getCoin());
+            Exchange exchange   = fishing.getExchange();
+            String symbol       = getSymbol(coinWithId, exchange);
 
-            boolean noIntervalFlag   = true;    // 해당 플래그를 이용해 마지막 매도/매수 후 바로 intervalTime 없이 바로 다음 매수/매도 진행
-            boolean noMatchFirstTick = true;    // 해당 플래그를 이용해 매수/매도를 올린 가격이 현재 최상위 값이 맞는지 다른 사람의 코인을 사지 않게 방지
-
-            for(String temp : list.keySet()){  mode = temp; }
-            ArrayList<String> tickPriceList = (ArrayList) list.get(mode);
+            // mode 처리
+            Trade mode = Trade.valueOf(String.valueOf(list.keySet().toArray()[0]));
+            ArrayList<String> tickPriceList = (ArrayList) list.get(mode.getVal());
             ArrayList<Map<String, String>> orderList = new ArrayList<>();
 
             /* Buy Start */
             log.info("[FOBLGATE][FISHINGTRADE][START BUY OR SELL TARGET ALL COIN]");
             for (int i = 0; i < tickPriceList.size(); i++) {
                 String cnt     = Utils.getRandomString(fishing.getMinContractCnt(), fishing.getMaxContractCnt());
-                String orderId = ReturnCode.NO_DATA.getValue();
-                if(UtilsData.MODE_BUY.equals(mode)) {
-                    orderId = createOrder(BUY, tickPriceList.get(i), cnt, Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());      // 매수
-                }else{
-                    orderId = createOrder(SELL, tickPriceList.get(i), cnt, Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());     // 매도
-                }
-                if(!orderId.equals(ReturnCode.NO_DATA.getValue())){                                                // 매수/매도가 정상적으로 이뤄졌을 경우 데이터를 list에 담는다
+                String orderId = (mode == Trade.BUY) ?
+                        createOrder(BUY,  tickPriceList.get(i), cnt, coinWithId, exchange) :
+                        createOrder(SELL, tickPriceList.get(i), cnt, coinWithId, exchange);
+
+                if(Utils.isSuccessOrder(orderId)){
                     Map<String, String> orderMap = new HashMap<>();
                     orderMap.put("order_id" ,orderId);
                     orderMap.put("price"    ,tickPriceList.get(i));
@@ -214,46 +211,38 @@ public class FoblGateImp extends AbstractExchange {
 
             /* Sell Start */
             log.info("[FOBLGATE][FISHINGTRADE][START BUY OR SELL TARGET PIECE COIN ]");
+            boolean isSameFirstTick = true;    // 해당 플래그를 이용해 매수/매도를 올린 가격이 현재 최상위 값이 맞는지 다른 사람의 코인을 사지 않게 방지
             for (int i = orderList.size() - 1; i >= 0; i--) {
                 Map<String, String> copiedOrderMap = Utils.deepCopy(orderList.get(i));
                 BigDecimal cnt                     = new BigDecimal(copiedOrderMap.get("cnt"));
 
                 while (cnt.compareTo(new BigDecimal("0")) > 0) {
-                    if (!noMatchFirstTick) break;                   // 최신 매도/매수 건 값이 다를경우 돌 필요 없음.
-                    if (noIntervalFlag) Thread.sleep(intervalTime); // intervalTime 만큼 휴식 후 매수 시작
-                    String orderId            = ReturnCode.NO_DATA.getValue();
-                    BigDecimal cntForExcution = new BigDecimal(Utils.getRandomString(fishing.getMinExecuteCnt(), fishing.getMaxExecuteCnt()));
-                    // 남은 코인 수와 매도/매수할 코인수를 비교했을 때, 남은 코인 수가 더 적다면.
-                    if (cnt.compareTo(cntForExcution) < 0) {
-                        cntForExcution = cnt;
-                        noIntervalFlag = false;
-                    } else {
-                        noIntervalFlag = true;
+                    if (!isSameFirstTick) break;                   // 최신 매도/매수 건 값이 다를경우 돌 필요 없음.
+                    if(cnt.compareTo(new BigDecimal(copiedOrderMap.get("cnt"))) != 0){
+                        Thread.sleep(intervalTime); // intervalTime 만큼 휴식 후 매수 시작
                     }
+                    BigDecimal executionCnt = new BigDecimal(Utils.getRandomString(fishing.getMinExecuteCnt(), fishing.getMaxExecuteCnt()));  // 실행 코인
+                    executionCnt            = (cnt.compareTo(executionCnt) < 0) ? cnt : executionCnt;    // 남은 코인 수와 매도/매수할 코인수를 비교했을 때, 남은 코인 수가 더 적다면 남은 cnt만큼 매수/매도
+
                     // 매도/매수 날리기전에 최신 매도/매수값이 내가 건 값이 맞는지 확인
-                    String nowFirstTick = "";
-                    if(UtilsData.MODE_BUY.equals(mode)) {
-                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(UtilsData.MODE_BUY);
-                    }else{
-                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(UtilsData.MODE_SELL);
-                    }
+                    String nowFirstTick = (mode == Trade.BUY) ?
+                            coinService.getFirstTick(fishing.getCoin(), exchange).get(UtilsData.MODE_BUY) :
+                            coinService.getFirstTick(fishing.getCoin(), exchange).get(UtilsData.MODE_SELL);
 
                     if (!copiedOrderMap.get("price").equals(nowFirstTick)) {
                         log.info("[FOBLGATE][FISHINGTRADE] Not Match First Tick. All Trade will be canceled RequestTick : {}, realTick : {}", copiedOrderMap.get("price"), nowFirstTick);
-                        noMatchFirstTick = false;
+                        isSameFirstTick = false;
                         break;
                     }
 
-                    if(UtilsData.MODE_BUY.equals(mode)) {
-                        orderId = createOrder(SELL, copiedOrderMap.get("price"), cntForExcution.toPlainString(), Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
-                    }else{
-                        orderId = createOrder(BUY, copiedOrderMap.get("price"), cntForExcution.toPlainString(), Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
-                    }
+                    String orderId = (mode == Trade.BUY) ?
+                            createOrder(SELL, copiedOrderMap.get("price"), executionCnt.toPlainString(), coinWithId, exchange) :
+                            createOrder(BUY,  copiedOrderMap.get("price"), executionCnt.toPlainString(), coinWithId, exchange);
 
-                    if(!orderId.equals(ReturnCode.NO_DATA.getValue())){
-                        cnt = cnt.subtract(cntForExcution);
+                    if(Utils.isSuccessOrder(orderId)){
+                        cnt = cnt.subtract(executionCnt);
                         Thread.sleep(500);
-                        if(UtilsData.MODE_BUY.equals(mode)) {
+                        if(mode == Trade.BUY) {
                             cancelOrder(orderId, SELL, copiedOrderMap.get("price"),symbol );
                         }else{
                             cancelOrder(orderId, BUY, copiedOrderMap.get("price"),symbol );
@@ -264,7 +253,7 @@ public class FoblGateImp extends AbstractExchange {
                 }
                 // 무조건 취소
                 Thread.sleep(500);
-                if(UtilsData.MODE_BUY.equals(mode)) {
+                if(mode == Trade.BUY) {
                     cancelOrder(orderList.get(i).get("order_id"), BUY, orderList.get(i).get("price") ,symbol);
                 }else{
                     cancelOrder(orderList.get(i).get("order_id"), SELL, orderList.get(i).get("price") ,symbol);
@@ -312,12 +301,7 @@ public class FoblGateImp extends AbstractExchange {
         return returnRes;
     }
 
-
-    /**
-     * Realtime Sync 거래
-     * @param realtime
-     * @return
-     */
+    @Override
     public int startRealtimeTrade(JsonObject realtime, boolean resetFlag) {
         log.info("[FOBLGATE][REALTIME SYNC TRADE START]");
         int returnCode   = ReturnCode.SUCCESS.getCode();
@@ -325,7 +309,9 @@ public class FoblGateImp extends AbstractExchange {
 
         try {
             boolean isStart      = false;
-            String symbol        = getSymbol(Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
+            String[] coinWithId  = Utils.splitCoinWithId(realtimeSync.getCoin());
+            Exchange exchange    = realtimeSync.getExchange();
+            String symbol        = getSymbol(coinWithId, exchange);
             String[] currentTick = getTodayTick(symbol);
             //            String openingPrice  = currentTick[0];
             if(resetFlag){
@@ -336,7 +322,6 @@ public class FoblGateImp extends AbstractExchange {
             String currentPrice  = currentTick[1];
             log.info("[FOBLGATE][REALTIME SYNC TRADE] open:{}, current:{} ", openingPrice, currentPrice);
 
-            String orderId       = ReturnCode.NO_DATA.getValue();
             String targetPrice   = "";
             String action        = "";
             String mode          = "";
@@ -368,7 +353,8 @@ public class FoblGateImp extends AbstractExchange {
 
             // 2. %를 맞추기 위한 매수/매도 로직
             if(isStart){
-                if( !(orderId = createOrder(action, targetPrice, cnt, Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange())).equals(ReturnCode.NO_DATA.getValue())){    // 매수/OrderId가 있으면 성공
+                String orderId = createOrder(action, targetPrice, cnt, coinWithId, exchange);
+                if(Utils.isSuccessOrder(orderId)){    // 매수/OrderId가 있으면 성공
                     Thread.sleep(300);
 
                     // 3. bestoffer set 로직
@@ -377,9 +363,8 @@ public class FoblGateImp extends AbstractExchange {
                         JsonObject object       = array.get(i).getAsJsonObject();
                         String bestofferPrice   = object.get("price").getAsString();
                         String bestofferCnt     = object.get("cnt").getAsString();
-                        String bestofferOrderId = ReturnCode.NO_DATA.getValue();
-
-                        if( !(bestofferOrderId = createOrder(action, bestofferPrice, bestofferCnt, Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange())).equals(ReturnCode.NO_DATA.getValue())){
+                        String bestofferOrderId = createOrder(action, bestofferPrice, bestofferCnt, coinWithId, exchange);
+                        if(Utils.isSuccessOrder(bestofferOrderId)){
                             log.info("[FOBLGATE][REALTIME SYNC] Bestoffer is setted. price:{}, cnt:{}", bestofferPrice, bestofferCnt);
                         }
                     }
@@ -388,9 +373,6 @@ public class FoblGateImp extends AbstractExchange {
                     cancelOrder(orderId, action, targetPrice, symbol);
                 }
             }
-
-
-
         }catch (Exception e){
             log.error("[FOBLGATE][REALTIME SYNC TRADE] Error :{} ", e.getMessage());
             e.printStackTrace();
@@ -438,9 +420,10 @@ public class FoblGateImp extends AbstractExchange {
         return returnRes;
     }
 
+    @Override
     public String createOrder(String type, String price, String cnt, String[] coinData, Exchange exchange){
 
-        String orderId = ReturnCode.NO_DATA.getValue();
+        String orderId = ReturnCode.FAIL_CREATE.getValue();
         try{
             setApiKey(coinData, exchange);
             String symbol = getSymbol(coinData, exchange);

@@ -255,7 +255,6 @@ public class BithumbGlobalImp extends AbstractExchange {
         String realtimeChangeRate = "signed_change_rate";
 
         try {
-
             boolean isStart      = false;
             String[] coinWithId  = Utils.splitCoinWithId(realtimeSync.getCoin());
             Exchange exchange    = realtimeSync.getExchange();
@@ -270,7 +269,6 @@ public class BithumbGlobalImp extends AbstractExchange {
             String openingPrice  = realtimeTargetInitRate;
             String currentPrice  = currentTick[1];
             log.info("[BITHUMBGLOBAL][REALTIME SYNC TRADE] open:{}, current:{} ", openingPrice, currentPrice);
-
 
             String targetPrice   = "";
             String action        = "";
@@ -377,7 +375,6 @@ public class BithumbGlobalImp extends AbstractExchange {
 
     @Override
     public String createOrder(String type, String price, String cnt, String[] coinData, Exchange exchange){
-
         String response = ReturnCode.FAIL_CREATE.getValue();
         try{
             String cutCnt = setCutCoinCnt(getSymbol(coinData, exchange), cnt);

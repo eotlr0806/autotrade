@@ -213,8 +213,8 @@ public class CoinOneImp extends AbstractExchange {
             log.info("[COINONE][FISHINGTRADE][END BUY OR SELL TARGET ALL COIN]");
 
             /* Sell Start */
-            boolean isSameFirstTick = true;    // 해당 플래그를 이용해 매수/매도를 올린 가격이 현재 최상위 값이 맞는지 다른 사람의 코인을 사지 않게 방지
             log.info("[COINONE][FISHINGTRADE][START BUY OR SELL TARGET PIECE COIN ]");
+            boolean isSameFirstTick = true;    // 해당 플래그를 이용해 매수/매도를 올린 가격이 현재 최상위 값이 맞는지 다른 사람의 코인을 사지 않게 방지
             for (int i = orderList.size() - 1; i >= 0; i--) {
                 Map<String, String> copiedOrderMap = Utils.deepCopy(orderList.get(i));
                 BigDecimal cnt                     = new BigDecimal(copiedOrderMap.get("qty"));

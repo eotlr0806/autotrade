@@ -62,10 +62,8 @@ public abstract class AbstractExchange {
     public abstract int startFishingTrade(Map<String, List> list, int intervalTime);
     public abstract int startRealtimeTrade(JsonObject realtime, boolean resetFlag);
     public abstract String getOrderBook(Exchange exchange, String[] coinWithId);
+    public abstract String createOrder(String type, String price, String cnt, String[] coinData, Exchange exchange) throws Exception;
 
-    public String createOrder(String type, String price, String cnt, String[] coinData, Exchange exchange) throws Exception{
-        throw new Exception("Not supported");
-    }
     public String getBalance(String[] coinData, Exchange exchange) throws Exception {
         throw new Exception("Not supported");
     }
