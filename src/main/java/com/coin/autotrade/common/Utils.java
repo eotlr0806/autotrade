@@ -12,6 +12,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 
 import java.math.BigDecimal;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -363,6 +365,17 @@ public class Utils {
         }else{
             return false;
         }
+    }
+
+    public static String getIp() {
+        String ip = "";
+        try {
+            InetAddress local = InetAddress.getLocalHost();
+            ip = local.getHostAddress();
+        } catch (UnknownHostException e1) {
+            e1.printStackTrace();
+        }
+        return ip;
     }
 
 }

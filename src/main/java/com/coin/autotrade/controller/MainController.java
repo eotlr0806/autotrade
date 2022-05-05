@@ -1,5 +1,6 @@
 package com.coin.autotrade.controller;
 
+import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.common.enumeration.ReturnCode;
 import com.coin.autotrade.common.enumeration.SessionKey;
 import com.coin.autotrade.service.RsaService;
@@ -28,6 +29,8 @@ public class MainController {
     public ModelAndView main( HttpServletRequest request) throws Exception{
 
         ModelAndView mav = new ModelAndView();
+        mav.addObject("serverIp", Utils.getIp());
+
         if(hasUserIdInSession(request)){
             mav.setViewName("layout/main");
             return mav;

@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>ATS - Auto Trading Solution</title>
+    <title id="title">ATS - Auto Trading Solution</title>
 
     <!-- Global stylesheets -->
     <link href="https://fonts.googleapis.com/css?family=Roboto:400,300,100,500,700,900" rel="stylesheet" type="text/css">
@@ -138,6 +138,7 @@
 
     </div>
     <!-- /page container -->
+    <input type="hidden" id="server_ip" th:value="${serverIp}" />
 
 </body>
 </html>
@@ -190,5 +191,29 @@
 
         });
         $('#trade_schedule_embeded').trigger('click');   // main 화면
+
+        setTitle();
     })
+
+    let setTitle = () => {
+        let serverIp = $('#server_ip').val();
+        let title    = 'ATS - AutoTrade';
+        switch (serverIp){
+            case '172.31.58.54' :
+                title = 'ATS - 1번서버';
+                break;
+            case '172.31.58.120' :
+                title = 'ATS - 2번서버';
+                break;
+            case '172.31.52.255' :
+                title = 'ATS - 3번서버';
+                break;
+            case '172.31.38.119' :
+                title = 'ATS - Test서버'
+                break;
+            default :
+                break;
+        }
+        $('#title').html(title);
+    }
 </script>
