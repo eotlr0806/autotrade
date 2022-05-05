@@ -188,6 +188,10 @@
                 $('#account').empty();
                 $('#account').append(`<embed id="embed_account" name="embed_account" type="text/html"  src="/main/account" style="width:100%; height:1000px;"></embed>`);
             }
+            if(item.target.id != 'trade_config_embeded'){
+                $('#trade_config').empty();
+                $('#trade_config').append(`<embed id="embed_trade_config" name="embed_trade_config" type="text/html"  src="/main/trade_config" style="width:100%; height:1000px;"></embed>`);
+            }
 
         });
         $('#trade_schedule_embeded').trigger('click');   // main 화면

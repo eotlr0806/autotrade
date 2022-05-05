@@ -369,7 +369,6 @@ public class BithumbImp extends AbstractExchange {
         return returnRes;
     }
 
-    /** Biyhumb global 매수/매도 로직 */
     @Override
     public String createOrder(String type, String price, String cnt, String[] coinData, Exchange exchange){
         String response = ReturnCode.FAIL_CREATE.getValue();
@@ -405,7 +404,6 @@ public class BithumbImp extends AbstractExchange {
         return response;
     }
 
-    /* Bithumb global 거래 취소 */
     private int cancelOrder(String type, String orderId, String coin, String currency) {
 
         int returnValue = ReturnCode.NO_DATA.getCode();

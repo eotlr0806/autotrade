@@ -193,7 +193,6 @@ public class BithumbGlobalImp extends AbstractExchange {
 
 
             /* Sell Start */
-//            boolean isInterval      = true;    // 해당 플래그를 이용해 마지막 매도/매수 후 바로 intervalTime 없이 바로 다음 매수/매도 진행
             boolean isSameFirstTick = true;    // 해당 플래그를 이용해 매수/매도를 올린 가격이 현재 최상위 값이 맞는지 다른 사람의 코인을 사지 않게 방지
             for (int i = orderList.size() - 1; i >= 0; i--) {
                 Map<String, String> copiedOrderMap = Utils.deepCopy(orderList.get(i));
@@ -201,14 +200,10 @@ public class BithumbGlobalImp extends AbstractExchange {
 
                 while (cnt.compareTo(BigDecimal.ZERO) > 0) {
                     if (!isSameFirstTick) break;                   // 최신 매도/매수 건 값이 다를경우 돌 필요 없음.
-//                    if (isInterval) Thread.sleep(intervalTime); // intervalTime 만큼 휴식 후 매수 시작
-                    // TODO : 체크필요. 기존에는 마지막값 매수/매도 후 다음틱을 바로 매수/매도를 하기위해 isInterval을 사용했으나, 최초에만 확인하면 되므로 아래와같이 로직 변경
                     if(cnt.compareTo(new BigDecimal(copiedOrderMap.get("cnt"))) != 0){
                         Thread.sleep(intervalTime); // intervalTime 만큼 휴식 후 매수 시작
                     }
-
                     BigDecimal executionCnt = new BigDecimal(Utils.getRandomString(fishing.getMinExecuteCnt(), fishing.getMaxExecuteCnt()));  // 실행 코인
-//                    isInterval              = (cnt.compareTo(executionCnt) < 0) ? false : true;          // 남은 코인 수와 매도/매수할 코인수를 비교했을 때, 남은 코인 수가 더 적다면 false를 주어 다음번에 바로 매수/매도
                     executionCnt            = (cnt.compareTo(executionCnt) < 0) ? cnt : executionCnt;    // 남은 코인 수와 매도/매수할 코인수를 비교했을 때, 남은 코인 수가 더 적다면 남은 cnt만큼 매수/매도
 
                     // 매도/매수 날리기전에 최신 매도/매수값이 내가 건 값이 맞는지 확인
