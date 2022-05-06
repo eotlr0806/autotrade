@@ -113,7 +113,7 @@ public class CoinsBitImp extends AbstractExchange {
             if(Utils.isSuccessOrder(firstOrderId)){
                 String secondOrderId = createOrder(secondAction, price, cnt, coinWithId, exchange);
 
-                Thread.sleep(500);
+                Thread.sleep(1000);
                 cancelOrder(symbol, firstOrderId);
                 if(Utils.isSuccessOrder(secondOrderId)){
                     cancelOrder(symbol, secondOrderId);

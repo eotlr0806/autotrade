@@ -221,7 +221,7 @@ public class CoinOneImp extends AbstractExchange {
 
                 while (cnt.compareTo(BigDecimal.ZERO) > 0) {
                     if (!isSameFirstTick) break;                                        // 최신 매도/매수 건 값이 다를경우 돌 필요 없음.
-                    if(cnt.compareTo(new BigDecimal(copiedOrderMap.get("cnt"))) != 0){  // 최초에 매수/매도 주문시에는 interval 적용 X
+                    if(cnt.compareTo(new BigDecimal(copiedOrderMap.get("qty"))) != 0){  // 최초에 매수/매도 주문시에는 interval 적용 X
                         Thread.sleep(intervalTime);                                     // intervalTime 만큼 휴식 후 매수 시작
                     }
                     BigDecimal executionCnt = new BigDecimal(Utils.getRandomString(fishing.getMinExecuteCnt(), fishing.getMaxExecuteCnt()));

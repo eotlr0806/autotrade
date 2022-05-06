@@ -8,6 +8,7 @@ import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.net.ssl.*;
@@ -26,21 +27,23 @@ public class DexorcaImp extends AbstractExchange {
     private String USER_ID               = "userId";
     private String SELL                  = "place_sell";
     private String BUY                   = "place_buy";
-    private String SUCCESS               = "0";
-    private String ALREADY_TRADED        = "19414";
     private String noChangedUserId       = "";
     private String ORDER_DATE            = "order_date";
     private String ORDER_ID              = "order_id";
     private int SLEEP_TIME               = 600000;
     private long VARIABLE                = 100000000L;
 
-    private enum Error {
-        NO_MONEY(19208,"잔액 부족"),
-        GAS(19212,"가스필요");
+    @Getter
+    private enum Code {
+        SUCCESS("0", "성공"),
+        NO_MONEY("19208","잔액 부족"),
+        GAS("19212","가스필요"),
+        NO_SESSION("19405", "세션 없음"),
+        ALREADY_TRADE("19414","이미 거래된 주문");
 
-        int code;
-        String msg;
-        Error(int code, String msg){
+        private String code;
+        private String msg;
+        Code(String code, String msg){
             this.code = code;
             this.msg  = msg;
         }
@@ -99,6 +102,35 @@ public class DexorcaImp extends AbstractExchange {
                 }else{
                     log.info("[DEXORCA][MAKE SESSION KEY] Already set account id:{}, session:{}", userId, UtilsData.DEXORCA_SESSION_KEY.get(userId));
                 }
+            }
+        }
+
+        if(!UtilsData.DEXORCA_SESSION_KEY.containsKey(userId)){
+            String msg = "There is no match coin. " + Arrays.toString(coinData) + " " + exchange.getExchangeCode();
+            throw new Exception(msg);
+        }
+    }
+
+    private void reconnectSession(String[] coinData, Exchange exchange) throws Exception{
+        String userId = "";
+        for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
+            if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1])){
+                userId = exCoin.getExchangeUserId();
+                setUserId(userId);
+                UtilsData.DEXORCA_SESSION_KEY.remove(exCoin.getExchangeUserId());
+                log.info("[DEXORCA][MAKE SESSION KEY] Remove session key: {}", userId);
+
+                JsonObject object = getOjbect("login");
+                JsonObject params = new JsonObject();
+                params.addProperty("account",  userId);
+                params.addProperty("password", exCoin.getApiPassword());
+                object.add("params", params);
+
+                JsonObject response = postHttpMethod(object);
+                String sessionId    = response.getAsJsonObject("result").get("session_id").getAsString();
+                UtilsData.DEXORCA_SESSION_KEY.put(exCoin.getExchangeUserId(), sessionId);
+
+                log.info("[DEXORCA][MAKE SESSION KEY] First set account id:{}, session:{}", userId, UtilsData.DEXORCA_SESSION_KEY.get(userId));
             }
         }
 
@@ -407,10 +439,11 @@ public class DexorcaImp extends AbstractExchange {
         JsonObject params = new JsonObject();
         params.addProperty("issue", symbol);
         body.add("params", params);
+        log.info("[DEXORCA][GET TODAY TICK] REQUEST:{}", gson.toJson(body));
 
         JsonObject returnVal = postHttpMethod(body);
         JsonObject result    = returnVal.getAsJsonObject("result");
-        if(result.get("rc").getAsString().equals(SUCCESS)){
+        if(result.get("rc").getAsString().equals(Code.SUCCESS.getCode())){
             returnRes[0] = result.get("open_price").getAsString();
             returnRes[1] = result.get("price").getAsString();
             log.info("[DEXORCA][GET TODAY TICK] SUCCESS");
@@ -433,9 +466,11 @@ public class DexorcaImp extends AbstractExchange {
             params.addProperty("issue", getSymbol(coinWithId, exchange));
             body.add("params", params);
 
+            log.info("[DEXORCA][GET ORDER BOOK] REQUEST: {}", gson.toJson(body));
+
             JsonObject returnVal = postHttpMethod(body);
             JsonObject result    = returnVal.getAsJsonObject("result");
-            if(result.get("rc").getAsString().equals(SUCCESS)){
+            if(result.get("rc").getAsString().equals(Code.SUCCESS.getCode())){
                 returnRes = gson.toJson(result);
                 log.info("[DEXORCA][GET ORDER BOOK] SUCCESS");
             }else{
@@ -471,17 +506,22 @@ public class DexorcaImp extends AbstractExchange {
             params.addProperty("session_id", UtilsData.DEXORCA_SESSION_KEY.get(getUserId()));
             object.add("params", params);
 
+            log.info("[DEXORCA][CREATE ORDER] REQUEST :{}" , gson.toJson(object));
+
             JsonObject response = postHttpMethod(object);
             JsonObject result    = response.getAsJsonObject("result");
             if(result.size() == 0){
                 log.info("[DEXORCA][CREATE ORDER] Maybe success result is null. {}" , gson.toJson(response));
-            }else if(result.get("rc").getAsString().equals(SUCCESS)){
+            }else if(result.get("rc").getAsString().equals(Code.SUCCESS.getCode())){
                 builder.append(result.get(ORDER_DATE).getAsString())
                         .append(",")
                         .append(result.get(ORDER_ID).getAsString());
                 returnMsg = builder.toString();
 
                 log.info("[DEXORCA][CREATE ORDER] CREATE SUCCESS:{}" , gson.toJson(response));
+            }else if(result.get("rc").getAsString().equals(Code.NO_SESSION.getCode())){
+                log.info("[DEXORCA][CREATE ORDER] CREATE FAIL:{}" , gson.toJson(response));
+                reconnectSession(coinData, exchange);
             }else{
                 log.error("[DEXORCA][CREATE ORDER] CREATE FAIL:{}", gson.toJson(response));
             }
@@ -542,12 +582,14 @@ public class DexorcaImp extends AbstractExchange {
             params.addProperty("org_order_id"  , ordNo.get(ORDER_ID));
             object.add("params", params);
 
+            log.info("[DEXORCA][CANCEL ORDER] CANCEL REQUEST: {}", gson.toJson(object));
+
             JsonObject response  = postHttpMethod(object);
             JsonObject result    = response.getAsJsonObject("result");
-            if(result.get("rc").getAsString().equals(SUCCESS)){
+            if(result.get("rc").getAsString().equals(Code.SUCCESS.getCode())){
                 returnCode = ReturnCode.SUCCESS.getCode();
                 log.info("[DEXORCA][CANCEL ORDER] CANCEL SUCCESS {}", gson.toJson(response));
-            }else if(result.get("rc").getAsString().equals(ALREADY_TRADED)){
+            }else if(result.get("rc").getAsString().equals(Code.ALREADY_TRADE.getCode())){
                 log.info("[DEXORCA][CANCEL ORDER] Already Traded {}", gson.toJson(response));
             }else{
                 log.error("[DEXORCA][CANCEL ORDER] CANCEL FAIL:{}", gson.toJson(response));
@@ -569,8 +611,6 @@ public class DexorcaImp extends AbstractExchange {
         }
         return returnCode;
     }
-
-
 
 
     private JsonObject postHttpMethod(JsonObject body) throws Exception{
@@ -645,8 +685,7 @@ public class DexorcaImp extends AbstractExchange {
     }
 
     private void disableSslVerification(){
-        try
-        {
+        try {
             // Create a trust manager that does not validate certificate chains
             TrustManager[] trustAllCerts = new TrustManager[] {new X509TrustManager() {
                 @Override
