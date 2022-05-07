@@ -21,5 +21,5 @@ spring:
 logging:
   file:
     name: ../logs/auto_trade.log     # 로깅 파일 위치
-    max-history: 10                 # 로그 파일 삭제 주기
-    max-size: 50MB                  # 로그 파일 하나당 최대 파일 사이즈
+    max-history: 7                 # 로그 파일 삭제 주기
+    max-size: 70MB                  # 로그 파일 하나당 최대 파일 사이즈
