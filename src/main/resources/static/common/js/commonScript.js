@@ -51,7 +51,8 @@ const API = {
     COIN          :"/v1/exchanges/coin",
     ORDER_BOOK    :"/v1/orderbook",
     BALANCE       :"/v1/balance",
-    TRADE_ACTION  :"/v1/trade/action"
+    TRADE_ACTION  :"/v1/trade/action",
+    ADD_TICK      :"/v1/trade/add-tick"
 }
 
 const CODE_ERROR         = -1000;

@@ -1,8 +1,9 @@
 package com.coin.autotrade.service.exchangeimp;
 
-import com.coin.autotrade.common.UtilsData;
 import com.coin.autotrade.common.Utils;
+import com.coin.autotrade.common.UtilsData;
 import com.coin.autotrade.common.enumeration.ReturnCode;
+import com.coin.autotrade.common.enumeration.Trade;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
 import com.google.gson.JsonArray;
@@ -130,33 +131,22 @@ public class FlataImp extends AbstractExchange {
 
         int returnCode = ReturnCode.SUCCESS.getCode();
         try{
-            String[] coinData   = Utils.splitCoinWithId(autoTrade.getCoin());
-            String sessionKey   = getSessionKey(coinData, autoTrade.getExchange());
-            String symbol       = getSymbol(coinData, autoTrade.getExchange());
-            String firstAction  = "";
-            String secondAction = "";
+            String[] coinWithId = Utils.splitCoinWithId(autoTrade.getCoin());
+            Exchange exchange   = autoTrade.getExchange();
+            String symbol       = getSymbol(coinWithId, exchange);
+            String sessionKey   = getSessionKey(coinWithId, exchange);
+            Trade mode          = getMode(autoTrade.getMode());
+            String firstAction  = (mode == Trade.BUY) ? BUY : SELL;
+            String secondAction = (mode == Trade.BUY) ? SELL : BUY;
 
-            // mode 처리
-            String mode = autoTrade.getMode();
-            if(UtilsData.MODE_RANDOM.equals(mode)){
-                mode = (Utils.getRandomInt(0,1) == 0) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
-            }
-
-            // Trade 모드에 맞춰 순서에 맞게 거래 타입 생성
-            if(UtilsData.MODE_BUY.equals(mode)){
-                firstAction  = BUY;
-                secondAction = SELL;
-            }else if(UtilsData.MODE_SELL.equals(mode)){
-                firstAction  = SELL;
-                secondAction = BUY;
-            }
-            String orderId = ReturnCode.NO_DATA.getValue();
-            if(!(orderId = createOrder(firstAction,price, cnt, symbol, sessionKey)).equals(ReturnCode.NO_DATA.getValue())){
-                if(createOrder(secondAction,price, cnt, symbol, sessionKey).equals(ReturnCode.NO_DATA.getValue())){          // SELL 모드가 실패 시,
-                    cancelOrder(orderId, sessionKey);
+            String firstOrderId  = createOrder(firstAction,price, cnt, coinWithId, exchange);
+            if(Utils.isSuccessOrder(firstOrderId)){
+                String secondOrderId = createOrder(secondAction, price, cnt, coinWithId, exchange);
+                cancelOrder(firstOrderId, sessionKey);
+                if(Utils.isSuccessOrder(secondOrderId)){
+                    cancelOrder(secondOrderId, sessionKey);
                 }
             }
-
         }catch (Exception e){
             returnCode = ReturnCode.FAIL.getCode();
             log.error("[FLATA][AUTOTRADE] Error {}", e.getMessage());
@@ -178,29 +168,29 @@ public class FlataImp extends AbstractExchange {
 
         try{
             log.info("[FLATA][LIQUIDITY] Start");
-            String[] coinData = Utils.splitCoinWithId(liquidity.getCoin());
-            String sessionKey = getSessionKey(coinData, liquidity.getExchange());
-            String symbol     = getSymbol(coinData, liquidity.getExchange());
+            String[] coinWithId = Utils.splitCoinWithId(liquidity.getCoin());
+            Exchange exchange   = liquidity.getExchange();
+            String sessionKey = getSessionKey(coinWithId, exchange);
+            String symbol     = getSymbol(coinWithId, exchange);
 
             while (!sellQueue.isEmpty() || !buyQueue.isEmpty() || !cancelList.isEmpty()) {
-                String mode           = (Utils.getRandomInt(1, 2) == 1) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
-                boolean cancelFlag    = (Utils.getRandomInt(1, 2) == 1) ? true : false;
-                String orderId        = ReturnCode.NO_DATA.getValue();
-                String price          = "";
-                String action         = "";
-                String cnt            = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
+                Trade mode         = getMode();
+                boolean cancelFlag = (Utils.getRandomInt(1, 2) == 1) ? true : false;
+                String orderId     = ReturnCode.FAIL_CREATE.getValue();
+                String action      = (mode == Trade.BUY) ? BUY : SELL;
+                String cnt         = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
+                String price       = null;
 
-                if (!buyQueue.isEmpty() && mode.equals(UtilsData.MODE_BUY)) {
-                    price   = buyQueue.poll();
-                    action  = BUY;
-                } else if (!sellQueue.isEmpty() && mode.equals(UtilsData.MODE_SELL)) {
-                    price   = sellQueue.poll();
-                    action  = SELL;
+                if (!buyQueue.isEmpty() && mode == Trade.BUY) {
+                    price = buyQueue.poll();
+                } else if (!sellQueue.isEmpty() && mode == Trade.SELL) {
+                    price = sellQueue.poll();
                 }
-                // 매수 로직
-                if(!action.equals("")){
-                    orderId = createOrder(action, price, cnt, symbol, sessionKey);
-                    if(!orderId.equals(ReturnCode.NO_DATA.getValue())){
+
+                // price == "" 면 buy도 sell도 진행할 수 없는 상태기에, order를 하지 않는다.
+                if(price != null){
+                    orderId = createOrder(action, price, cnt, coinWithId, exchange);
+                    if(Utils.isSuccessOrder(orderId)){
                         cancelList.add(orderId);
                     }
                     Thread.sleep(1500);
@@ -229,33 +219,24 @@ public class FlataImp extends AbstractExchange {
         int returnCode = ReturnCode.SUCCESS.getCode();
 
         try{
-            String[] coinData = Utils.splitCoinWithId(fishing.getCoin());
-            String sessionKey = getSessionKey(coinData, fishing.getExchange());
-            String symbol     = getSymbol(coinData, fishing.getExchange());
+            String[] coinWithId = Utils.splitCoinWithId(fishing.getCoin());
+            Exchange exchange   = fishing.getExchange();
+            String sessionKey   = getSessionKey(coinWithId, exchange);
+            String symbol       = getSymbol(coinWithId, exchange);
 
             // mode 처리
-            String mode = fishing.getMode();
-            if(UtilsData.MODE_RANDOM.equals(mode)){
-                mode = (Utils.getRandomInt(0,1) == 0) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
-            }
-
-            boolean noIntervalFlag   = true;    // 해당 플래그를 이용해 마지막 매도/매수 후 바로 intervalTime 없이 바로 다음 매수/매도 진행
-            boolean noMatchFirstTick = true;    // 해당 플래그를 이용해 매수/매도를 올린 가격이 현재 최상위 값이 맞는지 다른 사람의 코인을 사지 않게 방지
-
-            for(String temp : list.keySet()){  mode = temp; }
-            ArrayList<String> tickPriceList = (ArrayList) list.get(mode);
+            Trade mode = Trade.valueOf(String.valueOf(list.keySet().toArray()[0]));
+            ArrayList<String> tickPriceList = (ArrayList) list.get(mode.getVal());
             ArrayList<Map<String, String>> orderList = new ArrayList<>();
 
             /* Start */
             for (int i = 0; i < tickPriceList.size(); i++) {
                 String cnt     = Utils.getRandomString(fishing.getMinContractCnt(), fishing.getMaxContractCnt());
-                String orderId = ReturnCode.NO_DATA.getValue();
-                if(UtilsData.MODE_BUY.equals(mode)) {
-                    orderId = createOrder(BUY, tickPriceList.get(i), cnt, symbol, sessionKey);
-                }else{
-                    orderId = createOrder(SELL, tickPriceList.get(i), cnt, symbol, sessionKey);
-                }
-                if(!orderId.equals(ReturnCode.NO_DATA.getValue())){                                                // 매수/매도가 정상적으로 이뤄졌을 경우 데이터를 list에 담는다
+                String orderId = (mode == Trade.BUY) ?
+                        createOrder(BUY,  tickPriceList.get(i), cnt, coinWithId, exchange) :
+                        createOrder(SELL, tickPriceList.get(i), cnt, coinWithId, exchange);
+
+                if(Utils.isSuccessOrder(orderId)){
                     Map<String, String> orderMap = new HashMap<>();
                     orderMap.put("order_id" ,orderId);
                     orderMap.put("price"    ,tickPriceList.get(i));
@@ -266,44 +247,37 @@ public class FlataImp extends AbstractExchange {
             }
 
             /* Sell Start */
+            boolean isSameFirstTick = true;    // 해당 플래그를 이용해 매수/매도를 올린 가격이 현재 최상위 값이 맞는지 다른 사람의 코인을 사지 않게 방지
             for (int i = orderList.size() - 1; i >= 0; i--) {
                 Map<String, String> copiedOrderMap = Utils.deepCopy(orderList.get(i));
                 BigDecimal cnt                     = new BigDecimal(copiedOrderMap.get("cnt"));
 
-                while (cnt.compareTo(new BigDecimal("0")) > 0) {
-                    if (!noMatchFirstTick) break;                   // 최신 매도/매수 건 값이 다를경우 돌 필요 없음.
-                    if (noIntervalFlag) Thread.sleep(intervalTime); // intervalTime 만큼 휴식 후 매수 시작
-                    String orderId            = ReturnCode.NO_DATA.getValue();
-                    BigDecimal cntForExcution = new BigDecimal(Utils.getRandomString(fishing.getMinExecuteCnt(), fishing.getMaxExecuteCnt()));
-                    // 남은 코인 수와 매도/매수할 코인수를 비교했을 때, 남은 코인 수가 더 적다면.
-                    if (cnt.compareTo(cntForExcution) < 0) {
-                        cntForExcution = cnt;
-                        noIntervalFlag = false;
-                    } else {
-                        noIntervalFlag = true;
+                while (cnt.compareTo(BigDecimal.ZERO) > 0) {
+                    if (!isSameFirstTick) break;                   // 최신 매도/매수 건 값이 다를경우 돌 필요 없음.
+                    if(cnt.compareTo(new BigDecimal(copiedOrderMap.get("cnt"))) != 0){
+                        Thread.sleep(intervalTime); // intervalTime 만큼 휴식 후 매수 시작
                     }
+
+                    BigDecimal executionCnt = new BigDecimal(Utils.getRandomString(fishing.getMinExecuteCnt(), fishing.getMaxExecuteCnt()));  // 실행 코인
+                    executionCnt            = (cnt.compareTo(executionCnt) < 0) ? cnt : executionCnt;    // 남은 코인 수와 매도/매수할 코인수를 비교했을 때, 남은 코인 수가 더 적다면 남은 cnt만큼 매수/매도
+
                     // 매도/매수 날리기전에 최신 매도/매수값이 내가 건 값이 맞는지 확인
-                    String nowFirstTick = "";
-                    if(UtilsData.MODE_BUY.equals(mode)) {
-                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(UtilsData.MODE_BUY);
-                    }else{
-                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(UtilsData.MODE_SELL);
-                    }
+                    String nowFirstTick = (mode == Trade.BUY) ?
+                            coinService.getFirstTick(fishing.getCoin(), exchange).get(UtilsData.MODE_BUY) :
+                            coinService.getFirstTick(fishing.getCoin(), exchange).get(UtilsData.MODE_SELL);
 
                     if (!copiedOrderMap.get("price").equals(nowFirstTick)) {
                         log.info("[FLATA][FISHINGTRADE] Not Match First Tick. All Trade will be canceled RequestTick : {}, realTick : {}", copiedOrderMap.get("price"), nowFirstTick);
-                        noMatchFirstTick = false;
+                        isSameFirstTick = false;
                         break;
                     }
 
-                    if(UtilsData.MODE_BUY.equals(mode)) {
-                        orderId = createOrder(SELL, copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol, sessionKey);
-                    }else{
-                        orderId = createOrder(BUY, copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol, sessionKey);
-                    }
+                    String orderId = (mode == Trade.BUY) ?
+                            createOrder(SELL, copiedOrderMap.get("price"), executionCnt.toPlainString(), coinWithId, exchange) :
+                            createOrder(BUY,  copiedOrderMap.get("price"), executionCnt.toPlainString(), coinWithId, exchange);
 
-                    if(!orderId.equals(ReturnCode.NO_DATA.getValue())){
-                        cnt = cnt.subtract(cntForExcution);
+                    if(Utils.isSuccessOrder(orderId)){
+                        cnt = cnt.subtract(executionCnt);
                         Thread.sleep(500);
                         cancelOrder(orderId, sessionKey );
                     }else{
@@ -335,8 +309,9 @@ public class FlataImp extends AbstractExchange {
 
             boolean isStart      = false;
             String[] coinWithId  = Utils.splitCoinWithId(realtimeSync.getCoin());
+            Exchange exchange    = realtimeSync.getExchange();
             String sessionKey    = getSessionKey(coinWithId, fishing.getExchange());
-            String symbol        = getSymbol(coinWithId, realtimeSync.getExchange());
+            String symbol        = getSymbol(coinWithId, exchange);
             String[] currentTick = getTodayTick(symbol);
             //            String openingPrice  = currentTick[0];
             if(resetFlag){
@@ -347,7 +322,6 @@ public class FlataImp extends AbstractExchange {
             String currentPrice  = currentTick[1];
             log.info("[FLATA][REALTIME SYNC TRADE] open:{}, current:{} ", openingPrice, currentPrice);
 
-            String orderId       = ReturnCode.NO_DATA.getValue();
             String targetPrice   = "";
             String action        = "";
             String mode          = "";
@@ -377,8 +351,8 @@ public class FlataImp extends AbstractExchange {
             }
 
             if(isStart){
-                if( !(orderId = createOrder(action, targetPrice, cnt, symbol, sessionKey)).equals(ReturnCode.NO_DATA.getValue())){    // 매수/OrderId가 있으면 성공
-
+                String orderId = createOrder(action, targetPrice, cnt, coinWithId, exchange);
+                if(Utils.isSuccessOrder(orderId)){    // 매수/OrderId가 있으면 성공
                     Thread.sleep(300);
 
                     // 3. bestoffer set 로직
@@ -387,9 +361,8 @@ public class FlataImp extends AbstractExchange {
                         JsonObject object       = array.get(i).getAsJsonObject();
                         String bestofferPrice   = object.get("price").getAsString();
                         String bestofferCnt     = object.get("cnt").getAsString();
-                        String bestofferOrderId = ReturnCode.NO_DATA.getValue();
-
-                        if( !(bestofferOrderId = createOrder(action, bestofferPrice, bestofferCnt, symbol, sessionKey)).equals(ReturnCode.NO_DATA.getValue())){
+                        String bestofferOrderId = createOrder(action, bestofferPrice, bestofferCnt, coinWithId, exchange);
+                        if(Utils.isSuccessOrder(bestofferOrderId)){
                             log.info("[FLATA][REALTIME SYNC] Bestoffer is setted. price:{}, cnt:{}", bestofferPrice, bestofferCnt);
                         }
                     }
@@ -447,50 +420,24 @@ public class FlataImp extends AbstractExchange {
         return returnRes;
     }
 
+    @Override
+    public String createOrder(String type, String price, String cnt, String[] coinData, Exchange exchange){
 
-
-
-    /* 최초에 등록한 세션키를 가져옴. */
-    /**
-     * 매도/매수 function
-     * @param type   - 1: 매수 / 2 : 매도
-     * @param symbol - coin + / + currency
-     */
-    public String createOrder(String type, String price, String cnt, String symbol, String sessionKey){
-
-        String orderId = ReturnCode.NO_DATA.getValue();
+        String orderId = ReturnCode.FAIL_CREATE.getValue();
         try{
+            String sessionKey       = getSessionKey(coinData, exchange);
+            String symbol           = getSymbol(coinData, exchange);
             BigDecimal decimalPrice = new BigDecimal(price);
             BigDecimal decimalCnt   = new BigDecimal(cnt);
-            BigDecimal tax          = new BigDecimal("1000");
             BigDecimal total        = decimalPrice.multiply(decimalCnt);
-            BigDecimal resultTax    = total.divide(tax);
-            String minCntFix        = getCoinMinCount(symbol);
+            BigDecimal resultTax    = total.divide(BigDecimal.valueOf(1000));
 
-            int dotIdx = minCntFix.indexOf(".");
-            int oneIdx = minCntFix.indexOf("1");
-            int length = minCntFix.length();
-            int primary = 0;
-            double doubleCnt = Double.parseDouble(cnt);
-            // 소수
-            if(dotIdx < oneIdx){
-                // 34.232
-                // 0.01
-                primary = oneIdx - dotIdx;  // 소수점 2째 자리.
-                int num = (int) Math.pow(10,primary);
-                doubleCnt = Math.floor(doubleCnt * num) / num;
-            }else{
-                // 34.232
-                //  1.0
-                primary = dotIdx - 1; // 해당 자리에서 버림
-                int num = ((int) Math.pow(10,primary) == 0) ? 1 : (int) Math.pow(10,primary);
-                doubleCnt = Math.floor(doubleCnt / num) * num;
-            }
+            double doubleCnt = cutCnt(symbol, cnt);
 
             JsonObject header = new JsonObject();
             header.addProperty("symbol",symbol);
-            header.addProperty("buySellType",type);
-            header.addProperty("ordPrcType", "2");  // 1은 시장가, 2는 지정가
+            header.addProperty("buySellType",parseAction(type));
+            header.addProperty("ordPrcType", "2");              // 1은 시장가, 2는 지정가
             header.addProperty("ordPrc",Double.parseDouble(price));
             header.addProperty("ordQty",doubleCnt);
             header.addProperty("ordFee",resultTax.doubleValue());
@@ -502,19 +449,38 @@ public class FlataImp extends AbstractExchange {
             JsonObject item     = response.get("item").getAsJsonObject();
             orderId             = item.get("ordNo").toString();
 
-            // Order ID 가 0이면 에러
             if(!orderId.equals("0")){
                 log.info("[FLATA][CREATE ORDER] response :{}", gson.toJson(response));
             }else{
-                orderId = ReturnCode.NO_DATA.getValue();
                 log.error("[FLATA][CREATE ORDER] response :{}", gson.toJson(response));
             }
         }catch (Exception e){
-            orderId = ReturnCode.NO_DATA.getValue();
+            orderId = ReturnCode.FAIL_CREATE.getValue();
             log.error("[FLATA][CREATE ORDER] {}",e.getMessage());
             e.printStackTrace();
         }
         return orderId;
+    }
+
+    private double cutCnt(String symbol, String cnt) throws Exception{
+        String minCntFix = getCoinMinCount(symbol);
+
+        int dotIdx = minCntFix.indexOf(".");
+        int oneIdx = minCntFix.indexOf("1");
+        int length = minCntFix.length();
+        int primary = 0;
+        double doubleCnt = Double.parseDouble(cnt);
+        // 소수
+        if(dotIdx < oneIdx){ // 34.232 < 0.01
+            primary = oneIdx - dotIdx;  // 소수점 2째 자리.
+            int num = (int) Math.pow(10,primary);
+            doubleCnt = Math.floor(doubleCnt * num) / num;
+        }else{
+            primary = dotIdx - 1; // 해당 자리에서 버림
+            int num = ((int) Math.pow(10,primary) == 0) ? 1 : (int) Math.pow(10,primary);
+            doubleCnt = Math.floor(doubleCnt / num) * num;
+        }
+        return doubleCnt;
     }
 
 
@@ -655,5 +621,24 @@ public class FlataImp extends AbstractExchange {
     // 거래소에 맞춰 심볼 반환
     private String getSymbol(String[] coinData, Exchange exchange) throws Exception {
         return coinData[0] + "/" + getCurrency(exchange, coinData[0], coinData[1]);
+    }
+
+    private String parseAction(String action){
+        if(isExternalAction(action)){
+            if(Trade.BUY.equals(action)){
+                return BUY;
+            }else{
+                return SELL;
+            }
+        }
+        return action;
+    }
+
+    private boolean isExternalAction(String action){
+        if(!action.equals(BUY) && !action.equals(SELL)){
+            return true;
+        }else{
+            return false;
+        }
     }
 }

@@ -1,8 +1,9 @@
 package com.coin.autotrade.service.exchangeimp;
 
-import com.coin.autotrade.common.UtilsData;
 import com.coin.autotrade.common.Utils;
+import com.coin.autotrade.common.UtilsData;
 import com.coin.autotrade.common.enumeration.ReturnCode;
+import com.coin.autotrade.common.enumeration.Trade;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
 import com.google.gson.JsonArray;
@@ -58,52 +59,44 @@ public class OkexImp extends AbstractExchange {
     private void setCoinToken(String[] coinData, Exchange exchange)  throws Exception{
         // Set token key
 
-        for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
-            if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1])){
-                keyList.put(PUBLIC_KEY, exCoin.getPublicKey());
-                keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
-                keyList.put(API_PASSWORD, exCoin.getApiPassword());
-            }
-        }
-
-        log.info("[OKEX][SET API KEY] First Key setting in instance API:{}, secret:{}, password:{}",keyList.get(PUBLIC_KEY), keyList.get(SECRET_KEY), keyList.get(API_PASSWORD));
         if(keyList.isEmpty()){
-            String msg = "There is no match coin. " + Arrays.toString(coinData) + " " + exchange.getExchangeCode();
-            throw new Exception(msg);
+            for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
+                if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1])){
+                    keyList.put(PUBLIC_KEY, exCoin.getPublicKey());
+                    keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
+                    keyList.put(API_PASSWORD, exCoin.getApiPassword());
+                }
+            }
+
+            log.info("[OKEX][SET API KEY] First Key setting in instance API:{}, secret:{}, password:{}",keyList.get(PUBLIC_KEY), keyList.get(SECRET_KEY), keyList.get(API_PASSWORD));
+            if(keyList.isEmpty()){
+                String msg = "There is no match coin. " + Arrays.toString(coinData) + " " + exchange.getExchangeCode();
+                throw new Exception(msg);
+            }
         }
     }
 
-    /**
-     * okex global 자전 거래
-     * @param symbol coin + "-" + symbol
-     */
     @Override
     public int startAutoTrade(String price, String cnt){
         log.info("[OKEX][AUTOTRADE] START");
         int returnCode = ReturnCode.SUCCESS.getCode();
 
         try{
-            String symbol        = getSymbol(Utils.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
-            String firstAction   = "";
-            String secondAction  = "";
-            // mode 처리
-            String mode = autoTrade.getMode();
-            if(UtilsData.MODE_RANDOM.equals(mode)){
-                mode = (Utils.getRandomInt(0,1) == 0) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
-            }
-            // Trade 모드에 맞춰 순서에 맞게 거래 타입 생성
-            if(UtilsData.MODE_BUY.equals(mode)){
-                firstAction  = BUY;
-                secondAction = SELL;
-            }else if(UtilsData.MODE_SELL.equals(mode)){
-                firstAction  = SELL;
-                secondAction = BUY;
-            }
-            String orderId = ReturnCode.NO_DATA.getValue();
-            if(!(orderId = createOrder(firstAction,price, cnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){
-                if(createOrder(secondAction,price, cnt, symbol).equals(ReturnCode.NO_DATA.getValue())){          // SELL 모드가 실패 시,
-                    Thread.sleep(3000);
-                    cancelOrder(orderId, symbol);
+            String[] coinWithId = Utils.splitCoinWithId(autoTrade.getCoin());
+            Exchange exchange   = autoTrade.getExchange();
+            String symbol       = getSymbol(coinWithId, exchange);
+            Trade mode          = getMode(autoTrade.getMode());
+            String firstAction  = (mode == Trade.BUY) ? BUY : SELL;
+            String secondAction = (mode == Trade.BUY) ? SELL : BUY;
+
+            String firstOrderId  = createOrder(firstAction, price, cnt, coinWithId, exchange);
+            if(Utils.isSuccessOrder(firstOrderId)){
+                String secondOrderId = createOrder(secondAction, price, cnt, coinWithId, exchange);
+
+                Thread.sleep(500);
+                cancelOrder(firstOrderId, symbol);
+                if(Utils.isSuccessOrder(secondOrderId)){
+                    cancelOrder(secondOrderId, symbol);
                 }
             }
         }catch (Exception e){
@@ -126,28 +119,29 @@ public class OkexImp extends AbstractExchange {
         Queue<String> cancelList = new LinkedList<>();
 
         try{
-            log.info("[OKEX][LIQUIDITY] START");
-            String symbol     = getSymbol(Utils.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
+            log.info("[MEXC][LIQUIDITY] START");
+            String[] coinWithId = Utils.splitCoinWithId(liquidity.getCoin());
+            Exchange exchange   = liquidity.getExchange();
+            String symbol       = getSymbol(coinWithId, exchange);
 
             while (!sellQueue.isEmpty() || !buyQueue.isEmpty() || !cancelList.isEmpty()) {
-                String mode           = (Utils.getRandomInt(1, 2) == 1) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
-                boolean cancelFlag    = (Utils.getRandomInt(1, 2) == 1) ? true : false;
-                String orderId        = ReturnCode.NO_DATA.getValue();
-                String price          = "";
-                String action         = "";
-                String cnt            = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
+                Trade mode         = getMode();
+                boolean cancelFlag = (Utils.getRandomInt(1, 2) == 1) ? true : false;
+                String orderId     = ReturnCode.FAIL_CREATE.getValue();
+                String action      = (mode == Trade.BUY) ? BUY : SELL;
+                String cnt         = Utils.getRandomString(liquidity.getMinCnt(), liquidity.getMaxCnt());
+                String price       = null;
 
-                if (!buyQueue.isEmpty() && mode.equals(UtilsData.MODE_BUY)) {
-                    price   = buyQueue.poll();
-                    action  = BUY;
-                } else if (!sellQueue.isEmpty() && mode.equals(UtilsData.MODE_SELL)) {
-                    price   = sellQueue.poll();
-                    action  = SELL;
+                if (!buyQueue.isEmpty() && mode == Trade.BUY) {
+                    price = buyQueue.poll();
+                } else if (!sellQueue.isEmpty() && mode == Trade.SELL) {
+                    price = sellQueue.poll();
                 }
+
                 // 매수 로직
-                if(!action.equals("")){
-                    orderId = createOrder(action, price, cnt, symbol);
-                    if(!orderId.equals(ReturnCode.NO_DATA.getValue())){
+                if(price != null){
+                    orderId = createOrder(action, price, cnt, coinWithId, exchange);
+                    if(Utils.isSuccessOrder(orderId)){
                         cancelList.add(orderId);
                     }
                     Thread.sleep(1000);
@@ -176,32 +170,24 @@ public class OkexImp extends AbstractExchange {
         int returnCode = ReturnCode.SUCCESS.getCode();
 
         try{
-            String symbol = getSymbol(Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
+            String[] coinWithId = Utils.splitCoinWithId(fishing.getCoin());
+            Exchange exchange   = fishing.getExchange();
+            String symbol       = getSymbol(coinWithId, exchange);
 
             // mode 처리
-            String mode = fishing.getMode();
-            if(UtilsData.MODE_RANDOM.equals(mode)){
-                mode = (Utils.getRandomInt(0,1) == 0) ? UtilsData.MODE_BUY : UtilsData.MODE_SELL;
-            }
-
-            boolean noIntervalFlag   = true;    // 해당 플래그를 이용해 마지막 매도/매수 후 바로 intervalTime 없이 바로 다음 매수/매도 진행
-            boolean noMatchFirstTick = true;    // 해당 플래그를 이용해 매수/매도를 올린 가격이 현재 최상위 값이 맞는지 다른 사람의 코인을 사지 않게 방지
-
-            for(String temp : list.keySet()){  mode = temp; }
-            ArrayList<String> tickPriceList = (ArrayList) list.get(mode);
+            Trade mode = Trade.valueOf(String.valueOf(list.keySet().toArray()[0]));
+            ArrayList<String> tickPriceList = (ArrayList) list.get(mode.getVal());
             ArrayList<Map<String, String>> orderList = new ArrayList<>();
 
             /* Start */
             log.info("[OKEX][FISHINGTRADE][START BUY OR SELL TARGET ALL COIN]");
             for (int i = 0; i < tickPriceList.size(); i++) {
                 String cnt     = Utils.getRandomString(fishing.getMinContractCnt(), fishing.getMaxContractCnt());
-                String orderId = ReturnCode.NO_DATA.getValue();
-                if(UtilsData.MODE_BUY.equals(mode)) {
-                    orderId = createOrder(BUY,  tickPriceList.get(i), cnt, symbol);
-                }else{
-                    orderId = createOrder(SELL, tickPriceList.get(i), cnt, symbol);
-                }
-                if(!orderId.equals(ReturnCode.NO_DATA.getValue())){          // 매수/매도가 정상적으로 이뤄졌을 경우 데이터를 list에 담는다
+                String orderId = (mode == Trade.BUY) ?
+                        createOrder(BUY,  tickPriceList.get(i), cnt, coinWithId, exchange) :
+                        createOrder(SELL, tickPriceList.get(i), cnt, coinWithId, exchange);
+
+                if(Utils.isSuccessOrder(orderId)){
                     Map<String, String> orderMap = new HashMap<>();
                     orderMap.put("price" ,tickPriceList.get(i));
                     orderMap.put("cnt" ,cnt);
@@ -213,45 +199,38 @@ public class OkexImp extends AbstractExchange {
 
             /* Sell Start */
             log.info("[OKEX][FISHINGTRADE][START BUY OR SELL TARGET PIECE COIN ]");
+            boolean isSameFirstTick = true;    // 해당 플래그를 이용해 매수/매도를 올린 가격이 현재 최상위 값이 맞는지 다른 사람의 코인을 사지 않게 방지
             for (int i = orderList.size() - 1; i >= 0; i--) {
                 Map<String, String> copiedOrderMap = Utils.deepCopy(orderList.get(i));
                 BigDecimal cnt                     = new BigDecimal(copiedOrderMap.get("cnt"));
 
                 while (cnt.compareTo(new BigDecimal("0")) > 0) {
-                    if (!noMatchFirstTick) break;                   // 최신 매도/매수 건 값이 다를경우 돌 필요 없음.
-                    if (noIntervalFlag) Thread.sleep(intervalTime); // intervalTime 만큼 휴식 후 매수 시작
-                    String orderId            = ReturnCode.NO_DATA.getValue();
-                    BigDecimal cntForExcution = new BigDecimal(Utils.getRandomString(fishing.getMinExecuteCnt(), fishing.getMaxExecuteCnt()));
+                    if (!isSameFirstTick) break;                   // 최신 매도/매수 건 값이 다를경우 돌 필요 없음.
+                    if(cnt.compareTo(new BigDecimal(copiedOrderMap.get("cnt"))) != 0){
+                        Thread.sleep(intervalTime); // intervalTime 만큼 휴식 후 매수 시작
+                    }
+                    BigDecimal executionCnt = new BigDecimal(Utils.getRandomString(fishing.getMinExecuteCnt(), fishing.getMaxExecuteCnt()));  // 실행 코인
+                    executionCnt            = (cnt.compareTo(executionCnt) < 0) ? cnt : executionCnt;    // 남은 코인 수와 매도/매수할 코인수를 비교했을 때, 남은 코인 수가 더 적다면 남은 cnt만큼 매수/매도
 
-                    // 남은 코인 수와 매도/매수할 코인수를 비교했을 때, 남은 코인 수가 더 적다면.
-                    if (cnt.compareTo(cntForExcution) < 0) {
-                        cntForExcution = cnt;
-                        noIntervalFlag = false;
-                    } else {
-                        noIntervalFlag = true;
-                    }
                     // 매도/매수 날리기전에 최신 매도/매수값이 내가 건 값이 맞는지 확인
-                    String nowFirstTick = "";
-                    if(UtilsData.MODE_BUY.equals(mode)) {
-                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(UtilsData.MODE_BUY);
-                    }else{
-                        nowFirstTick = coinService.getFirstTick(fishing.getCoin(), fishing.getExchange()).get(UtilsData.MODE_SELL);
-                    }
+                    // 매도/매수 날리기전에 최신 매도/매수값이 내가 건 값이 맞는지 확인
+                    String nowFirstTick = (mode == Trade.BUY) ?
+                            coinService.getFirstTick(fishing.getCoin(), exchange).get(UtilsData.MODE_BUY) :
+                            coinService.getFirstTick(fishing.getCoin(), exchange).get(UtilsData.MODE_SELL);
+
                     String orderPrice = copiedOrderMap.get("price");
                     if (!orderPrice.equals(nowFirstTick)) {
                         log.info("[OKEX][FISHINGTRADE] Not Match First Tick. All Trade will be canceled RequestTick : {}, realTick : {}", copiedOrderMap.get("price"), nowFirstTick);
-                        noMatchFirstTick = false;
+                        isSameFirstTick = false;
                         break;
                     }
 
-                    if(UtilsData.MODE_BUY.equals(mode)) {
-                        orderId = createOrder(SELL, copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol);
-                    }else{
-                        orderId = createOrder(BUY,  copiedOrderMap.get("price"), cntForExcution.toPlainString(), symbol);
-                    }
+                    String orderId = (mode == Trade.BUY) ?
+                            createOrder(SELL, copiedOrderMap.get("price"), executionCnt.toPlainString(), coinWithId, exchange) :
+                            createOrder(BUY,  copiedOrderMap.get("price"), executionCnt.toPlainString(), coinWithId, exchange);
 
-                    if(!orderId.equals(ReturnCode.NO_DATA.getValue())){
-                        cnt = cnt.subtract(cntForExcution);
+                    if(Utils.isSuccessOrder(orderId)){
+                        cnt = cnt.subtract(executionCnt);
                     }else{
                         log.error("[OKEX][FISHINGTRADE] While loop is broken, Because create order is failed");
                         break;
@@ -281,7 +260,9 @@ public class OkexImp extends AbstractExchange {
         try {
 
             boolean isStart      = false;
-            String symbol        = getSymbol(Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
+            String[] coinWithId  = Utils.splitCoinWithId(realtimeSync.getCoin());
+            Exchange exchange    = realtimeSync.getExchange();
+            String symbol        = getSymbol(coinWithId, realtimeSync.getExchange());
             String[] currentTick = getTodayTick(symbol);
             //            String openingPrice  = currentTick[0];
             if(resetFlag){
@@ -292,7 +273,6 @@ public class OkexImp extends AbstractExchange {
             String currentPrice  = currentTick[1];
             log.info("[OKEX][REALTIME SYNC TRADE] open:{}, current:{} ", openingPrice, currentPrice);
 
-            String orderId       = ReturnCode.NO_DATA.getValue();
             String targetPrice   = "";
             String action        = "";
             String mode          = "";
@@ -323,8 +303,8 @@ public class OkexImp extends AbstractExchange {
             }
 
             if(isStart){
-                if( !(orderId = createOrder(action, targetPrice, cnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){    // 매수/OrderId가 있으면 성공
-
+                String orderId = createOrder(action, targetPrice, cnt, coinWithId, exchange);
+                if(Utils.isSuccessOrder(orderId)){    // 매수/OrderId가 있으면 성공
                     Thread.sleep(300);
 
                     // 3. bestoffer set 로직
@@ -333,9 +313,8 @@ public class OkexImp extends AbstractExchange {
                         JsonObject object       = array.get(i).getAsJsonObject();
                         String bestofferPrice   = object.get("price").getAsString();
                         String bestofferCnt     = object.get("cnt").getAsString();
-                        String bestofferOrderId = ReturnCode.NO_DATA.getValue();
-
-                        if( !(bestofferOrderId = createOrder(action, bestofferPrice, bestofferCnt, symbol)).equals(ReturnCode.NO_DATA.getValue())){
+                        String bestofferOrderId = createOrder(action, bestofferPrice, bestofferCnt, coinWithId, exchange);
+                        if(Utils.isSuccessOrder(bestofferOrderId)){
                             log.info("[OKEX][REALTIME SYNC] Bestoffer is setted. price:{}, cnt:{}", bestofferPrice, bestofferCnt);
                         }
                     }
@@ -403,18 +382,23 @@ public class OkexImp extends AbstractExchange {
 
 
     /** Biyhumb global 매수/매도 로직 */
-    public String createOrder(String type, String price, String cnt, String symbol){
-        String orderId = ReturnCode.NO_DATA.getValue();
+    @Override
+    public String createOrder(String type, String price, String cnt, String[] coinData, Exchange exchange){
+
+        String orderId = ReturnCode.FAIL_CREATE.getValue();
 
         try{
+            setCoinToken(coinData, exchange);
+            String action = parseAction(type);
+            String symbol = getSymbol(coinData, exchange);
+
             JsonObject header = new JsonObject();
             header.addProperty("instId",    symbol);
             header.addProperty("tdMode",    "cash");  // 지정가
-            header.addProperty("side",      type);
+            header.addProperty("side",      action);
             header.addProperty("ordType",   "limit"); // 지정가
             header.addProperty("px",        price);         // price
             header.addProperty("sz",        cnt);
-
 
             JsonObject returnVal = postHttpMethod(UtilsData.OKEX_ENDPOINT_CREATE_ORDER, gson.toJson(header));
             String status        = returnVal.get("code").getAsString();
@@ -556,4 +540,22 @@ public class OkexImp extends AbstractExchange {
         return coinData[0] + "-" + getCurrency(exchange, coinData[0], coinData[1]);
     }
 
+    private String parseAction(String action){
+        if(isExternalAction(action)){
+            if(Trade.BUY.equals(action)){
+                return BUY;
+            }else{
+                return SELL;
+            }
+        }
+        return action;
+    }
+
+    private boolean isExternalAction(String action){
+        if(!action.equals(BUY) && !action.equals(SELL)){
+            return true;
+        }else{
+            return false;
+        }
+    }
 }

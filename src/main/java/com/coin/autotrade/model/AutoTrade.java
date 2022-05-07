@@ -1,5 +1,6 @@
 package com.coin.autotrade.model;
 
+import com.coin.autotrade.common.enumeration.Trade;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.DynamicUpdate;
@@ -30,7 +31,8 @@ public class AutoTrade {
     private Integer maxSeconds;
     // 모드(무작위/매수우선/매도우선)
     @Column
-    private String mode;
+    @Enumerated(EnumType.STRING)
+    private Trade mode;
     // 거래소
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "exchange_id")

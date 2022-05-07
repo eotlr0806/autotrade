@@ -5,7 +5,9 @@ import lombok.Getter;
 @Getter
 public enum Trade {
     BUY("BUY"),
-    SELL("SELL");
+    SELL("SELL"),
+    RANDOM("RANDOM");
+
 
     private String val;
     Trade(String val){
