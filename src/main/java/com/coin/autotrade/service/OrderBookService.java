@@ -12,12 +12,13 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Optional;
 
-@org.springframework.stereotype.Service
+@Service
 @Slf4j
 public class OrderBookService {
 

@@ -28,24 +28,22 @@ public class TradeActionService {
 
         try{
             Optional<Exchange> exchangeObj = exchangeRepository.findById(Long.parseLong(params.get("exchangeId")));
-            Exchange exchange = null;
             if(exchangeObj.isPresent()) {
-                exchange = exchangeObj.get();
-
+                Exchange exchange = exchangeObj.get();
                 AbstractExchange abstractExchange = Utils.getInstance(exchange.getExchangeCode());
-                String msg = abstractExchange.createOrder(params.get("type"),
+                String orderId = abstractExchange.createOrder(params.get("type"),
                                                           params.get("price"),
                                                           params.get("cnt"),
                                                           Utils.splitCoinWithId(params.get("coinWithId")),
                                                           exchange);
-                if(msg.equals(ReturnCode.NO_DATA.getValue()) || msg.equals(ReturnCode.FAIL.getValue()) ){
-                    response.setBody(ReturnCode.FAIL, msg);
+                if(Utils.isSuccessOrder(orderId)){
+                    response.setBody(ReturnCode.SUCCESS, orderId);
                 }else{
-                    response.setBody(ReturnCode.SUCCESS, msg);
+                    response.setBody(ReturnCode.FAIL, orderId);
                 }
             }
         }catch(Exception e){
-            log.error("[GET BALANCE] Occur error : {}",e.getMessage());
+            log.error("[TRADE ACTION] Occur error : {}",e.getMessage());
             e.printStackTrace();
             response.setResponse(ReturnCode.FAIL, e.getMessage());
         }

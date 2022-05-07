@@ -3,6 +3,7 @@ package com.coin.autotrade.service.exchangeimp;
 import com.coin.autotrade.common.UtilsData;
 import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.common.enumeration.ReturnCode;
+import com.coin.autotrade.common.enumeration.Trade;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
 import com.google.gson.Gson;
@@ -20,6 +21,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 // Abstract class for common function and variable
 @Slf4j
@@ -32,14 +34,14 @@ public abstract class AbstractExchange {
      final protected String SECRET_KEY      = "secret_key";
      final protected String MIN_AMOUNT      = "min_amount";
      final protected String API_PASSWORD    = "apiPassword";
-     protected Map<String, String> keyList  = new HashMap<>();
      AutoTrade autoTrade                    = null;
-     Liquidity liquidity                    = null;
-     Fishing fishing                        = null;
-     RealtimeSync realtimeSync              = null;
-     CoinService coinService                = null; // Fishing 시, 사용하기 위한 coin Service class
-     String realtimeTargetInitRate          = null; // realtime 에서 사용하는 실시간 동기화 타겟의 최초 현재 값
-     Gson gson                              = new Gson();
+    Liquidity liquidity                    = null;
+    Fishing fishing                        = null;
+    RealtimeSync realtimeSync              = null;
+    CoinService coinService                = null; // Fishing 시, 사용하기 위한 coin Service class
+    String realtimeTargetInitRate          = null; // realtime 에서 사용하는 실시간 동기화 타겟의 최초 현재 값
+    Gson gson                              = new Gson();
+    protected ConcurrentHashMap<String, String> keyList  = new ConcurrentHashMap<>();
 
 
 
@@ -61,10 +63,8 @@ public abstract class AbstractExchange {
     public abstract int startFishingTrade(Map<String, List> list, int intervalTime);
     public abstract int startRealtimeTrade(JsonObject realtime, boolean resetFlag);
     public abstract String getOrderBook(Exchange exchange, String[] coinWithId);
+    public abstract String createOrder(String type, String price, String cnt, String[] coinData, Exchange exchange) throws Exception;
 
-    public String createOrder(String type, String price, String cnt, String[] coinData, Exchange exchange) throws Exception{
-        throw new Exception("Not supported");
-    }
     public String getBalance(String[] coinData, Exchange exchange) throws Exception {
         throw new Exception("Not supported");
     }
@@ -282,4 +282,24 @@ public abstract class AbstractExchange {
         return response.toString();
     }
 
+    /**
+     * mode 값을 받아서 RANDOM일 경우 RANDOM값을 전달
+     * @param mode
+     * @return
+     */
+    protected Trade getMode(Trade mode){
+        if(mode == Trade.RANDOM){
+            return (Utils.getRandomInt(0,1) == 0) ? Trade.BUY : Trade.SELL;
+        }else{
+            return mode;
+        }
+    }
+
+    /**
+     * Random하게 BUY / SELL 중 하나의 모드를 반환.
+     * @return
+     */
+    protected Trade getMode(){
+        return (Utils.getRandomInt(0,1) == 0) ? Trade.BUY : Trade.SELL;
+    }
 }

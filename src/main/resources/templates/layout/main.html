@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>ATS - Auto Trading Solution</title>
+    <title id="title">ATS - Auto Trading Solution</title>
 
     <!-- Global stylesheets -->
     <link href="https://fonts.googleapis.com/css?family=Roboto:400,300,100,500,700,900" rel="stylesheet" type="text/css">
@@ -21,7 +21,6 @@
     <!-- top navbar -->
     <div class="navbar navbar-default header-highlight">
         <div class="navbar-header">
-            <!-- TODO : 나중에 image 찾아서 변경하는게 날듯.-->
             <a class="navbar-brand" href="/"><img src="bootstrap/assets/images/logo_light.png" alt=""></a>
 
             <ul class="nav navbar-nav visible-xs-block">
@@ -60,12 +59,17 @@
                                     <a href="#"><i class="icon-stack2"></i> <span>트레이딩</span></a>
                                     <ul class="nav">
                                         <li class="nav-item">
-                                            <a class="nav-link" id="trade_embeded" data-toggle="tab" href="#trade" role="tab">스케줄 거래</a>
+                                            <a class="nav-link" id="trade_schedule_embeded" data-toggle="tab" href="#trade_schedule" role="tab">스케줄 거래</a>
                                         </li>
                                     </ul>
                                     <ul class="nav">
                                         <li class="nav-item">
-                                            <a class="nav-link" id="trade_action_embeded" data-toggle="tab" href="#trade_action" role="tab">기본 거래</a>
+                                            <a class="nav-link" id="trade_immediate_embeded" data-toggle="tab" href="#trade_immediate" role="tab">즉시 거래</a>
+                                        </li>
+                                    </ul>
+                                    <ul class="nav">
+                                        <li class="nav-item">
+                                            <a class="nav-link" id="trade_basic_embeded" data-toggle="tab" href="#trade_basic" role="tab">기본 거래</a>
                                         </li>
                                     </ul>
                                 </li>
@@ -103,12 +107,16 @@
             <!-- Main content -->
             <div class="content-wrapper">
                 <div class="tab-content">
-                    <div class="tab-pane" id="trade" role="tabpanel">
-                      <embed id="embed_trade" name="embed_trade" type="text/html"  src="/main/trade" style="width:100%; height:1000px;"></embed>
+                    <div class="tab-pane" id="trade_schedule" role="tabpanel">
+                      <embed id="embed_trade_schedule" name="embed_trade_schedule" type="text/html"  src="/main/trade_schedule" style="width:100%; height:1000px;"></embed>
                     </div>
 
-                    <div class="tab-pane" id="trade_action" role="tabpanel">
-                        <embed id="embed_trade_action" name="embed_trade_action" type="text/html"  src="/main/trade_action" style="width:100%; height:1000px;"></embed>
+                    <div class="tab-pane" id="trade_immediate" role="tabpanel">
+                        <embed id="embed_trade_immediate" name="embed_trade_immediate" type="text/html"  src="/main/trade_immediate" style="width:100%; height:1000px;"></embed>
+                    </div>
+
+                    <div class="tab-pane" id="trade_basic" role="tabpanel">
+                        <embed id="embed_trade_basic" name="embed_trade_basic" type="text/html"  src="/main/trade_basic" style="width:100%; height:1000px;"></embed>
                     </div>
 
                     <div class="tab-pane" id="coin_config" role="tabpanel">
@@ -130,6 +138,7 @@
 
     </div>
     <!-- /page container -->
+    <input type="hidden" id="server_ip" th:value="${serverIp}" />
 
 </body>
 </html>
@@ -156,31 +165,59 @@
 <!-- /theme JS files -->
 
 <script>
-    // nav class 가 충돌이나서 사용
+    // 한번 가져온 페이지는 안가져오는듯하여, embed 새로고침을 위해 사용.
     $(document).ready(() => {
         $(".nav a").on("click", item => {
             $(".nav").find(".active").removeClass("active");
             $(this).parent().addClass("active");
 
-            if(item.target.id != 'trade_embeded'){
-                $('#trade').empty();
-                $('#trade').append(`<embed id="embed_trade" name="embed_trade" type="text/html"  src="/main/trade" style="width:100%; height:1000px;"></embed>`);
-            }else if(item.target.id != 'trade_embeded'){
-                $('#trade').empty();
-                $('#trade').append(`<embed id="embed_trade_action" name="embed_trade_action" type="text/html"  src="/main/trade_action" style="width:100%; height:1000px;"></embed>`);
-            }else if(item.target.id != 'coin_config_embeded'){
+            // 새로고침이 필요한 페이지에 한해서만
+            if(item.target.id != 'trade_immediate_embeded'){
+                $('#trade_immediate').empty();
+                $('#trade_immediate').append(`<embed id="embed_trade_immediate" name="embed_trade_immediate" type="text/html"  src="/main/trade_immediate" style="width:100%; height:1000px;"></embed>`);
+            }
+            if(item.target.id != 'trade_basic_embeded'){
+                $('#trade_basic').empty();
+                $('#trade_basic').append(`<embed id="embed_trade_basic" name="embed_trade_basic" type="text/html"  src="/main/trade_basic" style="width:100%; height:1000px;"></embed>`);
+            }
+            if(item.target.id != 'coin_config_embeded'){
                 $('#coin_config').empty();
                 $('#coin_config').append(`<embed id="embed_coin_config" name="embed_coin_config" type="text/html"  src="/main/coin_config" style="width:100%; height:1000px;"></embed>`);
-            }else if(item.target.id != 'trade_config_embeded'){
-                $('#trade_config').empty();
-                $('#trade_config').append(`<embed id="embed_trade_config" name="embed_trade_config" type="text/html"  src="/main/trade_config" style="width:100%; height:1000px;"></embed>`);
-            }else if(item.target.id != 'account_embeded'){
+            }
+            if(item.target.id != 'account_embeded'){
                 $('#account').empty();
                 $('#account').append(`<embed id="embed_account" name="embed_account" type="text/html"  src="/main/account" style="width:100%; height:1000px;"></embed>`);
             }
+            if(item.target.id != 'trade_config_embeded'){
+                $('#trade_config').empty();
+                $('#trade_config').append(`<embed id="embed_trade_config" name="embed_trade_config" type="text/html"  src="/main/trade_config" style="width:100%; height:1000px;"></embed>`);
+            }
 
         });
+        $('#trade_schedule_embeded').trigger('click');   // main 화면
 
-        $('#trade_embeded').trigger('click');
+        setTitle();
     })
+
+    let setTitle = () => {
+        let serverIp = $('#server_ip').val();
+        let title    = 'ATS - AutoTrade';
+        switch (serverIp){
+            case '172.31.58.54' :
+                title = 'ATS - 1번서버';
+                break;
+            case '172.31.58.120' :
+                title = 'ATS - 2번서버';
+                break;
+            case '172.31.52.255' :
+                title = 'ATS - 3번서버';
+                break;
+            case '172.31.38.119' :
+                title = 'ATS - Test서버'
+                break;
+            default :
+                break;
+        }
+        $('#title').html(title);
+    }
 </script>
