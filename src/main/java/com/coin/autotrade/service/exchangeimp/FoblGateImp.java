@@ -216,7 +216,7 @@ public class FoblGateImp extends AbstractExchange {
                 Map<String, String> copiedOrderMap = Utils.deepCopy(orderList.get(i));
                 BigDecimal cnt                     = new BigDecimal(copiedOrderMap.get("cnt"));
 
-                while (cnt.compareTo(new BigDecimal("0")) > 0) {
+                while (cnt.compareTo(BigDecimal.ZERO) > 0) {
                     if (!isSameFirstTick) break;                   // 최신 매도/매수 건 값이 다를경우 돌 필요 없음.
                     if(cnt.compareTo(new BigDecimal(copiedOrderMap.get("cnt"))) != 0){
                         Thread.sleep(intervalTime); // intervalTime 만큼 휴식 후 매수 시작
@@ -426,12 +426,13 @@ public class FoblGateImp extends AbstractExchange {
         String orderId = ReturnCode.FAIL_CREATE.getValue();
         try{
             setApiKey(coinData, exchange);
+            String action = parseAction(type);
             String symbol = getSymbol(coinData, exchange);
 
-            Map<String, String> header = setDefaultRequest(keyList.get(USER_ID), symbol,type,keyList.get(PUBLIC_KEY));
+            Map<String, String> header = setDefaultRequest(keyList.get(USER_ID), symbol, action, keyList.get(PUBLIC_KEY));
             header.put("price",  price);   // price
             header.put("amount", cnt);     // cnt
-            String secretHash = makeApiHash(keyList.get(PUBLIC_KEY) + keyList.get(USER_ID) + symbol + type + price+ cnt+ keyList.get(SECRET_KEY));
+            String secretHash = makeApiHash(keyList.get(PUBLIC_KEY) + keyList.get(USER_ID) + symbol + action + price+ cnt+ keyList.get(SECRET_KEY));
 
             JsonObject returnVal = postHttpMethod(UtilsData.FOBLGATE_CREATE_ORDER, secretHash, header);
             String status        = gson.fromJson(returnVal.get("status"), String.class);

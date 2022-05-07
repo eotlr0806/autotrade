@@ -84,12 +84,12 @@ public class DcoinImp extends AbstractExchange {
         try{
             String[] coinWithId = Utils.splitCoinWithId(autoTrade.getCoin());
             Exchange exchange   = autoTrade.getExchange();
-            String     symbol   = getSymbol(coinWithId, exchange);
+            String symbol       = getSymbol(coinWithId, exchange);
             Trade mode          = getMode(autoTrade.getMode());
             String firstAction  = (mode == Trade.BUY) ? BUY : SELL;
             String secondAction = (mode == Trade.BUY) ? SELL : BUY;
 
-            String firstOrderId  = createOrder(firstAction,price, cnt, coinWithId, exchange);
+            String firstOrderId  = createOrder(firstAction, price, cnt, coinWithId, exchange);
             if(Utils.isSuccessOrder(firstOrderId)){
                 String secondOrderId = createOrder(secondAction, price, cnt, coinWithId, exchange);
                 cancelOrder(symbol, firstOrderId);
@@ -175,7 +175,6 @@ public class DcoinImp extends AbstractExchange {
             Trade mode = Trade.valueOf(String.valueOf(list.keySet().toArray()[0]));
             ArrayList<String> tickPriceList = (ArrayList) list.get(mode.getVal());
             ArrayList<Map<String, String>> orderList = new ArrayList<>();
-
 
             /* Start */
             log.info("[DCOIN][FISHINGTRADE][START BUY OR SELL TARGET ALL COIN]");

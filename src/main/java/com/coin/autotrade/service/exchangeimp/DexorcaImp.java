@@ -87,17 +87,7 @@ public class DexorcaImp extends AbstractExchange {
                 userId = exCoin.getExchangeUserId();
                 setUserId(userId);
                 if(!UtilsData.DEXORCA_SESSION_KEY.containsKey(exCoin.getExchangeUserId())){
-
-                    JsonObject object = getOjbect("login");
-                    JsonObject params = new JsonObject();
-                    params.addProperty("account",  userId);
-                    params.addProperty("password", exCoin.getApiPassword());
-                    object.add("params", params);
-
-                    JsonObject response = postHttpMethod(object);
-                    String sessionId    = response.getAsJsonObject("result").get("session_id").getAsString();
-                    UtilsData.DEXORCA_SESSION_KEY.put(exCoin.getExchangeUserId(), sessionId);
-
+                    createSession(userId, exCoin);
                     log.info("[DEXORCA][MAKE SESSION KEY] First set account id:{}, session:{}", userId, UtilsData.DEXORCA_SESSION_KEY.get(userId));
                 }else{
                     log.info("[DEXORCA][MAKE SESSION KEY] Already set account id:{}, session:{}", userId, UtilsData.DEXORCA_SESSION_KEY.get(userId));
@@ -119,17 +109,7 @@ public class DexorcaImp extends AbstractExchange {
                 setUserId(userId);
                 UtilsData.DEXORCA_SESSION_KEY.remove(exCoin.getExchangeUserId());
                 log.info("[DEXORCA][MAKE SESSION KEY] Remove session key: {}", userId);
-
-                JsonObject object = getOjbect("login");
-                JsonObject params = new JsonObject();
-                params.addProperty("account",  userId);
-                params.addProperty("password", exCoin.getApiPassword());
-                object.add("params", params);
-
-                JsonObject response = postHttpMethod(object);
-                String sessionId    = response.getAsJsonObject("result").get("session_id").getAsString();
-                UtilsData.DEXORCA_SESSION_KEY.put(exCoin.getExchangeUserId(), sessionId);
-
+                createSession(userId, exCoin);
                 log.info("[DEXORCA][MAKE SESSION KEY] First set account id:{}, session:{}", userId, UtilsData.DEXORCA_SESSION_KEY.get(userId));
             }
         }
@@ -138,6 +118,17 @@ public class DexorcaImp extends AbstractExchange {
             String msg = "There is no match coin. " + Arrays.toString(coinData) + " " + exchange.getExchangeCode();
             throw new Exception(msg);
         }
+    }
+
+    private void createSession(String userId, ExchangeCoin exCoin) throws Exception{
+        JsonObject object = getOjbect("login");
+        JsonObject params = new JsonObject();
+        params.addProperty("account",  userId);
+        params.addProperty("password", exCoin.getApiPassword());
+        object.add("params", params);
+        JsonObject response = postHttpMethod(object);
+        String sessionId    = response.getAsJsonObject("result").get("session_id").getAsString();
+        UtilsData.DEXORCA_SESSION_KEY.put(exCoin.getExchangeUserId(), sessionId);
     }
 
     @Override

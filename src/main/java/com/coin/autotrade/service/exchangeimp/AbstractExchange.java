@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 // Abstract class for common function and variable
 @Slf4j
@@ -33,14 +34,14 @@ public abstract class AbstractExchange {
      final protected String SECRET_KEY      = "secret_key";
      final protected String MIN_AMOUNT      = "min_amount";
      final protected String API_PASSWORD    = "apiPassword";
-     protected Map<String, String> keyList  = new HashMap<>();
      AutoTrade autoTrade                    = null;
-     Liquidity liquidity                    = null;
-     Fishing fishing                        = null;
-     RealtimeSync realtimeSync              = null;
-     CoinService coinService                = null; // Fishing 시, 사용하기 위한 coin Service class
-     String realtimeTargetInitRate          = null; // realtime 에서 사용하는 실시간 동기화 타겟의 최초 현재 값
-     Gson gson                              = new Gson();
+    Liquidity liquidity                    = null;
+    Fishing fishing                        = null;
+    RealtimeSync realtimeSync              = null;
+    CoinService coinService                = null; // Fishing 시, 사용하기 위한 coin Service class
+    String realtimeTargetInitRate          = null; // realtime 에서 사용하는 실시간 동기화 타겟의 최초 현재 값
+    Gson gson                              = new Gson();
+    protected ConcurrentHashMap<String, String> keyList  = new ConcurrentHashMap<>();
 
 
 
