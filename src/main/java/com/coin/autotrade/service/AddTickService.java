@@ -2,6 +2,7 @@ package com.coin.autotrade.service;
 
 import com.coin.autotrade.common.Response;
 import com.coin.autotrade.common.Utils;
+import com.coin.autotrade.common.UtilsData;
 import com.coin.autotrade.common.enumeration.ReturnCode;
 import com.coin.autotrade.common.enumeration.Trade;
 import com.coin.autotrade.model.AddTick;
@@ -72,7 +73,10 @@ public class AddTickService {
                             coinWithId,
                             exchange);
 
-                    Thread.sleep(150);
+                    // 20220510 - coinone에 대해서만
+                    if(UtilsData.COINONE.equals(exchange.getExchangeCode())){
+                        Thread.sleep(150);
+                    }
                     msgList.put(price.toPlainString(),makeResponse(params.getMode().getVal(), cnt, orderId));
 
                     if(Utils.isSuccessOrder(orderId)){

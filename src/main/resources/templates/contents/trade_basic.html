@@ -309,8 +309,10 @@
             // check mode
             let params = fncObj.setDataBeforePost(mode);
 
+            // postWithoutBlock
             if(params != CODE_ERROR){
-                let returnVal = await common.post(API.TRADE_ACTION, params);
+                // let returnVal = await common.post(API.TRADE_ACTION, params);
+                let returnVal = await common.postWithoutBlock(API.TRADE_ACTION, params);
                 if (!returnVal || returnVal.status !== CODE.SUCCESS){
                     common.noti("기본 거래","해당 코인에 대해 기본 거래가 불가능합니다.","error");
                     return;
