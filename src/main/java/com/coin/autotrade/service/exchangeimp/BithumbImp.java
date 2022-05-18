@@ -370,10 +370,6 @@ public class BithumbImp extends AbstractExchange {
     }
 
 
-//    apiKey	사용자 API Key	String/필수
-//    secretKey	사용자 Secret Key	String/필수
-//    currency
-
     @Override
     public String getBalance(String[] coinData, Exchange exchange) throws Exception{
         String returnValue = ReturnCode.NO_DATA.getValue();;
@@ -393,6 +389,7 @@ public class BithumbImp extends AbstractExchange {
             returnValue = gson.toJson(returnVal.get("data"));
             log.info("[BITHUMB][GET BALANCE] response : {}", rgResultDecode);
         }else{
+            returnValue = rgResultDecode;
             log.error("[BITHUMB][GET BALANCE] response :{}", rgResultDecode);
         }
 

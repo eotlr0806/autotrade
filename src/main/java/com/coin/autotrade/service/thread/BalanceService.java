@@ -14,7 +14,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.math.BigDecimal;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 
 @org.springframework.stereotype.Service
 @Slf4j
@@ -34,9 +36,8 @@ public class BalanceService {
         try{
             // 거래소 정보
             Optional<Exchange> exchangeObj = exchangeRepository.findById(exchangeId);
-            Exchange exchange = null;
             if(exchangeObj.isPresent()){
-                exchange = exchangeObj.get();
+                Exchange exchange = exchangeObj.get();
                 String[] coinWithId  = Utils.splitCoinWithId(coinData);
 
                 AbstractExchange abstractExchange = Utils.getInstance(exchange.getExchangeCode());
@@ -59,44 +60,104 @@ public class BalanceService {
      *  이후 거래소에 맞춰 진행할 예정**/
     public String parseBalance(String exchange, String data) throws Exception{
         String returnValue     = "";
-
         Gson gson = Utils.getGson();
-        if(exchange.equals(UtilsData.COINONE)){
-            JsonObject result     = gson.fromJson(data, JsonObject.class);
-            JsonArray resultJson = new JsonArray();
-            for (String key : result.keySet()){
-                if(key.equals("result") || key.equals("errorCode") || key.equals("normalWallets")){
-                    continue;
-                }
-                JsonObject element = result.getAsJsonObject(key);
-                BigDecimal avail   = new BigDecimal(element.get("avail").getAsString());
-                BigDecimal balance = new BigDecimal(element.get("balance").getAsString());
-                if(avail.compareTo(new BigDecimal(0)) == 0 && balance.compareTo(new BigDecimal(0)) == 0){
-                    continue;
-                }else{
-                    JsonObject item     = new JsonObject();
-                    String commaAvail   = addCommaWithKrw(element.get("avail").getAsString());
-                    String commaBalance = addCommaWithKrw(element.get("balance").getAsString());
-                    item.add(key.toUpperCase(), makeBalance(commaAvail, commaBalance));
-                    resultJson.add(item);
-                }
-            }
+        JsonObject result = gson.fromJson(data, JsonObject.class);
 
-            returnValue = gson.toJson(resultJson);
+        if(exchange.equals(UtilsData.COINONE)){
+            returnValue = gson.toJson(makeCoinoneArray(result));
         }else if(exchange.equals(UtilsData.BITHUMB)){
-            System.out.println("??");
+            returnValue = gson.toJson(makeBithumbArray(result));
         }
         return returnValue;
     }
 
-    private JsonObject makeBalance(String avail, String balance) {
+    /**
+     * 코인원 전용 parser
+     * @param data
+     * @return
+     * @throws Exception
+     */
+    private JsonArray makeCoinoneArray(JsonObject data) throws Exception{
+        JsonArray resultJson = new JsonArray();
+        for (String key : data.keySet()){
+            if(key.equals("result") || key.equals("errorCode") || key.equals("normalWallets")){
+                continue;
+            }
+            JsonObject element = data.getAsJsonObject(key);
+            BigDecimal avail   = new BigDecimal(element.get("avail").getAsString());
+            BigDecimal balance = new BigDecimal(element.get("balance").getAsString());
+            if(avail.compareTo(new BigDecimal(0)) == 0 && balance.compareTo(new BigDecimal(0)) == 0){
+                continue;
+            }else{
+                JsonObject item     = new JsonObject();
+                String commaAvail   = element.get("avail").getAsString();
+                String commaBalance = element.get("balance").getAsString();
+                item.add(key.toUpperCase(), makeBalance(commaAvail, commaBalance));
+                resultJson.add(item);
+            }
+        }
+        return resultJson;
+    }
+
+    /**
+     * 빗썸 전용 parser
+     * @param data
+     * @return
+     * @throws Exception
+     */
+    private JsonArray makeBithumbArray(JsonObject data) throws Exception{
+
+        JsonArray jsonArray = new JsonArray();
+        Set<String> keyList = new HashSet();
+        for (String key : data.keySet()){
+
+            String symbol = key.substring(key.lastIndexOf("_") + 1);
+            if(keyList.contains(symbol)){
+                continue;
+            }
+            keyList.add(symbol);
+
+            String total = "0";
+            String avail = "0";
+            if(data.get("total_" + symbol) != null && data.get("available_" + symbol) != null){
+                total = data.get("total_" + symbol).getAsString();
+                avail = data.get("available_" + symbol).getAsString();
+            }
+
+            BigDecimal bigDecimalTotal = new BigDecimal(total);
+            if(bigDecimalTotal.compareTo(BigDecimal.ZERO) == 0){    // 0인거 제외
+                continue;
+            }
+
+            JsonObject symbolObject = new JsonObject();
+            symbolObject.add(symbol.toUpperCase(), makeBalance(avail, total));
+            jsonArray.add(symbolObject);
+        }
+
+        return jsonArray;
+    }
+
+    /**
+     * client에 맞게 치환해주는 메서드
+     * @param avail
+     * @param balance
+     * @return
+     * @throws Exception
+     */
+    private JsonObject makeBalance(String avail, String balance) throws Exception {
         JsonObject object = new JsonObject();
-        object.addProperty("avail", avail);
-        object.addProperty("balance", balance);
+        object.addProperty("avail", addCommaWithKrw(avail));
+        object.addProperty("balance", addCommaWithKrw(balance));
 
         return object;
     }
 
+    /**
+     * 3자리마다 , 를 넣어주는 메서드
+     * @param moeny
+     * @return
+     * @throws Exception
+     */
     private String addCommaWithKrw(String moeny) throws Exception {
         StringBuilder builder = new StringBuilder();
         int cnt = 1;
@@ -119,4 +180,6 @@ public class BalanceService {
         }
         return builder.toString();
     }
+
+
 }
