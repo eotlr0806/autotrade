@@ -83,6 +83,8 @@ public class BalanceService {
             }
 
             returnValue = gson.toJson(resultJson);
+        }else if(exchange.equals(UtilsData.BITHUMB)){
+            System.out.println("??");
         }
         return returnValue;
     }
