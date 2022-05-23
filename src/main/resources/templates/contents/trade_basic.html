@@ -82,14 +82,12 @@
                                         <div class="form-group">
                                             <label class="text-bold" for="filter_exchange">거래소</label>
                                             <select name="fSpot" id="filter_exchange" class="form-control">
-                                                <!--<option value="NONE"> 선택 </option>-->
                                             </select>
                                         </div>
 
                                         <div class="form-group">
                                             <label class="text-bold" for="filter_coin">코인</label>
                                             <select name="fSpot" id="filter_coin" class="form-control"></select>
-<!--                                            <button onclick="fncObj.onClickRealPriceBtn()" class="btn btn-primary" style="margin-left:10px;">호가 조회</button>-->
                                         </div>
 
                                     </div>
@@ -111,44 +109,130 @@
 
                     <!-- 2 columns form -->
                     <div class="row">
-                        <!-- 자전 거래 -->
                         <div class="col-md-8">
+
                             <div class="panel panel-flat">
-                                <div class="panel-heading">
-<!--                                    <h5 class="panel-title text-bold">거래</h5>-->
-<!--                                    <div class="heading-elements">-->
-<!--                                        <ul class="icons-list">-->
-<!--                                            <li><a data-action="collapse"></a></li>-->
-<!--                                        </ul>-->
-<!--                                    </div>-->
+                                <div class="panel-heading" style="text-align:center; height:313px; padding:100px 0">
+                                    <span id="coin_name" style="text-align: center; font-size: 70px;">
+                                        Coin
+                                    </span>
                                 </div>
+                            </div>
 
-                                <div class="panel-body">
-                                    <div class="row">
-                                        <div class="col-md-12">
-                                            <div class="row">
-                                                <div class="form-group">
-                                                    <label class="control-label col-sm-2">주문 가격</label>
-                                                    <div class="radio col-sm-8" style="margin-top:0px;">
-                                                        <input id="trade_price" type="text" placeholder="100" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
-                                                    </div>
+                            <div style="padding:0px 10px 0px 10px; background-color:#f5f5f5">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="row">
+                                            <div class="form-group">
+                                                <div class="col-sm-3" style="border: 0.2rem solid; background-color:dodgerblue; border-color:black; color:white; text-align:center; font-size:15px;">
+                                                    보유 자산
                                                 </div>
-                                            </div>
-                                            <div class="row">
-                                                <div class="form-group">
-                                                    <label class="control-label col-sm-2">주문 수량</label>
-                                                    <div class="radio col-sm-8" style="margin-top:0px;">
-                                                        <input id="trade_cnt" type="text" placeholder="100" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
-                                                    </div>
+                                                <div class="col-sm-8" id="total_asset" style="margin-left:10px; border: 0.2rem solid; background-color:lightskyblue; border-color:black; color:white; text-align:center; font-size:15px;">
+                                                    0
                                                 </div>
-                                            </div>
-
-                                            <div class="text-right">
-                                                <button onclick="fncObj.postTrade(TRADE_ACTION.BUY)" type="submit" class="btn btn-danger">매 수</button>
-                                                <button onclick="fncObj.postTrade(TRADE_ACTION.SELL)" type="submit" class="btn btn-primary">매 도</button>
-<!--                                                <button onclick="fncObj.postTrade(TRADE_LIST.AUTOTRADE);" type="submit" class="btn btn-primary">저 장</button>-->
                                             </div>
                                         </div>
+                                        <div class="row">
+                                            <div class="form-group">
+                                                <div class="col-sm-3" style="border: 0.2rem solid; background-color:dodgerblue; border-color:black; color:white; text-align:center; font-size:15px;">
+                                                    사용 가능
+                                                </div>
+                                                <div class="col-sm-8" id="available_asset" style="margin-left:10px; border: 0.2rem solid; background-color:lightskyblue; border-color:black; color:white; text-align:center; font-size:15px;">
+                                                    0
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <div class="row">
+                                            <div class="form-group">
+                                                <div class="col-sm-3" style="border: 0.2rem solid; background-color:red; border-color:black; color:white; text-align:center; font-size:15px;">
+                                                    보유 코인
+                                                </div>
+                                                <div class="col-sm-8" id="total_coin_asset" style="margin-left:5px; border: 0.2rem solid; background-color:lightskyblue; border-color:black; color:white; text-align:center; font-size:15px;">
+                                                    0
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="form-group">
+                                                <div class="col-sm-3" style="border: 0.2rem solid; background-color:red; border-color:black; color:white; text-align:center; font-size:15px;">
+                                                    사용 가능
+                                                </div>
+                                                <div class="col-sm-8" id="available_coin_asset" style="margin-left:5px; border: 0.2rem solid; background-color:lightskyblue; border-color:black; color:white; text-align:center; font-size:15px;">
+                                                    0
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="panel panel-flat">
+                                <div class="panel-body">
+                                    <div class="row">
+                                        <!-- 매수 -->
+                                        <div class="col-md-6">
+                                            <div class="row">
+                                                <div class="form-group">
+                                                    <label class="control-label col-sm-4">매수 가격</label>
+                                                    <div class="radio col-sm-8" style="margin-top:0px;">
+                                                        <input id="trade_buy_price" type="text" placeholder="100" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="form-group">
+                                                    <label class="control-label col-sm-4">매수량</label>
+                                                    <div class="radio col-sm-8" style="margin-top:0px;">
+                                                        <input id="trade_buy_cnt" type="text" placeholder="100" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="form-group">
+                                                    <label class="control-label col-sm-4">거래금액</label>
+                                                    <div class="radio col-sm-8" style="margin-top:0px;">
+                                                        <input id="trade_buy_total_price" type="text" placeholder="100" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-sm-12">
+                                                <button onclick="fncObj.postTrade(TRADE_ACTION.BUY)" type="submit" class="btn btn-primary col-sm-12">매 수</button>
+                                            </div>
+                                        </div>
+                                        <!-- 매도 -->
+                                        <div class="col-md-6">
+                                            <div class="row">
+                                                <div class="form-group">
+                                                    <label class="control-label col-sm-4">매도 가격</label>
+                                                    <div class="radio col-sm-8" style="margin-top:0px;">
+                                                        <input id="trade_sell_price" type="text" placeholder="100" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="form-group">
+                                                    <label class="control-label col-sm-4">매도량</label>
+                                                    <div class="radio col-sm-8" style="margin-top:0px;">
+                                                        <input id="trade_sell_cnt" type="text" placeholder="100" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="form-group">
+                                                    <label class="control-label col-sm-4">거래금액</label>
+                                                    <div class="radio col-sm-8" style="margin-top:0px;">
+                                                        <input id="trade_sell_total_price" type="text" placeholder="100" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-sm-12">
+                                                <button onclick="fncObj.postTrade(TRADE_ACTION.SELL)" type="submit" class="btn btn-danger col-sm-12">매 도</button>
+                                            </div>
+                                        </div>
+
                                     </div>
                                 </div>
                             </div>
@@ -224,7 +308,8 @@
     const STOP        = "STOP";
     let exchangesList = [];
     let loginUserId   = '';
-    let schedule      = '';
+    let tickSchedule  = '';
+    let assetSchedule = '';
 
     // init page
     $(document).ready(() => {
@@ -251,8 +336,11 @@
 
         // 호가 조회 함수
         onClickRealPriceBtn : () =>{
-            clearInterval(schedule);                                    // 기존 schedule stop
-            schedule = setInterval(fncObj.getTickAndMakeTable, 1000);   // 신규 schedule start
+            clearInterval(tickSchedule);                                    // 기존 tickSchedule stop
+            clearInterval(assetSchedule);                                    // 기존 tickSchedule stop
+
+            tickSchedule  = setInterval(fncObj.getTickAndMakeTable, 1000);   // 신규 tickSchedule start
+            assetSchedule = setInterval(fncObj.getBalanceAndSetData, 1000);   // 신규 tickSchedule start
         },
 
         // 비동기 호가조회 API
@@ -267,12 +355,74 @@
                         console.log(`호가조회 성공! ${new Date()}`, response.data.data);
                         fncObj.makerealPriceTable(response.data.data);
                     }else{
-                        console.log(`[GET API ERROR] url: ${url}, response: ${JSON.stringify(response.data)}`);
+                        console.log(`호가조회 실패! ${new Date()}`, response);
+                        common.noti("호가 조회","해당 코인에 대해 현재 호가조회가 불가능합니다.","error");
+                        clearInterval(tickSchedule);
                     }
                 })
                 .catch(error => {
-                    console.log(`[GET API ERROR] url: ${url}, error: ${error}`);
+                    console.log(`호가조회 실패! ${new Date()}`, error);
+                    common.noti("호가 조회","해당 코인에 대해 현재 호가조회가 불가능합니다.","error");
+                    clearInterval(tickSchedule);
                 })
+        },
+
+        getBalanceAndSetData : () => {
+            // Get Balance
+            let filterExchangeNm = $('#filter_exchange').val();
+            let coin             = $('#filter_coin').val();
+            let url              = API.BALANCE + `?exchange=${filterExchangeNm}&currency=${coin}&userId=${loginUserId}`;
+            axios.get(url)
+                .then(response => {
+                    if (response.data.status === CODE.SUCCESS){
+                        console.log(`자산조회 성공! ${new Date()}`, response.data.data);
+                        fncObj.setAsset(JSON.parse(response.data.data));
+                    }else{
+                        console.log(`자산조회 실패! ${new Date()}`, response);
+                        common.noti("자산 조회","해당 코인에 대해 자산조회가 불가능합니다.","error");
+                        clearInterval(assetSchedule);
+                    }
+                })
+                .catch(error => {
+                    console.log(`자산조회 실패! ${new Date()}`, error);
+                    common.noti("자산 조회","해당 코인에 대해 자산조회가 불가능합니다.","error");
+                    clearInterval(assetSchedule);
+                })
+        },
+
+        setAsset : data => {
+            let selectedExchange = $('#filter_exchange').val();
+            let selectedCoin     = $('#filter_coin').val();
+            let exchange         = exchangesList.filter(x => x.id === Number(selectedExchange))[0];
+            let coin             = exchange.exchangeCoin.filter(x => x.id === Number(selectedCoin.split(';')[1]))[0];
+
+            if (data){
+                let currencyMoeny = '';
+                let currencyCoin = '';
+                data.some(item => {
+                    if (!currencyMoeny){
+                        currencyMoeny = item[coin.currency]
+                            || item[coin.currency.toUpperCase()]
+                            || item[coin.currency.toLowerCase()]
+                            || '';
+                    }
+                    if (!currencyCoin){
+                        currencyCoin = item[coin.coinCode]
+                            || item[coin.coinCode.toUpperCase()]
+                            || item[coin.coinCode.toLowerCase()]
+                            || '';
+                    }
+                })
+
+                if (currencyMoeny){
+                    $('#total_asset').text(`${currencyMoeny.balance} ${coin.currency}`);
+                    $('#available_asset').text(`${currencyMoeny.avail} ${coin.currency}`);
+                }
+                if (currencyCoin){
+                    $('#total_coin_asset').text(`${currencyCoin.balance} ${coin.coinCode}`);
+                    $('#available_coin_asset').text(`${currencyCoin.avail} ${coin.coinCode}`);
+                }
+            }
         },
 
         // 호가 조회 시, 데이터 조회 및 셋팅
@@ -438,7 +588,8 @@
             common.noti("거래소","모든 서비스는 각 코인 등록시 등록한 통화 기준입니다.","success");
         }
 
-        clearInterval(schedule);         // 기존 스케줄 정지
+        clearInterval(tickSchedule);         // 기존 스케줄 정지
+        clearInterval(assetSchedule);
     });
 
     // coin change event
@@ -446,7 +597,8 @@
         let selectedExchange = $('#filter_exchange').val();
         let selectedCoin     = $('#filter_coin').val();
         if($('#filter_exchange').val() == 'NONE' || $('#filter_coin').val() == 'NONE'){
-            clearInterval(schedule);         // 기존 스케줄 정지
+            clearInterval(tickSchedule);         // 기존 스케줄 정지
+            clearInterval(assetSchedule);
             common.noti("조회", "거래소와 코인을 선택해주세요","error");
             return;
         }
@@ -454,7 +606,7 @@
         let exchange         = exchangesList.filter(x => x.id === Number(selectedExchange))[0];
         let coin             = exchange.exchangeCoin.filter(x => x.id === Number(selectedCoin.split(';')[1]))[0];
         $('#coin_user_id').text(`ID : ${coin.exchangeUserId}`);
-
+        $('#coin_name').text(`${coin.coinCode}/${coin.currency}`);
         fncObj.onClickRealPriceBtn();
     });
 

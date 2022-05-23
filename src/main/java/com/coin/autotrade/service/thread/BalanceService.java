@@ -68,6 +68,9 @@ public class BalanceService {
         }else if(exchange.equals(UtilsData.BITHUMB)){
             returnValue = gson.toJson(makeBithumbArray(result));
         }
+        if(returnValue.equals("[]")){
+            throw new Exception(data);
+        }
         return returnValue;
     }
 
