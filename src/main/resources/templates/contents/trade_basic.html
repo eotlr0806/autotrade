@@ -178,7 +178,7 @@
                                                 <div class="form-group">
                                                     <label class="control-label col-sm-4">매수 가격</label>
                                                     <div class="radio col-sm-8" style="margin-top:0px;">
-                                                        <input id="trade_buy_price" type="text" placeholder="100" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                        <input id="trade_buy_price" type="text" value="0" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
                                                     </div>
                                                 </div>
                                             </div>
@@ -186,7 +186,7 @@
                                                 <div class="form-group">
                                                     <label class="control-label col-sm-4">매수량</label>
                                                     <div class="radio col-sm-8" style="margin-top:0px;">
-                                                        <input id="trade_buy_cnt" type="text" placeholder="100" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                        <input id="trade_buy_cnt" type="text" value="0" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
                                                     </div>
                                                 </div>
                                             </div>
@@ -194,7 +194,7 @@
                                                 <div class="form-group">
                                                     <label class="control-label col-sm-4">거래금액</label>
                                                     <div class="radio col-sm-8" style="margin-top:0px;">
-                                                        <input id="trade_buy_total_price" type="text" placeholder="100" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                        <input id="trade_buy_total_price" type="text" value="0" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
                                                     </div>
                                                 </div>
                                             </div>
@@ -208,7 +208,7 @@
                                                 <div class="form-group">
                                                     <label class="control-label col-sm-4">매도 가격</label>
                                                     <div class="radio col-sm-8" style="margin-top:0px;">
-                                                        <input id="trade_sell_price" type="text" placeholder="100" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                        <input id="trade_sell_price" type="text" value="0" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
                                                     </div>
                                                 </div>
                                             </div>
@@ -216,7 +216,7 @@
                                                 <div class="form-group">
                                                     <label class="control-label col-sm-4">매도량</label>
                                                     <div class="radio col-sm-8" style="margin-top:0px;">
-                                                        <input id="trade_sell_cnt" type="text" placeholder="100" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                        <input id="trade_sell_cnt" type="text" value="0" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
                                                     </div>
                                                 </div>
                                             </div>
@@ -224,7 +224,7 @@
                                                 <div class="form-group">
                                                     <label class="control-label col-sm-4">거래금액</label>
                                                     <div class="radio col-sm-8" style="margin-top:0px;">
-                                                        <input id="trade_sell_total_price" type="text" placeholder="100" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                        <input id="trade_sell_total_price" type="text" value="0" class="form-control" min="0" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
                                                     </div>
                                                 </div>
                                             </div>
@@ -381,12 +381,14 @@
                         console.log(`자산조회 실패! ${new Date()}`, response);
                         common.noti("자산 조회","해당 코인에 대해 자산조회가 불가능합니다.","error");
                         clearInterval(assetSchedule);
+                        fncObj.clearAsset();
                     }
                 })
                 .catch(error => {
                     console.log(`자산조회 실패! ${new Date()}`, error);
                     common.noti("자산 조회","해당 코인에 대해 자산조회가 불가능합니다.","error");
                     clearInterval(assetSchedule);
+                    fncObj.clearAsset();
                 })
         },
 
@@ -425,6 +427,13 @@
             }
         },
 
+        clearAsset : () => {
+            $('#total_asset').text('0');
+            $('#available_asset').text('0');
+            $('#total_coin_asset').text('0');
+            $('#available_coin_asset').text('0');
+        },
+
         // 호가 조회 시, 데이터 조회 및 셋팅
         makerealPriceTable : (tickList) => {
             $('#modal_coin_price_body').empty();
@@ -456,19 +465,23 @@
             if(!fncObj.validateParam()){
                 return CODE_ERROR;
             }
+            let inputPrice = (mode === TRADE_ACTION.BUY) ?
+                $('#trade_buy_price').val() :
+                $('#trade_sell_price').val();
+            let inputCnt = (mode === TRADE_ACTION.BUY) ?
+                $('#trade_buy_cnt').val() :
+                $('#trade_sell_cnt').val();
 
             let body = {
                 type       : mode,
-                price      : dataObj.validateDot($('#trade_price').val()),
-                cnt        : dataObj.validateDot($('#trade_cnt').val()),
+                price      : dataObj.validateDot(inputPrice),
+                cnt        : dataObj.validateDot(inputCnt),
                 exchangeId : $('#filter_exchange').val(),
                 coinWithId : $('#filter_coin').val(),
                 userId     : loginUserId,
             };
             return body;
         },
-
-
 
 
         // 공통 부분
@@ -484,6 +497,20 @@
             }
             return true;
         },
+
+
+        changeBuyEvent : () => {
+            let price = Number($('#trade_buy_price').val());
+            let cnt   = Number($('#trade_buy_cnt').val());
+            $('#trade_buy_total_price').val(price * cnt);
+        },
+
+        changeSellEvent : () => {
+            let price = Number($('#trade_sell_price').val());
+            let cnt   = Number($('#trade_sell_cnt').val());
+            $('#trade_sell_total_price').val(price * cnt);
+        }
+
     };
     /** Function object **/
 
@@ -551,8 +578,6 @@
                 return target;
             }
         }
-
-        
     }
     /** Function object for data setter,getter **/
 
@@ -599,6 +624,7 @@
         if($('#filter_exchange').val() == 'NONE' || $('#filter_coin').val() == 'NONE'){
             clearInterval(tickSchedule);         // 기존 스케줄 정지
             clearInterval(assetSchedule);
+            fncObj.clearAsset();
             common.noti("조회", "거래소와 코인을 선택해주세요","error");
             return;
         }
@@ -609,6 +635,12 @@
         $('#coin_name').text(`${coin.coinCode}/${coin.currency}`);
         fncObj.onClickRealPriceBtn();
     });
+
+    $('#trade_buy_price').on('input', fncObj.changeBuyEvent);
+    $('#trade_buy_cnt').on('input', fncObj.changeBuyEvent);
+    $('#trade_sell_price').on('input', fncObj.changeSellEvent);
+    $('#trade_sell_cnt').on('input', fncObj.changeSellEvent);
+
 
 
 
