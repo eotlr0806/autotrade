@@ -57,6 +57,7 @@ public class UtilsData {
     public static String DCOIN_TICK               = "https://openapi.dcoin.com/open/api/get_ticker";
     public static String DCOIN_CREATE_ORDER       = "https://openapi.dcoin.com/open/api/create_order";
     public static String DCOIN_CANCEL_ORDER       = "https://openapi.dcoin.com/open/api/cancel_order";
+    public static String DCOIN_BALANCE            = "https://openapi.dcoin.com/open/api/user/account";
 
     public static String FLATA_ORDERBOOK          = "https://www.flata.exchange/out/api/getSnapshot";
     public static String FLATA_COININFO           = "https://www.flata.exchange/out/api/InstList";

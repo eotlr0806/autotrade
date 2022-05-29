@@ -20,6 +20,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.security.MessageDigest;
+import java.time.Instant;
 import java.util.*;
 
 @Slf4j
@@ -367,6 +368,29 @@ public class DcoinImp extends AbstractExchange {
         return returnRes;
     }
 
+
+    @Override
+    public String getBalance(String[] coinData, Exchange exchange) throws Exception{
+        String returnValue = ReturnCode.NO_DATA.getValue();;
+        setApiKey(coinData, exchange);
+        // DCoin 의 경우, property 값들이 오름차순으로 입력되야 해서, 공통 함수로 빼기 어려움.
+        JsonObject header = new JsonObject();
+        header.addProperty("api_key", keyList.get(PUBLIC_KEY));
+
+        String request       = UtilsData.DCOIN_BALANCE + "?api_key=" + URLEncoder.encode(keyList.get(PUBLIC_KEY))
+                                                       + "&sign=" + createSign(gson.toJson(header));
+        String response      = getHttpMethod(request);
+        JsonObject resObject = gson.fromJson(response, JsonObject.class);
+        String returnCode    = resObject.get("code").getAsString();
+        if(SUCCESS.equals(returnCode)){
+            returnValue = gson.toJson(resObject.get("data").getAsJsonObject().getAsJsonArray("coin_list"));
+            log.info("[DCOIN][GET BALANCE] Success response");
+        }else{
+            log.error("[DCOIN][GET BALANCE] Fail response : {}", gson.toJson(resObject));
+        }
+
+        return returnValue;
+    }
 
     @Override
     public String createOrder(String type, String price, String cnt, String[] coinData, Exchange exchange) {

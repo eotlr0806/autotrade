@@ -71,6 +71,8 @@ public class BalanceService {
             returnValue = gson.toJson(makeBithumbGlobalArray(gson.fromJson(data, JsonArray.class)));
         }else if(exchange.equals(UtilsData.COINSBIT)){
             returnValue = gson.toJson(makeCoinsBitArray(gson.fromJson(data, JsonObject.class)));
+        }else if(exchange.equals(UtilsData.DCOIN)){
+            returnValue = gson.toJson(makeDcoinArray(gson.fromJson(data, JsonArray.class)));
         }
 
 
@@ -139,7 +141,7 @@ public class BalanceService {
     }
 
     /**
-     * 코인원 전용 parser
+     * 빗썸글로벌전용 전용 parser
      * @param data
      * @return
      * @throws Exception
@@ -182,6 +184,27 @@ public class BalanceService {
         return resultJson;
     }
 
+    /**
+     * 빗썸글로벌전용 전용 parser
+     * @param data
+     * @return
+     * @throws Exception
+     */
+    private JsonArray makeDcoinArray(JsonArray arrayData) throws Exception{
+        JsonArray resultJson = new JsonArray();
+        for(JsonElement arrayElement : arrayData){
+            JsonObject data = arrayElement.getAsJsonObject();
+            BigDecimal normal   = new BigDecimal(data.get("normal").getAsString()); // 사용가능
+            BigDecimal locked   = new BigDecimal(data.get("locked").getAsString()); // 잠겨있는 금액 인듯
+
+            if(normal.compareTo(BigDecimal.ZERO) == 0 && locked.compareTo(BigDecimal.ZERO) == 0){
+                continue;
+            }
+            resultJson.add(makeJson(data.get("coin").getAsString(),normal.toPlainString(),normal.add(locked).toPlainString() ));
+        }
+
+        return resultJson;
+    }
     /**
      *
      * @param key 심볼
