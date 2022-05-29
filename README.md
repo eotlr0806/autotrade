@@ -10,7 +10,7 @@
 | Bithumb | https://apidocs.bithumb.com/docs/api_info | 
 | DCoin | https://github.com/dcoinapi/openapi/wiki | 
 | Digifinex | https://docs.digifinex.com/en-ww/v3/#introduction |
-| GateIO | https://www.gate.io/docs/apiv4/en/#about-apiv4-key-improvement |
+| GateIO | https://www.gate.io/docs/developers/apiv4/en/ |
 | Ku Coin | https://docs.kucoin.com/#general | 
 | OkEx | https://www.okx.com/docs-v5/en/#market-maker-program | 
 | XT Com | https://doc.xt.com/ |
