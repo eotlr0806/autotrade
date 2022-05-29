@@ -339,8 +339,20 @@
             clearInterval(tickSchedule);                                    // 기존 tickSchedule stop
             clearInterval(assetSchedule);                                    // 기존 tickSchedule stop
 
-            tickSchedule  = setInterval(fncObj.getTickAndMakeTable, 1000);   // 신규 tickSchedule start
-            assetSchedule = setInterval(fncObj.getBalanceAndSetData, 1000);   // 신규 tickSchedule start
+            if(fncObj.isSlowExchange($('#filter_exchange').val())){
+                tickSchedule  = setInterval(fncObj.getTickAndMakeTable, 5000);   // 신규 tickSchedule start
+                assetSchedule = setInterval(fncObj.getBalanceAndSetData, 5000);   // 신규 tickSchedule start
+            }else{
+                tickSchedule  = setInterval(fncObj.getTickAndMakeTable, 1000);   // 신규 tickSchedule start
+                assetSchedule = setInterval(fncObj.getBalanceAndSetData, 1000);   // 신규 tickSchedule start
+            }
+        },
+
+        // 조회가 느린 거래소의경우 조회시간을 느리게 조회
+        isSlowExchange: (exchangeId) => {
+            if(exchangeId == 13){  // 코인스빗
+                return true;
+            }
         },
 
         // 비동기 호가조회 API

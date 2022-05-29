@@ -385,7 +385,7 @@ public class BithumbGlobalImp extends AbstractExchange {
         String status        = returnVal.get("code").getAsString();
         if(status.equals(SUCCESS)){
             returnValue = gson.toJson(returnVal.get("data"));
-            log.info("[BITHUMBGLOBAL][GET BALANCE] Response : {}", gson.toJson(returnVal));
+            log.info("[BITHUMBGLOBAL][GET BALANCE] Response");
         }else{
             log.error("[BITHUMBGLOBAL][GET BALANCE] Response :{}", gson.toJson(returnVal));
         }

@@ -69,7 +69,11 @@ public class BalanceService {
             returnValue = gson.toJson(makeBithumbArray(gson.fromJson(data, JsonObject.class)));
         }else if(exchange.equals(UtilsData.BITHUMB_GLOBAL)){
             returnValue = gson.toJson(makeBithumbGlobalArray(gson.fromJson(data, JsonArray.class)));
+        }else if(exchange.equals(UtilsData.COINSBIT)){
+            returnValue = gson.toJson(makeCoinsBitArray(gson.fromJson(data, JsonObject.class)));
         }
+
+
         if(returnValue.equals("[]")){
             throw new Exception(data);
         }
@@ -159,7 +163,32 @@ public class BalanceService {
 
 
     /**
-     * Json Object를 만들어줌
+     * 코인스빗 전용 parser
+     * @param data
+     * @return
+     * @throws Exception
+     */
+    private JsonArray makeCoinsBitArray(JsonObject data) throws Exception{
+        JsonArray resultJson = new JsonArray();
+        for (String key : data.keySet()){
+            JsonObject element = data.getAsJsonObject(key);
+            BigDecimal avail   = new BigDecimal(element.get("available").getAsString());
+            BigDecimal balance = new BigDecimal(element.get("freeze").getAsString());
+            if(avail.compareTo(new BigDecimal(0)) == 0 && balance.compareTo(new BigDecimal(0)) == 0){
+                continue;
+            }
+            resultJson.add(makeJson(key,avail.toPlainString(), balance.add(avail).toPlainString()));
+        }
+        return resultJson;
+    }
+
+    /**
+     *
+     * @param key 심볼
+     * @param avail 사용 가능 금액
+     * @param balacne 총 금액
+     * @return
+     * @throws Exception
      */
     private JsonObject makeJson(String key, String avail, String balacne) throws Exception{
         JsonObject item     = new JsonObject();

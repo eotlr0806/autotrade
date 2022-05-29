@@ -113,6 +113,7 @@ public class UtilsData {
     public static String COINSBIT_GET_COININFO          = "/api/v1/public/markets";
     public static String COINSBIT_CREATE_ORDER          = "/api/v1/order/new";
     public static String COINSBIT_CANCEL_ORDER          = "/api/v1/order/cancel";
+    public static String COINSBIT_BALANCE               = "/api/v1/account/balances";
 
     public static String MEXC_URL                       = "https://www.mexc.com";
     public static String MEXC_ORDERBOOK                 = "/open/api/v2/market/depth";    // ?symbol=btc_usdt&depth=10
