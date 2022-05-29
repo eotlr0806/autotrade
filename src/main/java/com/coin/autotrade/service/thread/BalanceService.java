@@ -81,6 +81,8 @@ public class BalanceService {
             // NOT Supported
         }else if(exchange.equals(UtilsData.FOBLGATE)){
             returnValue = gson.toJson(makeFoblGateArray(gson.fromJson(data, JsonObject.class)));
+        }else if(exchange.equals(UtilsData.GATEIO)){
+            returnValue = gson.toJson(makeGateIoArray(gson.fromJson(data, JsonArray.class)));
         }
 
 
@@ -193,7 +195,7 @@ public class BalanceService {
     }
 
     /**
-     * 빗썸글로벌전용 전용 parser
+     * 디코인 전용 parser
      * @param data
      * @return
      * @throws Exception
@@ -237,6 +239,28 @@ public class BalanceService {
         }
 
         return jsonArray;
+    }
+
+    /**
+     * Gateio 전용 parser
+     * @param arrayData
+     * @return
+     * @throws Exception
+     */
+    private JsonArray makeGateIoArray(JsonArray arrayData) throws Exception{
+        JsonArray resultJson = new JsonArray();
+        for(JsonElement arrayElement : arrayData){
+            JsonObject data = arrayElement.getAsJsonObject();
+            BigDecimal available = new BigDecimal(data.get("available").getAsString()); // 사용가능
+            BigDecimal locked    = new BigDecimal(data.get("locked").getAsString());    // 잠겨있는 금액 인듯
+
+            if(available.compareTo(BigDecimal.ZERO) == 0 && locked.compareTo(BigDecimal.ZERO) == 0){
+                continue;
+            }
+            resultJson.add(makeJson(data.get("currency").getAsString() ,available.toPlainString(),available.add(locked).toPlainString() ));
+        }
+
+        return resultJson;
     }
 
     /**

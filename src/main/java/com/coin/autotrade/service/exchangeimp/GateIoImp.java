@@ -11,7 +11,9 @@ import com.google.gson.JsonObject;
 import io.gate.gateapi.ApiClient;
 import io.gate.gateapi.ApiException;
 import io.gate.gateapi.api.SpotApi;
+import io.gate.gateapi.api.WalletApi;
 import io.gate.gateapi.models.Order;
+import io.gate.gateapi.models.SpotAccount;
 import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
@@ -64,7 +66,7 @@ public class GateIoImp extends AbstractExchange {
                     // Init Gateio API SDK
                     apiClient.setApiKeySecret(exCoin.getPublicKey(), exCoin.getPrivateKey());
                     apiClient.setBasePath(UtilsData.GATEIO_URL);
-                    spotApi = new SpotApi(apiClient);
+                    spotApi   = new SpotApi(apiClient);
                 }
             }
             log.info("[GATEIO][SET API KEY] First Key setting in instance API:{}, secret:{}",keyList.get(PUBLIC_KEY), keyList.get(SECRET_KEY));
@@ -375,6 +377,16 @@ public class GateIoImp extends AbstractExchange {
         return returnRes;
     }
 
+
+    @Override
+    public String getBalance(String[] coinData, Exchange exchange) throws Exception{
+        String returnValue = ReturnCode.NO_DATA.getValue();;
+        setCoinToken(coinData, exchange);
+        SpotApi.APIlistSpotAccountsRequest account = spotApi.listSpotAccounts();
+        List<SpotAccount> list = account.execute();
+        returnValue = gson.toJson(list);
+        return returnValue;
+    }
 
     /** Biyhumb global 매수/매도 로직 */
     @Override
