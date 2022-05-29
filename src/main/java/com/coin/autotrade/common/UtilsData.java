@@ -52,6 +52,7 @@ public class UtilsData {
     public static String FOBLGATE_TICK            = "https://api2.foblgate.com/api/chart/selectChart";
     public static String FOBLGATE_CREATE_ORDER    = "https://api2.foblgate.com/api/trade/orderPlace";
     public static String FOBLGATE_CANCEL_ORDER    = "https://api2.foblgate.com/api/trade/orderCancel";
+    public static String FOBLGATE_BALANCE         = "https://api2.foblgate.com/api/account/balance";
 
     public static String DCOIN_ORDERBOOK          = "https://openapi.dcoin.com/open/api/market_dept";
     public static String DCOIN_TICK               = "https://openapi.dcoin.com/open/api/get_ticker";
@@ -82,6 +83,7 @@ public class UtilsData {
     public static String DIGIFINEX_TIMESTAMP      = "https://openapi.digifinex.com/v3/time";
     public static String DIGIFINEX_CREATE_ORDER   = "https://openapi.digifinex.com/v3/spot/order/new";
     public static String DIGIFINEX_CANCEL_ORDER   = "https://openapi.digifinex.com/v3/spot/order/cancel";
+    public static String DIGIFINEX_BALANCE        = "https://openapi.digifinex.com/v3/spot/assets";
 
     public static String XTCOM_ORDERBOOK          = "https://api.xt.com/data/api/v1/getDepth";
     public static String XTCOM_CREATE_ORDER       = "https://api.xt.com/trade/api/v1/order";

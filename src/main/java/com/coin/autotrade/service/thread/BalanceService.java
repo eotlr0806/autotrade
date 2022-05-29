@@ -73,6 +73,14 @@ public class BalanceService {
             returnValue = gson.toJson(makeCoinsBitArray(gson.fromJson(data, JsonObject.class)));
         }else if(exchange.equals(UtilsData.DCOIN)){
             returnValue = gson.toJson(makeDcoinArray(gson.fromJson(data, JsonArray.class)));
+        }else if(exchange.equals(UtilsData.DEXORCA)){
+            // NOT Supported
+        }else if(exchange.equals(UtilsData.FLATA)){
+            // NOT Supported
+        }else if(exchange.equals(UtilsData.DIGIFINEX)){
+            // NOT Supported
+        }else if(exchange.equals(UtilsData.FOBLGATE)){
+            returnValue = gson.toJson(makeFoblGateArray(gson.fromJson(data, JsonObject.class)));
         }
 
 
@@ -205,8 +213,33 @@ public class BalanceService {
 
         return resultJson;
     }
+
     /**
-     *
+     * foblgate전용 parser
+     * @param data
+     * @return
+     * @throws Exception
+     */
+    private JsonArray makeFoblGateArray(JsonObject data) throws Exception{
+        JsonArray jsonArray = new JsonArray();
+        Set<String> keyList = new HashSet();
+
+        JsonObject total = data.getAsJsonObject("total");
+        JsonObject avail = data.getAsJsonObject("avail");
+
+        for(String coin : total.keySet()){
+            BigDecimal totalVal = new BigDecimal(total.get(coin).getAsString());
+            if(totalVal.compareTo(BigDecimal.ZERO) == 0){
+                continue;
+            }
+            BigDecimal availVal = new BigDecimal(avail.get(coin).getAsString());
+            jsonArray.add(makeJson(coin, availVal.toPlainString(), totalVal.toPlainString()));
+        }
+
+        return jsonArray;
+    }
+
+    /**
      * @param key 심볼
      * @param avail 사용 가능 금액
      * @param balacne 총 금액

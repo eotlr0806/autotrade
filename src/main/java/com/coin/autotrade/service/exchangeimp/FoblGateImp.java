@@ -17,6 +17,7 @@ import java.io.DataOutputStream;
 import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -419,6 +420,30 @@ public class FoblGateImp extends AbstractExchange {
 
         return returnRes;
     }
+
+
+    @Override
+    public String getBalance(String[] coinData, Exchange exchange) throws Exception{
+        String returnValue = ReturnCode.NO_DATA.getValue();;
+        setApiKey(coinData, exchange);
+
+        Map<String, String> header = new HashMap<>();
+        header.put("mbId",keyList.get(USER_ID));
+        header.put("apiKey", keyList.get(PUBLIC_KEY));
+        String secretHash = makeApiHash(keyList.get(PUBLIC_KEY) + keyList.get(USER_ID) + keyList.get(SECRET_KEY));
+
+        JsonObject returnVal = postHttpMethod(UtilsData.FOBLGATE_BALANCE, secretHash, header);
+        String status        = gson.fromJson(returnVal.get("status"), String.class);
+        if(status.equals(SUCCESS)){
+            returnValue = gson.toJson(returnVal.get("data"));
+            log.info("[FOBLGATE][GET BALANCE] Success response");
+        }else{
+            log.error("[FOBLGATE][GET BALANCE] Fail response : {}", gson.toJson(returnVal));
+        }
+        return returnValue;
+    }
+
+
 
     @Override
     public String createOrder(String type, String price, String cnt, String[] coinData, Exchange exchange){
