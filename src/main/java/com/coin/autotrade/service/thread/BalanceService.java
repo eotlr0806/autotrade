@@ -9,6 +9,7 @@ import com.coin.autotrade.repository.ExchangeRepository;
 import com.coin.autotrade.service.exchangeimp.AbstractExchange;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,12 +62,13 @@ public class BalanceService {
     public String parseBalance(String exchange, String data) throws Exception{
         String returnValue     = "";
         Gson gson = Utils.getGson();
-        JsonObject result = gson.fromJson(data, JsonObject.class);
 
         if(exchange.equals(UtilsData.COINONE)){
-            returnValue = gson.toJson(makeCoinoneArray(result));
+            returnValue = gson.toJson(makeCoinoneArray(gson.fromJson(data, JsonObject.class)));
         }else if(exchange.equals(UtilsData.BITHUMB)){
-            returnValue = gson.toJson(makeBithumbArray(result));
+            returnValue = gson.toJson(makeBithumbArray(gson.fromJson(data, JsonObject.class)));
+        }else if(exchange.equals(UtilsData.BITHUMB_GLOBAL)){
+            returnValue = gson.toJson(makeBithumbGlobalArray(gson.fromJson(data, JsonArray.class)));
         }
         if(returnValue.equals("[]")){
             throw new Exception(data);
@@ -91,13 +93,8 @@ public class BalanceService {
             BigDecimal balance = new BigDecimal(element.get("balance").getAsString());
             if(avail.compareTo(new BigDecimal(0)) == 0 && balance.compareTo(new BigDecimal(0)) == 0){
                 continue;
-            }else{
-                JsonObject item     = new JsonObject();
-                String commaAvail   = element.get("avail").getAsString();
-                String commaBalance = element.get("balance").getAsString();
-                item.add(key.toUpperCase(), makeBalance(commaAvail, commaBalance));
-                resultJson.add(item);
             }
+            resultJson.add(makeJson(key,avail.toPlainString(), balance.toPlainString()));
         }
         return resultJson;
     }
@@ -131,13 +128,43 @@ public class BalanceService {
             if(bigDecimalTotal.compareTo(BigDecimal.ZERO) == 0){    // 0인거 제외
                 continue;
             }
-
-            JsonObject symbolObject = new JsonObject();
-            symbolObject.add(symbol.toUpperCase(), makeBalance(avail, total));
-            jsonArray.add(symbolObject);
+            jsonArray.add(makeJson(key,avail, total));
         }
 
         return jsonArray;
+    }
+
+    /**
+     * 코인원 전용 parser
+     * @param data
+     * @return
+     * @throws Exception
+     */
+    private JsonArray makeBithumbGlobalArray(JsonArray arrayData) throws Exception{
+        JsonArray resultJson = new JsonArray();
+        for(JsonElement arrayElement : arrayData){
+            JsonObject data = arrayElement.getAsJsonObject();
+            BigDecimal btc     = new BigDecimal(data.get("btcQuantity").getAsString());
+            BigDecimal avail   = new BigDecimal(data.get("count").getAsString());
+            BigDecimal balance = new BigDecimal(data.get("frozen").getAsString());
+
+            if(btc.compareTo(BigDecimal.ZERO) == 0){
+                continue;
+            }
+            resultJson.add(makeJson(data.get("coinType").getAsString(),avail.toPlainString(),avail.add(balance).toPlainString() ));
+        }
+
+        return resultJson;
+    }
+
+
+    /**
+     * Json Object를 만들어줌
+     */
+    private JsonObject makeJson(String key, String avail, String balacne) throws Exception{
+        JsonObject item     = new JsonObject();
+        item.add(key.toUpperCase(), makeBalance(avail, balacne));
+        return item;
     }
 
     /**

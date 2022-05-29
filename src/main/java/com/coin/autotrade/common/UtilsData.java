@@ -99,6 +99,7 @@ public class UtilsData {
     public static String BITHUMB_GLOBAL_TICK            = "https://global-openapi.bithumb.pro/openapi/v1/spot/ticker";
     public static String BITHUMB_GLOBAL_CREATE_ORDER    = "https://global-openapi.bithumb.pro/openapi/v1/spot/placeOrder";
     public static String BITHUMB_GLOBAL_CANCEL_ORDER    = "https://global-openapi.bithumb.pro/openapi/v1/spot/cancelOrder";
+    public static String BITHUMB_GLOBAL_BALANCE         = "https://global-openapi.bithumb.pro/openapi/v1/spot/assetList";
 
     public static String OKEX_URL                       = "https://www.okex.com";
     public static String OKEX_ORDERBOOK                 = "https://www.okex.com/api/v5/market/books";
