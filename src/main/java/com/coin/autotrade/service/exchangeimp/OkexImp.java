@@ -398,7 +398,6 @@ public class OkexImp extends AbstractExchange {
         header.put("OK-ACCESS-TIMESTAMP", currentTime);
         header.put("OK-ACCESS-PASSPHRASE", keyList.get(API_PASSWORD));
 
-        //String returnVal = getHttpMethod(url, header);
         JsonObject returnVal = gson.fromJson(getHttpMethod(url, header), JsonObject.class);
         String status        = returnVal.get("code").getAsString();
         if(status.equals(SUCCESS)){

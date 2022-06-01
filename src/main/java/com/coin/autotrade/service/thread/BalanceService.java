@@ -92,6 +92,8 @@ public class BalanceService {
             returnValue = gson.toJson(makeMexcArray(gson.fromJson(data, JsonObject.class)));
         }else if(exchange.equals(UtilsData.OKEX)){
             returnValue = gson.toJson(makeOkexArray(gson.fromJson(data, JsonArray.class)));
+        }else if(exchange.equals(UtilsData.XTCOM)){
+            returnValue = gson.toJson(makeXtcomArray(gson.fromJson(data, JsonObject.class)));
         }
 
 
@@ -332,6 +334,25 @@ public class BalanceService {
             resultJson.add(makeJson(data.get("ccy").getAsString() ,available.toPlainString(),available.add(locked).toPlainString() ));
         }
         return resultJson;
+    }
+
+    /**
+     * Xtcom 전용
+     * @pa용am data
+     * @return
+     * @throws Exception
+     */
+    private JsonArray makeXtcomArray(JsonObject data) throws Exception{
+        JsonArray jsonArray = new JsonArray();
+
+        for(String coin : data.keySet()){
+            JsonObject item = data.get(coin).getAsJsonObject();
+            BigDecimal availVal = new BigDecimal(item.get("available").getAsString());
+            BigDecimal freeze   = new BigDecimal(item.get("freeze").getAsString());
+
+            jsonArray.add(makeJson(coin, availVal.toPlainString(), freeze.add(availVal).toPlainString()));
+        }
+        return jsonArray;
     }
 
     /**

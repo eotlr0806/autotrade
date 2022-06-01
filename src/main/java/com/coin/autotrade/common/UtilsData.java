@@ -90,6 +90,7 @@ public class UtilsData {
     public static String XTCOM_CANCEL_ORDER       = "https://api.xt.com/trade/api/v1/cancel";
     public static String XTCOM_TICK               = "https://api.xt.com/data/api/v1/getTickers";
     public static String XTCOM_GET_COININFO       = "https://api.xt.com/data/api/v1/getMarketConfig";
+    public static String XTCOM_BALANCE            = "https://api.xt.com/trade/api/v1/getBalance";
 
     public static String BITHUMB_URL                    = "https://api.bithumb.com";
     public static String BITHUMB_ORDERBOOK              = "https://api.bithumb.com/public/orderbook";
