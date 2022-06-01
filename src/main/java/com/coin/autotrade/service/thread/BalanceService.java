@@ -88,6 +88,8 @@ public class BalanceService {
             returnValue = NOT_SUPPORT;
         }else if(exchange.equals(UtilsData.LBANK)){
             returnValue = gson.toJson(makeLbankArray(gson.fromJson(data, JsonObject.class)));
+        }else if(exchange.equals(UtilsData.MEXC)){
+            returnValue = gson.toJson(makeMexcArray(gson.fromJson(data, JsonObject.class)));
         }
 
 
@@ -294,6 +296,24 @@ public class BalanceService {
         return jsonArray;
     }
 
+    /**
+     * Mexc 전용
+     * @param data
+     * @return
+     * @throws Exception
+     */
+    private JsonArray makeMexcArray(JsonObject data) throws Exception{
+        JsonArray jsonArray = new JsonArray();
+        Set<String> keyList = new HashSet();
+        for(String coin : data.keySet()){
+            JsonObject item = data.get(coin).getAsJsonObject();
+            BigDecimal frozen = new BigDecimal(item.get("frozen").getAsString());
+            BigDecimal avail  = new BigDecimal(item.get("available").getAsString());
+
+            jsonArray.add(makeJson(coin, avail.toPlainString(), frozen.add(avail).toPlainString()));
+        }
+        return jsonArray;
+    }
 
     /**
      * @param key 심볼

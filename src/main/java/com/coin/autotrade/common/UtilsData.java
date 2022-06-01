@@ -122,6 +122,7 @@ public class UtilsData {
     public static String MEXC_ORDERBOOK                 = "/open/api/v2/market/depth";    // ?symbol=btc_usdt&depth=10
     public static String MEXC_CREATE_ORDER              = "/open/api/v2/order/place";
     public static String MEXC_CANCEL_ORDER              = "/open/api/v2/order/cancel";
+    public static String MEXC_BALANCE                   = "/open/api/v2/account/info";
     public static String MEXC_TICK                      = "https://www.mexc.com/open/api/v2/market/kline?interval=1d&limit=1";
     public static String MEXC_GET_COININFO              = "https://www.mexc.com/open/api/v2/market/symbols";
 
