@@ -380,11 +380,13 @@ public class GateIoImp extends AbstractExchange {
 
     @Override
     public String getBalance(String[] coinData, Exchange exchange) throws Exception{
-        String returnValue = ReturnCode.NO_DATA.getValue();;
+        String returnValue = ReturnCode.NO_DATA.getValue();
+        log.info("[GATEIO][GET BALANCE] START");
         setCoinToken(coinData, exchange);
         SpotApi.APIlistSpotAccountsRequest account = spotApi.listSpotAccounts();
         List<SpotAccount> list = account.execute();
         returnValue = gson.toJson(list);
+        log.info("[GATEIO][GET BALANCE] END");
         return returnValue;
     }
 

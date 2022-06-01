@@ -10,6 +10,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.lbank.java.api.sdk.response.ResCancelOrderVo;
 import com.lbank.java.api.sdk.response.ResCreateOrderVo;
+import com.lbank.java.api.sdk.response.ResUserInfoVo;
 import com.lbank.java.api.sdk.service.LBankServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 
@@ -356,6 +357,18 @@ public class LbankImp extends AbstractExchange {
         return returnRes;
     }
 
+
+    @Override
+    public String getBalance(String[] coinData, Exchange exchange) throws Exception{
+        String returnValue = ReturnCode.NO_DATA.getValue();;
+        setCoinToken(coinData, exchange);
+        log.info("[LBANK][GET BALANCE] START");
+        String customId = UUID.randomUUID().toString();
+        ResUserInfoVo resUserInfoVo = service.getUserInfo();
+        returnValue = gson.toJson(resUserInfoVo.getData());
+        log.info("[LBANK][GET BALANCE] END");
+        return returnValue;
+    }
 
     @Override
     public String getOrderBook(Exchange exchange, String[] coinWithId) {

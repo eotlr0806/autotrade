@@ -61,6 +61,7 @@ public class BalanceService {
      *  이후 거래소에 맞춰 진행할 예정**/
     public String parseBalance(String exchange, String data) throws Exception{
         String returnValue     = "";
+        String NOT_SUPPORT     = "[]";
         Gson gson = Utils.getGson();
 
         if(exchange.equals(UtilsData.COINONE)){
@@ -74,19 +75,23 @@ public class BalanceService {
         }else if(exchange.equals(UtilsData.DCOIN)){
             returnValue = gson.toJson(makeDcoinArray(gson.fromJson(data, JsonArray.class)));
         }else if(exchange.equals(UtilsData.DEXORCA)){
-            // NOT Supported
+            returnValue = NOT_SUPPORT;
         }else if(exchange.equals(UtilsData.FLATA)){
-            // NOT Supported
+            returnValue = NOT_SUPPORT;
         }else if(exchange.equals(UtilsData.DIGIFINEX)){
-            // NOT Supported
+            returnValue = NOT_SUPPORT;
         }else if(exchange.equals(UtilsData.FOBLGATE)){
             returnValue = gson.toJson(makeFoblGateArray(gson.fromJson(data, JsonObject.class)));
         }else if(exchange.equals(UtilsData.GATEIO)){
             returnValue = gson.toJson(makeGateIoArray(gson.fromJson(data, JsonArray.class)));
+        }else if(exchange.equals(UtilsData.KUCOIN)){
+            returnValue = NOT_SUPPORT;
+        }else if(exchange.equals(UtilsData.LBANK)){
+            returnValue = gson.toJson(makeLbankArray(gson.fromJson(data, JsonObject.class)));
         }
 
 
-        if(returnValue.equals("[]")){
+        if(returnValue.equals(NOT_SUPPORT)){
             throw new Exception(data);
         }
         return returnValue;
@@ -262,6 +267,33 @@ public class BalanceService {
 
         return resultJson;
     }
+
+
+    /**
+     * Lbank 전용
+     * @param data
+     * @return
+     * @throws Exception
+     */
+    private JsonArray makeLbankArray(JsonObject data) throws Exception{
+        JsonArray jsonArray = new JsonArray();
+        Set<String> keyList = new HashSet();
+
+        JsonObject total = data.getAsJsonObject("asset");
+        JsonObject avail = data.getAsJsonObject("free");
+
+        for(String coin : total.keySet()){
+            BigDecimal totalVal = new BigDecimal(total.get(coin).getAsString());
+            if(totalVal.compareTo(BigDecimal.ZERO) == 0){
+                continue;
+            }
+            BigDecimal availVal = new BigDecimal(avail.get(coin).getAsString());
+            jsonArray.add(makeJson(coin, availVal.toPlainString(), totalVal.toPlainString()));
+        }
+
+        return jsonArray;
+    }
+
 
     /**
      * @param key 심볼
