@@ -371,7 +371,7 @@ public class DcoinImp extends AbstractExchange {
 
     @Override
     public String getBalance(String[] coinData, Exchange exchange) throws Exception{
-        String returnValue = ReturnCode.NO_DATA.getValue();;
+        String returnValue = ReturnCode.NO_DATA.getValue();
         setApiKey(coinData, exchange);
         // DCoin 의 경우, property 값들이 오름차순으로 입력되야 해서, 공통 함수로 빼기 어려움.
         JsonObject header = new JsonObject();

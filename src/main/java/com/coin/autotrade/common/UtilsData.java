@@ -109,6 +109,7 @@ public class UtilsData {
     public static String OKEX_TICK                      = "https://www.okex.com/api/v5/market/tickers";
     public static String OKEX_ENDPOINT_CREATE_ORDER     = "/api/v5/trade/order";
     public static String OKEX_ENDPOINT_CANCEL_ORDER     = "/api/v5/trade/cancel-order";
+    public static String OBEX_ENDPOINT_BALANCE          = "/api/v5/account/balance";
 
     public static String COINSBIT_URL                   = "https://coinsbit.io";
     public static String COINSBIT_ORDERBOOK             = "/api/v1/public/book";    // params : ?market=ETH_BTC&side=buy

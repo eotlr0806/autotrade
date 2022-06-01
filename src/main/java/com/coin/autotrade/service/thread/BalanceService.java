@@ -90,6 +90,8 @@ public class BalanceService {
             returnValue = gson.toJson(makeLbankArray(gson.fromJson(data, JsonObject.class)));
         }else if(exchange.equals(UtilsData.MEXC)){
             returnValue = gson.toJson(makeMexcArray(gson.fromJson(data, JsonObject.class)));
+        }else if(exchange.equals(UtilsData.OKEX)){
+            returnValue = gson.toJson(makeOkexArray(gson.fromJson(data, JsonArray.class)));
         }
 
 
@@ -313,6 +315,23 @@ public class BalanceService {
             jsonArray.add(makeJson(coin, avail.toPlainString(), frozen.add(avail).toPlainString()));
         }
         return jsonArray;
+    }
+
+    /**
+     * okEx 거래소 전용
+     * @param arrayData
+     * @return
+     * @throws Exception
+     */
+    private JsonArray makeOkexArray(JsonArray arrayData) throws Exception{
+        JsonArray resultJson = new JsonArray();
+        for(JsonElement arrayElement : arrayData){
+            JsonObject data      = arrayElement.getAsJsonObject();
+            BigDecimal available = new BigDecimal(data.get("availBal").getAsString()); // 사용가능
+            BigDecimal locked    = new BigDecimal(data.get("frozenBal").getAsString());    // 잠겨있는 금액 인듯
+            resultJson.add(makeJson(data.get("ccy").getAsString() ,available.toPlainString(),available.add(locked).toPlainString() ));
+        }
+        return resultJson;
     }
 
     /**

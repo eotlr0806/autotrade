@@ -17,6 +17,7 @@ import javax.net.ssl.HttpsURLConnection;
 import java.io.*;
 import java.math.BigDecimal;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.*;
@@ -378,6 +379,36 @@ public class OkexImp extends AbstractExchange {
         }
 
         return returnRes;
+    }
+
+
+
+    @Override
+    public String getBalance(String[] coinData, Exchange exchange) throws Exception{
+        String returnValue = ReturnCode.NO_DATA.getValue();
+
+        setCoinToken(coinData, exchange);
+        String url = UtilsData.OKEX_URL + UtilsData.OBEX_ENDPOINT_BALANCE;
+        String currentTime = getCurrentTime();
+        String sign = makeSignature(currentTime, "GET", UtilsData.OBEX_ENDPOINT_BALANCE, "");
+
+        Map<String, String> header = new HashMap<>();
+        header.put("OK-ACCESS-KEY", keyList.get(PUBLIC_KEY));
+        header.put("OK-ACCESS-SIGN", sign);
+        header.put("OK-ACCESS-TIMESTAMP", currentTime);
+        header.put("OK-ACCESS-PASSPHRASE", keyList.get(API_PASSWORD));
+
+        //String returnVal = getHttpMethod(url, header);
+        JsonObject returnVal = gson.fromJson(getHttpMethod(url, header), JsonObject.class);
+        String status        = returnVal.get("code").getAsString();
+        if(status.equals(SUCCESS)){
+            returnValue = gson.toJson(returnVal.get("data").getAsJsonArray().get(0).getAsJsonObject().get("details"));
+            log.info("[OKEX][GET BALANCE] Success response");
+        }else{
+            log.error("[OKEX][CREATE ORDER] Response :{}", gson.toJson(returnVal));
+        }
+
+        return returnValue;
     }
 
 
