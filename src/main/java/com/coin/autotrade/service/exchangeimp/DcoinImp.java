@@ -20,6 +20,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.security.MessageDigest;
+import java.time.Instant;
 import java.util.*;
 
 @Slf4j
@@ -27,6 +28,7 @@ public class DcoinImp extends AbstractExchange {
     final private String BUY                  = "BUY";
     final private String SELL                 = "SELL";
     final private String SUCCESS              = "0";
+    final private String LOCK                 = "250";
     final private String SUCCESS_CANCEL       = "2";
 
     @Override
@@ -369,6 +371,29 @@ public class DcoinImp extends AbstractExchange {
 
 
     @Override
+    public String getBalance(String[] coinData, Exchange exchange) throws Exception{
+        String returnValue = ReturnCode.NO_DATA.getValue();
+        setApiKey(coinData, exchange);
+        // DCoin 의 경우, property 값들이 오름차순으로 입력되야 해서, 공통 함수로 빼기 어려움.
+        JsonObject header = new JsonObject();
+        header.addProperty("api_key", keyList.get(PUBLIC_KEY));
+
+        String request       = UtilsData.DCOIN_BALANCE + "?api_key=" + URLEncoder.encode(keyList.get(PUBLIC_KEY))
+                                                       + "&sign=" + createSign(gson.toJson(header));
+        String response      = getHttpMethod(request);
+        JsonObject resObject = gson.fromJson(response, JsonObject.class);
+        String returnCode    = resObject.get("code").getAsString();
+        if(SUCCESS.equals(returnCode)){
+            returnValue = gson.toJson(resObject.get("data").getAsJsonObject().getAsJsonArray("coin_list"));
+            log.info("[DCOIN][GET BALANCE] Success response");
+        }else{
+            log.error("[DCOIN][GET BALANCE] Fail response : {}", gson.toJson(resObject));
+        }
+
+        return returnValue;
+    }
+
+    @Override
     public String createOrder(String type, String price, String cnt, String[] coinData, Exchange exchange) {
 
         String orderId   = ReturnCode.FAIL_CREATE.getValue();
@@ -396,6 +421,7 @@ public class DcoinImp extends AbstractExchange {
             } else {
                 log.error("[DCOIN][CREATE ORDER] response {}", gson.toJson(json));
             }
+            Thread.sleep(600);
         }catch(Exception e){
             log.error("[DCOIN][CREATE ORDER] Error {}", e.getMessage());
             e.printStackTrace();
@@ -421,10 +447,16 @@ public class DcoinImp extends AbstractExchange {
             String returnCode = json.get("code").getAsString();
             if (SUCCESS.equals(returnCode) || SUCCESS_CANCEL.equals(returnCode)) {
                 returnValue = ReturnCode.SUCCESS.getCode();
-                log.info("[DCOIN][CANCEL ORDER] response:{}", gson.toJson(json));
+                log.info("[DCOIN][CANCEL ORDER] SUCCESS CANCEL:{}", gson.toJson(json));
+            } else if(LOCK.equals(returnCode)){
+                log.info("[DCOIN][CANCEL ORDER] LOCK CANCEL.. RETRY SOON");
+                Thread.sleep(65000);
+                JsonObject reAgainJson = postHttpMethod(UtilsData.DCOIN_CANCEL_ORDER, makeEncodedParas(header));
+                log.info("[DCOIN][CANCEL ORDER] CANCEL AGAIN:{}", gson.toJson(reAgainJson));
             } else {
-                log.error("[DCOIN][CANCEL ORDER] response:{}", gson.toJson(json));
+                log.error("[DCOIN][CANCEL ORDER] FAIL CANCEL:{}", gson.toJson(json));
             }
+            Thread.sleep(600);
         }catch(Exception e){
             log.error("[DCOIN][CANCEL ORDER] Error: {}", e.getMessage());
             e.printStackTrace();

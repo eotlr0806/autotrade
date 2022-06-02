@@ -282,6 +282,50 @@ public abstract class AbstractExchange {
         return response.toString();
     }
 
+
+    protected String getHttpMethod(String url, Map<String, String> header) throws Exception{
+        log.info("[ABSTRACT EXCHANGE][GET HTTP] url : {}", url);
+        StringBuffer response = null;
+
+        URL urlObject = new URL(url);
+        HttpURLConnection connection = (HttpURLConnection) urlObject.openConnection();
+        connection.setRequestMethod("GET");
+        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
+        connection.setConnectTimeout(UtilsData.TIMEOUT_VALUE);
+        connection.setReadTimeout(UtilsData.TIMEOUT_VALUE);
+
+        if(!header.isEmpty()){
+            header.keySet().stream().forEach(key -> {
+                connection.setRequestProperty(key, header.get(key));
+            });
+        }
+
+        int returnCode    = connection.getResponseCode();
+        String returnMsg  = connection.getResponseMessage();
+        if(returnCode == HttpURLConnection.HTTP_OK){
+            InputStreamReader reader = null;
+            if(connection.getInputStream() != null){
+                reader = new InputStreamReader(connection.getInputStream());
+            }else if(connection.getErrorStream() != null){
+                reader = new InputStreamReader(connection.getErrorStream());
+            }else{
+                log.error("[ABSTRACT EXCHANGE][GET HTTP] Http response is 200. But inputstream is null!!");
+                throw new Exception();
+            }
+            BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+            response = new StringBuffer();
+            String inputLine = "";
+            while ((inputLine = br.readLine()) != null) {
+                response.append(inputLine);
+            }
+            br.close();
+        }else{
+            log.error("[ABSTRACT EXCHANGE][GET HTTP] Error code : {}, Error msg : {}", returnCode, returnMsg);
+            throw new Exception();
+        }
+        return response.toString();
+    }
+
     /**
      * mode 값을 받아서 RANDOM일 경우 RANDOM값을 전달
      * @param mode
