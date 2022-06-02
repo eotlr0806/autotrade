@@ -350,7 +350,8 @@
 
         // 조회가 느린 거래소의경우 조회시간을 느리게 조회
         isSlowExchange: (exchangeId) => {
-            if(exchangeId == 13 || exchangeId == 9 || exchangeId == 12){  // 코인스빗, Gateio, xtcom
+            if(exchangeId == 13 || exchangeId == 9
+                || exchangeId == 12 || exchangeId == 2){  // 코인스빗, Gateio, xtcom, Dcoin
                 return true;
             }
         },

@@ -28,6 +28,7 @@ public class DcoinImp extends AbstractExchange {
     final private String BUY                  = "BUY";
     final private String SELL                 = "SELL";
     final private String SUCCESS              = "0";
+    final private String LOCK                 = "250";
     final private String SUCCESS_CANCEL       = "2";
 
     @Override
@@ -420,6 +421,7 @@ public class DcoinImp extends AbstractExchange {
             } else {
                 log.error("[DCOIN][CREATE ORDER] response {}", gson.toJson(json));
             }
+            Thread.sleep(600);
         }catch(Exception e){
             log.error("[DCOIN][CREATE ORDER] Error {}", e.getMessage());
             e.printStackTrace();
@@ -445,10 +447,16 @@ public class DcoinImp extends AbstractExchange {
             String returnCode = json.get("code").getAsString();
             if (SUCCESS.equals(returnCode) || SUCCESS_CANCEL.equals(returnCode)) {
                 returnValue = ReturnCode.SUCCESS.getCode();
-                log.info("[DCOIN][CANCEL ORDER] response:{}", gson.toJson(json));
+                log.info("[DCOIN][CANCEL ORDER] SUCCESS CANCEL:{}", gson.toJson(json));
+            } else if(LOCK.equals(returnCode)){
+                log.info("[DCOIN][CANCEL ORDER] LOCK CANCEL.. RETRY SOON");
+                Thread.sleep(65000);
+                JsonObject reAgainJson = postHttpMethod(UtilsData.DCOIN_CANCEL_ORDER, makeEncodedParas(header));
+                log.info("[DCOIN][CANCEL ORDER] CANCEL AGAIN:{}", gson.toJson(reAgainJson));
             } else {
-                log.error("[DCOIN][CANCEL ORDER] response:{}", gson.toJson(json));
+                log.error("[DCOIN][CANCEL ORDER] FAIL CANCEL:{}", gson.toJson(json));
             }
+            Thread.sleep(600);
         }catch(Exception e){
             log.error("[DCOIN][CANCEL ORDER] Error: {}", e.getMessage());
             e.printStackTrace();
