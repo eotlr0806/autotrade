@@ -10,6 +10,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.binary.Hex;
+import org.apache.commons.lang3.StringUtils;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -17,6 +18,7 @@ import javax.net.ssl.HttpsURLConnection;
 import java.io.*;
 import java.math.BigDecimal;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
@@ -367,7 +369,6 @@ public class DigifinexImp extends AbstractExchange {
 
         return returnRes;
     }
-
     @Override
     public String createOrder(String type, String price, String cnt, String[] coinData, Exchange exchange){
         String orderId = ReturnCode.FAIL_CREATE.getValue();
@@ -414,7 +415,6 @@ public class DigifinexImp extends AbstractExchange {
             connection.setRequestMethod("POST");
             connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
             connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
-            // Set Header for OKKE API
             connection.setRequestProperty("ACCESS-KEY", keyList.get(PUBLIC_KEY));
             connection.setRequestProperty("ACCESS-TIMESTAMP", getTimestamp());
             connection.setRequestProperty("ACCESS-SIGN", sign);

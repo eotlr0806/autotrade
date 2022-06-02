@@ -148,6 +148,22 @@ let common = {
         return returnData;
     },
 
+    postWithoutBlock : async (url, body) => {
+        let returnData = null;
+        await axios.post(url, body).
+        then(response => {
+            if (response.data.status === CODE.SUCCESS){
+                returnData = response.data;
+            }else{
+                console.log(`[POST API ERROR] url: ${url}, response: ${JSON.stringify(response.data)}`);
+            }
+        }).
+        catch(error => {
+            console.log(`[POST API ERROR] url: ${url}, error: ${error}`);
+        });
+        return returnData;
+    },
+
     delete : async (url, body) => {
         common.blockPage("요청중입니다.");
         let returnData;

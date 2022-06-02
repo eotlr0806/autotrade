@@ -388,6 +388,33 @@ public class XtcomImp extends AbstractExchange {
     }
 
     @Override
+    public String getBalance(String[] coinData, Exchange exchange) throws Exception{
+        String returnValue = ReturnCode.NO_DATA.getValue();
+
+        setCoinToken(coinData, exchange);
+        String url = UtilsData.XTCOM_BALANCE;
+        long nonce = System.currentTimeMillis();
+        Map<String, Object> map = new HashMap<String, Object>();
+        map.put("accesskey", keyList.get(PUBLIC_KEY));
+        map.put("nonce", nonce);
+
+        url += "?accesskey=" + keyList.get(PUBLIC_KEY)
+                + "&nonce="  + nonce
+                + "&signature=" + getSignature(map);
+
+        JsonObject returnVal = gson.fromJson(getHttpMethod(url), JsonObject.class);
+        String status        = returnVal.get("code").getAsString();
+        if(status.equals(SUCCESS)){
+            returnValue = gson.toJson(returnVal.get("data"));
+            log.info("[XTCOM][GET BALANCE] Success response");
+        }else{
+            log.error("[XTCOM][CREATE ORDER] Response :{}", gson.toJson(returnVal));
+        }
+
+        return returnValue;
+    }
+
+    @Override
     public String createOrder(String type, String price, String cnt, String[] coinData, Exchange exchange){
         String orderId = ReturnCode.FAIL_CREATE.getValue();
         try {

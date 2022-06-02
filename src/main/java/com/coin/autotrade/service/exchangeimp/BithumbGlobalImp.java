@@ -368,6 +368,31 @@ public class BithumbGlobalImp extends AbstractExchange {
         return returnRes;
     }
 
+
+    @Override
+    public String getBalance(String[] coinData, Exchange exchange) throws Exception{
+        String returnValue = ReturnCode.NO_DATA.getValue();;
+
+        setCoinToken(coinData, exchange);
+
+        JsonObject header = new JsonObject();
+        header.addProperty("apiKey",    keyList.get(PUBLIC_KEY));
+        header.addProperty("assetType","spot");
+        header.addProperty("timestamp", System.currentTimeMillis());
+        header.addProperty("signature", setSignature(header));
+
+        JsonObject returnVal = postHttpMethod(UtilsData.BITHUMB_GLOBAL_BALANCE, gson.toJson(header));
+        String status        = returnVal.get("code").getAsString();
+        if(status.equals(SUCCESS)){
+            returnValue = gson.toJson(returnVal.get("data"));
+            log.info("[BITHUMBGLOBAL][GET BALANCE] Response");
+        }else{
+            log.error("[BITHUMBGLOBAL][GET BALANCE] Response :{}", gson.toJson(returnVal));
+        }
+        return returnValue;
+    }
+
+
     @Override
     public String createOrder(String type, String price, String cnt, String[] coinData, Exchange exchange){
         String response = ReturnCode.FAIL_CREATE.getValue();

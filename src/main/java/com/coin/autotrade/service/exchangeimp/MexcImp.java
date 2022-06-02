@@ -393,6 +393,24 @@ public class MexcImp extends AbstractExchange {
 
 
     @Override
+    public String getBalance(String[] coinData, Exchange exchange) throws Exception{
+        String returnValue = ReturnCode.NO_DATA.getValue();;
+        setCoinToken(coinData, exchange);
+
+
+        JsonObject object = new JsonObject();
+        String  result = call(UtilsData.MEXC_BALANCE, object, new HashMap<>());
+        JsonObject resultJson = gson.fromJson(result, JsonObject.class);
+        if(resultJson.get("code").getAsString().equals("200")){
+            returnValue = gson.toJson(resultJson.get("data"));
+            log.info("[MEXC][GET BALANCE] Success response");
+        }else{
+            log.error("[MEXC][GET BALANCE] Fail response : {}", result);
+        }
+        return returnValue;
+    }
+
+    @Override
     public String createOrder(String type, String price, String cnt, String[] coinData, Exchange exchange){
         String orderId = ReturnCode.FAIL_CREATE.getValue();
         try {
@@ -439,6 +457,21 @@ public class MexcImp extends AbstractExchange {
             e.printStackTrace();
         }
         return returnValue;
+    }
+
+    private String call(String uri, Object object, Map<String, String> params) throws Exception{
+
+        params.put("api_key",     keyList.get(PUBLIC_KEY));
+        params.put("req_time",    String.valueOf(Instant.now().getEpochSecond()));
+        params.put("recv_window", "60");
+        params.put("sign",        createSignature("GET", uri, params));
+
+        Request.Builder builder = new Request.Builder().url(UtilsData.MEXC_URL + uri + "?" + toQueryString(params));
+        builder.get();
+
+        Request  request  = builder.build();
+        Response response = OK_HTTP_CLIENT.newCall(request).execute();
+        return response.body().string();
     }
 
     private <T> T call(String method, String uri, Object object, Map<String, String> params, TypeReference<T> ref) throws Exception{

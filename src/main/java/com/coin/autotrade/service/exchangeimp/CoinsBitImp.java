@@ -421,6 +421,26 @@ public class CoinsBitImp extends AbstractExchange {
         return result;
     }
 
+    @Override
+    public String getBalance(String[] coinData, Exchange exchange) throws Exception{
+        String returnValue = ReturnCode.NO_DATA.getValue();;
+
+        setCoinToken(coinData, exchange);
+        JsonObject object = new JsonObject();
+        object.addProperty("request", UtilsData.COINSBIT_BALANCE);
+        object.addProperty("nonce",   Instant.now().getEpochSecond());
+
+        String url = UtilsData.COINSBIT_URL + UtilsData.COINSBIT_BALANCE;
+        JsonObject returnRes = postHttpMethod(url, object);
+        if(isSuccess(returnRes)){
+            returnValue = gson.toJson(returnRes.get("result"));
+            log.info("[COINSBIT][GET BALANCE] Success response");
+        }else{
+            log.error("[COINSBIT][GET BALANCE] Fail response : {}", gson.toJson(returnRes));
+        }
+
+        return returnValue;
+    }
 
     @Override
     public String createOrder(String type, String price, String cnt , String[] coinData, Exchange exchange){
