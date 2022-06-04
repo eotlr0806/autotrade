@@ -449,10 +449,10 @@ public class DcoinImp extends AbstractExchange {
                 returnValue = ReturnCode.SUCCESS.getCode();
                 log.info("[DCOIN][CANCEL ORDER] SUCCESS CANCEL:{}", gson.toJson(json));
             } else if(LOCK.equals(returnCode)){
-                log.info("[DCOIN][CANCEL ORDER] LOCK CANCEL.. RETRY SOON");
+                log.error("[DCOIN][CANCEL ORDER] LOCK CANCEL.. RETRY SOON");
                 Thread.sleep(65000);
                 JsonObject reAgainJson = postHttpMethod(UtilsData.DCOIN_CANCEL_ORDER, makeEncodedParas(header));
-                log.info("[DCOIN][CANCEL ORDER] CANCEL AGAIN:{}", gson.toJson(reAgainJson));
+                log.error("[DCOIN][CANCEL ORDER] CANCEL AGAIN:{}", gson.toJson(reAgainJson));
             } else {
                 log.error("[DCOIN][CANCEL ORDER] FAIL CANCEL:{}", gson.toJson(json));
             }
