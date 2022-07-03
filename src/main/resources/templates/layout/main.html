@@ -85,6 +85,11 @@
                                             <a class="nav-link" id="trade_config_embeded" data-toggle="tab" href="#trade_config" role="tab">거래 관리</a>
                                         </li>
                                     </ul>
+                                    <ul class="nav">
+                                        <li class="nav-item">
+                                            <a class="nav-link" id="trade_exception_embeded" data-toggle="tab" href="#trade_exception" role="tab">에러 확인</a>
+                                        </li>
+                                    </ul>
                                 </li>
                                 <li>
                                     <a href="#"><i class="icon-wrench3"></i> <span>계정</span></a>
@@ -124,6 +129,9 @@
                     </div>
                     <div class="tab-pane" id="trade_config" role="tabpanel">
                         <embed id="embed_trade_config" name="embed_trade_config" type="text/html"  src="/main/trade_config" style="width:100%; height:1000px;"></embed>
+                    </div>
+                    <div class="tab-pane" id="trade_exception" role="tabpanel">
+                        <embed id="embed_trade_exception" name="embed_trade_exception" type="text/html"  src="/main/trade_exception" style="width:100%; height:1000px;"></embed>
                     </div>
 
                     <div class="tab-pane" id="account" role="tabpanel">
@@ -191,6 +199,10 @@
             if(item.target.id != 'trade_config_embeded'){
                 $('#trade_config').empty();
                 $('#trade_config').append(`<embed id="embed_trade_config" name="embed_trade_config" type="text/html"  src="/main/trade_config" style="width:100%; height:1000px;"></embed>`);
+            }
+            if(item.target.id != 'trade_exception_embeded'){
+                $('#trade_exception').empty();
+                $('#trade_exception').append(`<embed id="embed_trade_exception" name="embed_trade_exception" type="text/html"  src="/main/trade_exception" style="width:100%; height:1000px;"></embed>`);
             }
 
         });

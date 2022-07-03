@@ -7,6 +7,7 @@ import com.coin.autotrade.repository.LiquidityRepository;
 import com.coin.autotrade.service.CoinService;
 import com.coin.autotrade.service.exchangeimp.AbstractExchange;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 import java.util.Map;
 
@@ -14,7 +15,7 @@ import java.util.Map;
  * Liquidity Trade Thread
  * DESC : 호가 유동성 쓰레드
  */
-@org.springframework.stereotype.Service
+@Service
 @Slf4j
 public class LiquidityTradeThread implements Runnable{
 

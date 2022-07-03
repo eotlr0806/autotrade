@@ -1,14 +1,21 @@
 package com.coin.autotrade.service.exchangeimp;
 
-import com.coin.autotrade.common.UtilsData;
 import com.coin.autotrade.common.Utils;
+import com.coin.autotrade.common.UtilsData;
 import com.coin.autotrade.common.enumeration.ReturnCode;
 import com.coin.autotrade.common.enumeration.Trade;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -352,19 +359,25 @@ public class BithumbGlobalImp extends AbstractExchange {
 
     @Override
     public String getOrderBook(Exchange exchange, String[] coinWithId) {
+        log.info("[BITHUMBGLOBAL][ORDER BOOK] START");
         String returnRes = ReturnCode.FAIL.getValue();
 
-        log.info("[BITHUMBGLOBAL][ORDER BOOK] START");
         try{
-            String symbol   = getSymbol(coinWithId,exchange);
-            String request  = UtilsData.BITHUMB_GLOBAL_ORDERBOOK + "?symbol=" + symbol;
-            returnRes       = getHttpMethod(request);
+            String symbol  = getSymbol(coinWithId,exchange);
+            String request = UtilsData.BITHUMB_GLOBAL_ORDERBOOK + "?symbol=" + symbol;
+            returnRes = getHttpMethod(request);
+            String status = gson.fromJson(returnRes, JsonObject.class).get("code").getAsString();
+            if (!status.equals(SUCCESS)){
+                insertLog(request,"호가조회", returnRes);
+                log.error("[BITHUMBGLOBAL][ORDER BOOK] Response:{}", returnRes);
+                returnRes = ReturnCode.FAIL.getValue();
+            }
         }catch (Exception e){
             log.error("[BITHUMBGLOBAL][ORDER BOOK] Error {}", e.getMessage());
-            e.printStackTrace();
+            insertLog(Arrays.toString(coinWithId),"호가조회",e.getMessage());
         }
-        log.info("[BITHUMBGLOBAL][ORDER BOOK] END");
 
+        log.info("[BITHUMBGLOBAL][ORDER BOOK] END");
         return returnRes;
     }
 
@@ -388,6 +401,7 @@ public class BithumbGlobalImp extends AbstractExchange {
             log.info("[BITHUMBGLOBAL][GET BALANCE] Response");
         }else{
             log.error("[BITHUMBGLOBAL][GET BALANCE] Response :{}", gson.toJson(returnVal));
+            insertLog(gson.toJson(header), "자산조회", gson.toJson(returnVal));
         }
         return returnValue;
     }
@@ -418,9 +432,11 @@ public class BithumbGlobalImp extends AbstractExchange {
                 response        = obj.get("orderId").getAsString();
                 log.info("[BITHUMBGLOBAL][CREATE ORDER] Response : {}", gson.toJson(returnVal));
             }else{
+                insertLog(gson.toJson(header), "주문", gson.toJson(returnVal));
                 log.error("[BITHUMBGLOBAL][CREATE ORDER] Response :{}", gson.toJson(returnVal));
             }
         }catch (Exception e){
+            insertLog("", "주문", e.getMessage());
             log.error("[BITHUMBGLOBAL][CREATE ORDER] Error {}",e.getMessage());
             e.printStackTrace();
         }
@@ -447,10 +463,12 @@ public class BithumbGlobalImp extends AbstractExchange {
                 returnValue = ReturnCode.SUCCESS.getCode();
                 log.info("[BITHUMBGLOBAL][CANCEL ORDER] Response:{}", gson.toJson(json));
             } else {
+                insertLog(gson.toJson(header), "취소", gson.toJson(json));
                 log.error("[BITHUMBGLOBAL][CANCEL ORDER] Response:{}", gson.toJson(json));
             }
         }catch(Exception e){
             log.error("[BITHUMBGLOBAL][CANCEL ORDER] Error {}", e.getMessage());
+            insertLog("", "취소", e.getMessage());
             e.printStackTrace();
         }
         return returnValue;
@@ -458,6 +476,7 @@ public class BithumbGlobalImp extends AbstractExchange {
 
 
     /* Http post method */
+    // TODO : restTemplate 으로 요청 시, System error 를 뱉음. 여유될때 변경
     private JsonObject postHttpMethod(String targetUrl, String payload) throws Exception{
 
         log.info("[BITHUMBGLOBAL][POST HTTP] targetUrl : {} , request : {}",targetUrl, payload);
@@ -575,6 +594,10 @@ public class BithumbGlobalImp extends AbstractExchange {
         }else{
             return false;
         }
+    }
+
+    private void insertLog(String request, String action, String msg){
+        exceptionLog.makeLogAndInsert("빗썸글로벌",request, action, msg);
     }
 
 }

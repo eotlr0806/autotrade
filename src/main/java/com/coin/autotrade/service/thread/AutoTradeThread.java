@@ -8,12 +8,13 @@ import com.coin.autotrade.repository.AutoTradeRepository;
 import com.coin.autotrade.service.CoinService;
 import com.coin.autotrade.service.exchangeimp.AbstractExchange;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 /**
  * Auto Trade Thread
  * DESC : 자전거래용 쓰레드
  */
-@org.springframework.stereotype.Service
+@Service
 @Slf4j
 public class AutoTradeThread implements Runnable{
 
