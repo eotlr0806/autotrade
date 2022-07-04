@@ -19,6 +19,13 @@ public class ExceptionLogService {
         return exceptionLogRepository.findAll();
     }
 
+    // 하루 전 데이터를 모두 삭제함.
+    public void deleteByTimeBeforeOneDay(){
+        LocalDateTime localDateTime = LocalDateTime.now();
+        localDateTime = localDateTime.minusDays(1L);
+        exceptionLogRepository.deleteByDateTimeLessThan(localDateTime);
+    }
+
     /**
      * make and insert
      */
