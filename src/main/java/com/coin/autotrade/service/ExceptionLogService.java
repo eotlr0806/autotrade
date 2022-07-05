@@ -5,6 +5,7 @@ import com.coin.autotrade.repository.ExceptionLogRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.util.ObjectUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -20,9 +21,12 @@ public class ExceptionLogService {
     }
 
     // 하루 전 데이터를 모두 삭제함.
-    public void deleteByTimeBeforeOneDay(){
+    public void deleteByTimeBefore(long day){
+        if(ObjectUtils.isEmpty(day)){
+            return ;
+        }
         LocalDateTime localDateTime = LocalDateTime.now();
-        localDateTime = localDateTime.minusDays(1L);
+        localDateTime = localDateTime.minusDays(day);
         exceptionLogRepository.deleteByDateTimeLessThan(localDateTime);
     }
 
