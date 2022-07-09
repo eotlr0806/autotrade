@@ -8,6 +8,7 @@ import com.coin.autotrade.common.enumeration.Trade;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
 import com.coin.autotrade.service.ExceptionLogService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
@@ -42,7 +43,9 @@ public abstract class AbstractExchange {
      RealtimeSync realtimeSync              = null;
      CoinService coinService                = null; // Fishing 시, 사용하기 위한 coin Service class
      String realtimeTargetInitRate          = null; // realtime 에서 사용하는 실시간 동기화 타겟의 최초 현재 값
-     Gson gson                              = new Gson();
+     Gson gson                              = new Gson(); // 그만써가는걸로...
+     ObjectMapper mapper                    = new ObjectMapper();
+
      protected ConcurrentHashMap<String, String> keyList  = new ConcurrentHashMap<>();
      protected ExceptionLogService exceptionLog = (ExceptionLogService) BeanUtils.getBean(ExceptionLogService.class);  // Bean 주입
      protected RestTemplate restTemplate = (RestTemplate) BeanUtils.getBean(RestTemplate.class);
@@ -249,30 +252,30 @@ public abstract class AbstractExchange {
         log.info("[ABSTRACT EXCHANGE][GET HTTP] url : {}", url);
 
         HttpEntity entity = new HttpEntity(getHeader(null));
-        ResponseEntity<Object> responseEntity = restTemplate.exchange(
+        ResponseEntity<String> responseEntity = restTemplate.exchange(
                 url,
                 HttpMethod.GET,
                 entity,
-                Object.class
+                String.class
         );
 
         log.info("[ABSTRACT EXCHANGE][GET HTTP] url : {}", url);
-        return gson.toJson(responseEntity.getBody());
+        return responseEntity.getBody();
     }
 
     protected String getHttpMethod(String url, Map<String, String> header) throws Exception {
         log.info("[ABSTRACT EXCHANGE][GET HTTP] url : {}", url);
 
         HttpEntity entity = new HttpEntity(getHeader(header));
-        ResponseEntity<Object> responseEntity = restTemplate.exchange(
+        ResponseEntity<String> responseEntity = restTemplate.exchange(
                 url,
                 HttpMethod.GET,
                 entity,
-                Object.class
+                String.class
         );
 
         log.info("[ABSTRACT EXCHANGE][GET HTTP] url : {}", url);
-        return gson.toJson(responseEntity.getBody());
+        return responseEntity.getBody();
     }
 
     protected HttpHeaders getHeader(Map<String, String> header){

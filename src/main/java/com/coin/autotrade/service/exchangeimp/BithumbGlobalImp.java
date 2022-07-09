@@ -28,6 +28,7 @@ import java.math.BigDecimal;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 public class BithumbGlobalImp extends AbstractExchange {
@@ -387,14 +388,13 @@ public class BithumbGlobalImp extends AbstractExchange {
         String returnValue = ReturnCode.NO_DATA.getValue();;
 
         setCoinToken(coinData, exchange);
+        Map<String, String> header = new LinkedHashMap<>();
+        header.put("apiKey", keyList.get(PUBLIC_KEY));
+        header.put("assetType", "spot");
+        header.put("timestamp", String.valueOf(System.currentTimeMillis()));
+        header.put("signature", setSignature(header));
 
-        JsonObject header = new JsonObject();
-        header.addProperty("apiKey",    keyList.get(PUBLIC_KEY));
-        header.addProperty("assetType","spot");
-        header.addProperty("timestamp", System.currentTimeMillis());
-        header.addProperty("signature", setSignature(header));
-
-        JsonObject returnVal = postHttpMethod(UtilsData.BITHUMB_GLOBAL_BALANCE, gson.toJson(header));
+        JsonObject returnVal = postHttpMethod(UtilsData.BITHUMB_GLOBAL_BALANCE, mapper.writeValueAsString(header));
         String status        = returnVal.get("code").getAsString();
         if(status.equals(SUCCESS)){
             returnValue = gson.toJson(returnVal.get("data"));
@@ -414,18 +414,19 @@ public class BithumbGlobalImp extends AbstractExchange {
             String cutCnt = setCutCoinCnt(getSymbol(coinData, exchange), cnt);
             setCoinToken(coinData, exchange);
             String action     = parseAction(type);
-            JsonObject header = new JsonObject();
-            header.addProperty("apiKey",    keyList.get(PUBLIC_KEY));
-            header.addProperty("msgNo",     System.currentTimeMillis());
-            header.addProperty("price",     price);
-            header.addProperty("quantity",  cutCnt);
-            header.addProperty("side",      action);
-            header.addProperty("symbol",    getSymbol(coinData, exchange));
-            header.addProperty("timestamp", System.currentTimeMillis());
-            header.addProperty("type",      "limit"); // 지정가
-            header.addProperty("signature", setSignature(header));
 
-            JsonObject returnVal = postHttpMethod(UtilsData.BITHUMB_GLOBAL_CREATE_ORDER, gson.toJson(header));
+            Map<String, String> header = new LinkedHashMap<>();
+            header.put("apiKey", keyList.get(PUBLIC_KEY));
+            header.put("msgNo", String.valueOf(System.currentTimeMillis()));
+            header.put("price", price);
+            header.put("quantity", cutCnt);
+            header.put("side", action);
+            header.put("symbol", getSymbol(coinData, exchange));
+            header.put("timestamp", String.valueOf(System.currentTimeMillis()));
+            header.put("type", "limit");
+            header.put("signature", setSignature(header));
+
+            JsonObject returnVal = postHttpMethod(UtilsData.BITHUMB_GLOBAL_CREATE_ORDER, mapper.writeValueAsString(header));
             String status        = returnVal.get("code").getAsString();
             if(status.equals(SUCCESS)){
                 JsonObject obj  = returnVal.get("data").getAsJsonObject();
@@ -449,15 +450,15 @@ public class BithumbGlobalImp extends AbstractExchange {
         int returnValue = ReturnCode.FAIL.getCode();
 
         try {
-            JsonObject header = new JsonObject();
-            header.addProperty("apiKey",    keyList.get(PUBLIC_KEY));
-            header.addProperty("msgNo",     System.currentTimeMillis());
-            header.addProperty("orderId",   orderId);
-            header.addProperty("symbol",    symbol);
-            header.addProperty("timestamp", System.currentTimeMillis());
-            header.addProperty("signature", setSignature(header));
+            Map<String, String> header = new LinkedHashMap<>();
+            header.put("apiKey", keyList.get(PUBLIC_KEY));
+            header.put("msgNo", String.valueOf(System.currentTimeMillis()));
+            header.put("orderId", orderId);
+            header.put("symbol", symbol);
+            header.put("timestamp", String.valueOf(System.currentTimeMillis()));
+            header.put("signature", setSignature(header));
 
-            JsonObject json = postHttpMethod(UtilsData.BITHUMB_GLOBAL_CANCEL_ORDER, gson.toJson(header));
+            JsonObject json = postHttpMethod(UtilsData.BITHUMB_GLOBAL_CANCEL_ORDER, mapper.writeValueAsString(header));
             String status   = json.get("code").getAsString();
             if (status.equals(SUCCESS) || status.equals(SUCCESS_CANCEL)) {
                 returnValue = ReturnCode.SUCCESS.getCode();
@@ -474,46 +475,18 @@ public class BithumbGlobalImp extends AbstractExchange {
         return returnValue;
     }
 
-
-    /* Http post method */
-    // TODO : restTemplate 으로 요청 시, System error 를 뱉음. 여유될때 변경
     private JsonObject postHttpMethod(String targetUrl, String payload) throws Exception{
-
+        log.info("[BITHUMBGLOBAL][POST HTTP] start request");
         log.info("[BITHUMBGLOBAL][POST HTTP] targetUrl : {} , request : {}",targetUrl, payload);
-        URL url = new URL(targetUrl);
-        HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
-        connection.setDoOutput(true);
-        connection.setDoInput(true);
-        connection.setConnectTimeout(UtilsData.TIMEOUT_VALUE);
-        connection.setReadTimeout(UtilsData.TIMEOUT_VALUE);
-        connection.setRequestMethod("POST");
-        connection.setRequestProperty("Content-Type", "application/json");
-        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
-        // Writing the post data to the HTTP request body
-        BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream()));
-        bw.write(payload);
-        bw.close();
-        StringBuffer response = new StringBuffer();
-        if(connection.getResponseCode() == HttpsURLConnection.HTTP_OK){
-            BufferedReader br = null;
-            if(connection.getInputStream() != null){
-                br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            }else if(connection.getErrorStream() != null){
-                br = new BufferedReader(new InputStreamReader(connection.getErrorStream()));
-            }else{
-                log.error("[BITHUMBGLOBAL][POST HTTP] Return Code is 200. But inputstream and errorstream is null");
-                throw new Exception();
-            }
-            String inputLine = "";
-            while ((inputLine = br.readLine()) != null) {
-                response.append(inputLine);
-            }
-            br.close();
-        }else{
-            log.error("[BITHUMBGLOBAL][POST HTTP] Return code : {}, msg : {}",connection.getResponseCode(), connection.getResponseMessage());
-            throw new Exception();
-        }
-        return gson.fromJson(response.toString(), JsonObject.class);
+
+        HttpEntity<String> response = restTemplate.exchange(
+                targetUrl,
+                HttpMethod.POST,
+                new HttpEntity<String>(payload, getHeader(null)),
+                String.class
+        );
+        log.info("[BITHUMBGLOBAL][POST HTTP] end request");
+        return gson.fromJson(response.getBody(), JsonObject.class);
     }
 
 
@@ -557,18 +530,10 @@ public class BithumbGlobalImp extends AbstractExchange {
         return String.valueOf(Math.floor(doubleCnt * pow) / pow);
     }
 
-    /* making signature method */
-    private String setSignature(JsonObject header) throws Exception{
-        String sign = "";
-        int idx = 0;
-        for(String key : header.keySet()){
-            if(idx == header.size() - 1){
-                sign += key + "=" + header.get(key).getAsString();
-            }else{
-                sign += key + "=" + header.get(key).getAsString() + "&";
-            }
-            idx++;
-        }
+    private String setSignature(Map<String, String> header) throws Exception{
+        String sign = header.keySet().stream()
+                .map(key -> key+"="+header.get(key))
+                .collect(Collectors.joining("&"));
         return getHmacSha256(sign);
     }
 

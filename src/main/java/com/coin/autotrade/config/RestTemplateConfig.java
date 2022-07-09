@@ -4,14 +4,12 @@ import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.BufferingClientHttpRequestFactory;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.client.RestTemplate;
 
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -23,13 +21,10 @@ public class RestTemplateConfig {
     @Bean
     public RestTemplate restTemplate(){
         RestTemplate restTemplate = new RestTemplateBuilder()
-                .requestFactory(() -> new BufferingClientHttpRequestFactory(new SimpleClientHttpRequestFactory()))
                 .setConnectTimeout(Duration.ofMillis(10000))
                 .setReadTimeout(Duration.ofMillis(10000))
-                .additionalMessageConverters(new StringHttpMessageConverter(Charset.forName("UTF-8")))
                 .build();
         getConverter(restTemplate);
-
         return restTemplate;
     }
 
@@ -38,7 +33,8 @@ public class RestTemplateConfig {
         converter.setSupportedMediaTypes(Collections.singletonList(MediaType.ALL));
         List<HttpMessageConverter<?>> messageConverters = new ArrayList<>();
         messageConverters.add(converter);
-        restTemplate.setMessageConverters(messageConverters);
+        messageConverters.add(new StringHttpMessageConverter(StandardCharsets.UTF_8));  // UTF-8 으로 default reset
+        restTemplate.getMessageConverters().addAll(messageConverters);
     }
 
 }
