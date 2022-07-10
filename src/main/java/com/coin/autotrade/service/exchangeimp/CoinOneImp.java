@@ -3,6 +3,7 @@ package com.coin.autotrade.service.exchangeimp;
 
 import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.common.UtilsData;
+import com.coin.autotrade.common.enumeration.LogAction;
 import com.coin.autotrade.common.enumeration.ReturnCode;
 import com.coin.autotrade.common.enumeration.Trade;
 import com.coin.autotrade.model.*;
@@ -12,6 +13,8 @@ import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.tomcat.util.codec.binary.Base64;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -112,7 +115,6 @@ public class CoinOneImp extends AbstractExchange {
         }catch(Exception e){
             returnCode = ReturnCode.FAIL.getCode();
             log.error("[COINONE][ERROR][AUTOTRADE] {}", e.getMessage());
-            e.printStackTrace();
         }
         log.info("[COINONE][AUTOTRADE] END");
 
@@ -121,11 +123,11 @@ public class CoinOneImp extends AbstractExchange {
 
 
     @Override
-    public int startLiquidity(Map list) {
+    public int startLiquidity(Map<String, LinkedList<String>> list) {
         int returnCode = ReturnCode.SUCCESS.getCode();
 
-        Queue<String> sellQueue = (LinkedList) list.get("sell");
-        Queue<String> buyQueue  = (LinkedList) list.get("buy");
+        Queue<String> sellQueue = list.get("sell");
+        Queue<String> buyQueue  = list.get("buy");
         Queue<Map<String,String>> cancelList = new LinkedList<>();
 
         try{
@@ -169,7 +171,6 @@ public class CoinOneImp extends AbstractExchange {
         }catch (Exception e){
             returnCode = ReturnCode.FAIL.getCode();
             log.error("[COINONE][LIQUIDITY] ERROR : {}", e.getMessage());
-            e.printStackTrace();
         }
         log.info("[COINONE][LIQUIDITY] END");
         return returnCode;
@@ -262,7 +263,6 @@ public class CoinOneImp extends AbstractExchange {
         }catch (Exception e){
             returnCode = ReturnCode.FAIL.getCode();
             log.error("[COINONE][FISHINGTRADE] ERROR : {}", e.getMessage());
-            e.printStackTrace();
         }
 
         log.info("[COINONE][FISHINGTRADE] END");
@@ -362,7 +362,6 @@ public class CoinOneImp extends AbstractExchange {
             }
         }catch (Exception e){
             log.error("[COINONE][REALTIME SYNC TRADE] ERROR :{} ", e.getMessage());
-            e.printStackTrace();
         }
         log.info("[COINONE][REALTIME SYNC TRADE] END");
         return returnCode;
@@ -396,13 +395,18 @@ public class CoinOneImp extends AbstractExchange {
         String returnRes = "";
         try{
             log.info("[COINONE][GET ORDER BOOK] START");
-            String coin    = coinWithId[0];
-            String request = UtilsData.COINONE_ORDERBOOK + "?currency=" + coin;
+            String coin     = coinWithId[0];
+            String request  = UtilsData.COINONE_ORDERBOOK + "?currency=" + coin;
             returnRes = getHttpMethod(request);
+            String result   = gson.fromJson(returnRes, JsonObject.class).get("errorCode").getAsString();
+            if(!SUCCESS.equals(result)){
+                log.error("[COINONE][ORDER BOOK] Error : {}",returnRes);
+                insertLog(request, LogAction.ORDER_BOOK, returnRes);
+            }
             log.info("[COINONE][Order book] END");
         }catch (Exception e){
-            log.error("[COINONE][ORDER BOOK] {}",e.getMessage());
-            e.printStackTrace();
+            log.error("[COINONE][ORDER BOOK] Error : {}",e.getMessage());
+            insertLog(Arrays.toString(coinWithId), LogAction.ORDER_BOOK, e.getMessage());
         }
 
         return returnRes;
@@ -417,7 +421,7 @@ public class CoinOneImp extends AbstractExchange {
             setCoinToken(coinData, exchange);
             String action     = parseAction(type);
             String url        = ( action.equals(BUY) ) ? UtilsData.COINONE_LIMIT_BUY : UtilsData.COINONE_LIMIT_SELL;
-            JsonObject header = setDefaultRequest(cnt, coinData[0], price);
+            Map<String, String> header = setDefaultRequest(cnt, coinData[0], price);
             JsonObject json   = postHttpMethod(url, gson.toJson(header));
             String returnCode = json.get("errorCode").getAsString();
             if(SUCCESS.equals(returnCode)){
@@ -425,10 +429,11 @@ public class CoinOneImp extends AbstractExchange {
                 log.info("[COINONE][CREATE ORDER] Response. mode :{}, response :{}",  action, gson.toJson(json));
             }else{
                 log.error("[COINONE][CREATE ORDER] Response. mode :{}, response :{}", action, gson.toJson(json));
+                insertLog(gson.toJson(header), LogAction.CREATE_ORDER, gson.toJson(json));
             }
         }catch (Exception e){
             log.error("[COINONE][CREATE ORDER] Error {}", e.getMessage());
-            e.printStackTrace();
+            insertLog("", LogAction.CREATE_ORDER, e.getMessage());
         }
         return orderId;
     }
@@ -443,9 +448,9 @@ public class CoinOneImp extends AbstractExchange {
         int returnValue = ReturnCode.FAIL.getCode();
 
         try{
-            JsonObject header = setDefaultRequest(data.get("qty"), data.get("currency"), data.get("price"));
-            header.addProperty("is_ask",  Integer.parseInt(data.get("is_ask")));
-            header.addProperty("order_id",data.get("order_id"));
+            Map<String, String> header = setDefaultRequest(data.get("qty"), data.get("currency"), data.get("price"));
+            header.put("is_ask",  data.get("is_ask"));
+            header.put("order_id",data.get("order_id"));
 
             JsonObject json   = postHttpMethod(UtilsData.COINONE_CANCEL , gson.toJson(header));
             String returnCode = json.get("errorCode").getAsString();
@@ -455,10 +460,11 @@ public class CoinOneImp extends AbstractExchange {
                 log.info("[COINONE][CANCEL ORDER] Response : {} ",  gson.toJson(json) );
             }else{
                 log.error("[COINONE][CANCEL ORDER] Response : {}" , gson.toJson(json));
+                insertLog(gson.toJson(header), LogAction.CANCEL_ORDER, gson.toJson(json));
             }
         }catch (Exception e){
             log.error("[COINONE][CANCEL ORDER] ERROR {}", e.getMessage());
-            e.printStackTrace();
+            insertLog("", LogAction.CANCEL_ORDER, e.getMessage());
         }
         return returnValue;
     }
@@ -468,9 +474,10 @@ public class CoinOneImp extends AbstractExchange {
         String returnValue = ReturnCode.NO_DATA.getValue();;
 
         setCoinToken(coinData, exchange);
-        JsonObject header = new JsonObject();
-        header.addProperty("access_token", keyList.get(PUBLIC_KEY));
-        header.addProperty("nonce",System.currentTimeMillis());
+        Map<String, String> header = new LinkedHashMap<>();
+        header.put("access_token", keyList.get(PUBLIC_KEY));
+        header.put("nonce", String.valueOf(System.currentTimeMillis()));
+
         JsonObject json   = postHttpMethod(UtilsData.COINONE_BALANCE , gson.toJson(header));
         String returnCode = json.get("errorCode").getAsString();
         if(SUCCESS.equals(returnCode)){
@@ -478,6 +485,7 @@ public class CoinOneImp extends AbstractExchange {
             log.info("[COINONE][GET BALANCE] Success Response");
         }else{
             log.error("[COINONE][GET BALANCE] Response : {}" , gson.toJson(json));
+            insertLog(gson.toJson(header), LogAction.BALANCE, gson.toJson(json));
             throw new Exception(gson.toJson(json));
         }
         return returnValue;
@@ -498,71 +506,41 @@ public class CoinOneImp extends AbstractExchange {
         defaultMap.put("qty",cnt);
         defaultMap.put("currency",currency);
         defaultMap.put("price", price);
-
         return defaultMap;
     }
 
     /* default 로 필요한 데이터를 받아 request 전 셋팅 후 반환 */
-    private JsonObject setDefaultRequest(String cnt, String currency, String price) throws Exception{
+    private Map<String, String> setDefaultRequest(String cnt, String currency, String price) throws Exception{
         Thread.sleep(300);
         long nonce = System.currentTimeMillis();
-        JsonObject defaultRequest = new JsonObject();
-
-        defaultRequest.addProperty("access_token", keyList.get(PUBLIC_KEY));
-        defaultRequest.addProperty("nonce",nonce);
-        defaultRequest.addProperty("qty",Double.parseDouble(cnt));
-        defaultRequest.addProperty("currency",currency);
-        defaultRequest.addProperty("price",price);
-
-        return defaultRequest;
+        Map<String, String> defaultMap = new LinkedHashMap<>();
+        defaultMap.put("access_token", keyList.get(PUBLIC_KEY));
+        defaultMap.put("nonce", String.valueOf(nonce));
+        defaultMap.put("qty", String.valueOf(Double.parseDouble(cnt)));
+        defaultMap.put("currency", currency);
+        defaultMap.put("price", price);
+        return defaultMap;
     }
 
     /* HTTP POST Method for coinone */
     private JsonObject postHttpMethod(String targetUrl, String payload) throws Exception {
-
+        log.info("[COINONE][POST REQUEST] post http start");
         log.info("[COINONE][POST REQUEST] Target url : {}, Request : {}", targetUrl, payload);
 
-        URL url = new URL(targetUrl);
         String encodingPayload = Base64.encodeBase64String(payload.getBytes());    // Encoding to base 64
-
         String signature = makeHmacSignature(encodingPayload, keyList.get(SECRET_KEY).toUpperCase());
+        Map<String, String> header = new HashMap<>();
+        header.put("X-COINONE-PAYLOAD", encodingPayload);
+        header.put("X-COINONE-SIGNATURE", signature);
 
-        HttpURLConnection connection = (HttpsURLConnection) url.openConnection();
-        connection.setDoOutput(true);
-        connection.setDoInput(true);
-        connection.setConnectTimeout(UtilsData.TIMEOUT_VALUE);
-        connection.setReadTimeout(UtilsData.TIMEOUT_VALUE);
-        connection.setRequestMethod("POST");
-        connection.setRequestProperty("Content-Type", "application/json");
-        connection.setRequestProperty("X-COINONE-PAYLOAD", encodingPayload);
-        connection.setRequestProperty("X-COINONE-SIGNATURE", signature);
-
-        // Writing the post data to the HTTP request body
-        BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream()));
-        bw.write(encodingPayload);
-        bw.close();
-        StringBuffer response = new StringBuffer();
-        if(connection.getResponseCode() == HttpsURLConnection.HTTP_OK){
-            BufferedReader br = null;
-            if(connection.getInputStream() != null){
-                br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            }else if(connection.getErrorStream() != null){
-                br = new BufferedReader(new InputStreamReader(connection.getErrorStream()));
-            }else{
-                log.error("[COINONE][POST HTTP] Return Code is 200. But inputstream and errorstream is null");
-                throw new Exception();
-            }
-            String inputLine = "";
-            while ((inputLine = br.readLine()) != null) {
-                response.append(inputLine);
-            }
-            br.close();
-        }else{
-            log.error("[COINONE][POST HTTP] Return code : {}, msg : {}",connection.getResponseCode(), connection.getResponseMessage());
-            throw new Exception();
-        }
-        return gson.fromJson(response.toString(), JsonObject.class);
-
+        HttpEntity<String> response = restTemplate.exchange(
+                targetUrl,
+                HttpMethod.POST,
+                new HttpEntity<String>(payload, getHeader(header)),
+                String.class
+        );
+        log.info("[COINONE][POST REQUEST] post http end");
+        return gson.fromJson(response.getBody(), JsonObject.class);
     }
 
     private String parseAction(String action){
@@ -583,6 +561,8 @@ public class CoinOneImp extends AbstractExchange {
             return false;
         }
     }
-
+    private void insertLog(String request, LogAction action, String msg){
+        exceptionLog.makeLogAndInsert("코인원",request, action, msg);
+    }
 }
 
