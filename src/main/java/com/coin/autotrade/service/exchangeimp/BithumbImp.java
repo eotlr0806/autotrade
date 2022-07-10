@@ -397,7 +397,7 @@ public class BithumbImp extends AbstractExchange {
         }else{
             returnValue = rgResultDecode;
             log.error("[BITHUMB][GET BALANCE] response :{}", rgResultDecode);
-            insertLog(gson.toJson(rgParams), LogAction.BALANCE, rgResultDecode);
+            insertLog(createLog(rgParams, httpHeaders), LogAction.BALANCE, rgResultDecode);
         }
 
         return returnValue;
@@ -429,7 +429,7 @@ public class BithumbImp extends AbstractExchange {
                 log.info("[BITHUMB][CREATE ORDER] response : {}", rgResultDecode);
             }else{
                 log.error("[BITHUMB][CREATE ORDER] response :{}", rgResultDecode);
-                insertLog(gson.toJson(rgParams), LogAction.CREATE_ORDER, rgResultDecode);
+                insertLog(createLog(rgParams, httpHeaders), LogAction.CREATE_ORDER, rgResultDecode);
             }
         }catch (Exception e){
             log.error("[BITHUMB][CREATE ORDER] ERROR {}",e.getMessage());
@@ -451,14 +451,13 @@ public class BithumbImp extends AbstractExchange {
             String api_host                     = UtilsData.BITHUMB_URL + UtilsData.BITHUMB_ENDPOINT_CANCEL_ORDER;
             HashMap<String, String> httpHeaders = getHttpHeaders(UtilsData.BITHUMB_ENDPOINT_CANCEL_ORDER, rgParams);
             String rgResultDecode               = postHttpMethod(api_host,  rgParams, httpHeaders);
-
             JsonObject returnVal = gson.fromJson(rgResultDecode, JsonObject.class);
             String status        = returnVal.get("status").getAsString();
             if(status.equals(SUCCESS) || status.equals(ALREADY_TRADED)){
                 log.info("[BITHUMB][CANCEL ORDER] response : {}", rgResultDecode);
             }else{
                 log.error("[BITHUMB][CANCEL ORDER] response :{}", rgResultDecode);
-                insertLog(gson.toJson(rgParams), LogAction.CANCEL_ORDER, rgResultDecode);
+                insertLog(createLog(rgParams, httpHeaders), LogAction.CANCEL_ORDER, rgResultDecode);
             }
         }catch(Exception e){
             log.error("[BITHUMB][CANCEL ORDER] ERROR : {}", e.getMessage());
@@ -570,6 +569,14 @@ public class BithumbImp extends AbstractExchange {
         }else{
             return false;
         }
+    }
+
+    private String createLog(Map<String, String> param, Map<String, String> header){
+        Map<String , String> map = new HashMap<>();
+        map.putAll(param);
+        map.putAll(header);
+
+        return gson.toJson(map);
     }
 
     private void insertLog(String request, LogAction action, String msg){
