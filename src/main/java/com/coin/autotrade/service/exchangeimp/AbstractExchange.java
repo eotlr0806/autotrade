@@ -9,21 +9,17 @@ import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
 import com.coin.autotrade.service.ExceptionLogService;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.*;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
 import org.springframework.util.ObjectUtils;
 import org.springframework.web.client.RestTemplate;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.math.BigDecimal;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 // Abstract class for common function and variable
@@ -62,7 +58,7 @@ public abstract class AbstractExchange {
     public abstract void initClass(RealtimeSync realtimeSync, CoinService coinService) throws Exception;
 
     public abstract int startAutoTrade(String price, String cnt);
-    public abstract int startLiquidity(Map list);
+    public abstract int startLiquidity(Map<String, LinkedList<String>> list);
     public abstract int startFishingTrade(Map<String, List> list, int intervalTime);
     public abstract int startRealtimeTrade(JsonObject realtime, boolean resetFlag);
     public abstract String getOrderBook(Exchange exchange, String[] coinWithId);

@@ -2,6 +2,7 @@ package com.coin.autotrade.service.exchangeimp;
 
 import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.common.UtilsData;
+import com.coin.autotrade.common.enumeration.LogAction;
 import com.coin.autotrade.common.enumeration.ReturnCode;
 import com.coin.autotrade.common.enumeration.Trade;
 import com.coin.autotrade.model.*;
@@ -106,7 +107,6 @@ public class BithumbGlobalImp extends AbstractExchange {
         }catch (Exception e){
             returnCode = ReturnCode.FAIL.getCode();
             log.error("[BITHUMBGLOBAL][AUTOTRADE] Error : {}", e.getMessage());
-            e.printStackTrace();
         }
 
         log.info("[BITHUMBGLOBAL][AUTOTRADE] End");
@@ -114,11 +114,11 @@ public class BithumbGlobalImp extends AbstractExchange {
     }
 
     @Override
-    public int startLiquidity(Map list){
+    public int startLiquidity(Map<String, LinkedList<String>> list){
         int returnCode = ReturnCode.SUCCESS.getCode();
 
-        Queue<String> sellQueue  = (LinkedList) list.get("sell");
-        Queue<String> buyQueue   = (LinkedList) list.get("buy");
+        Queue<String> sellQueue  = list.get("sell");
+        Queue<String> buyQueue   = list.get("buy");
         Queue<String> cancelList = new LinkedList<>();
 
         try{
@@ -159,7 +159,6 @@ public class BithumbGlobalImp extends AbstractExchange {
         }catch (Exception e){
             returnCode = ReturnCode.FAIL.getCode();
             log.error("[BITHUMBGLOBAL][LIQUIDITY] Error {}", e.getMessage());
-            e.printStackTrace();
         }
         log.info("[BITHUMBGLOBAL][LIQUIDITY] END");
         return returnCode;
@@ -244,7 +243,6 @@ public class BithumbGlobalImp extends AbstractExchange {
         }catch (Exception e){
             returnCode = ReturnCode.FAIL.getCode();
             log.error("[BITHUMBGLOBAL][FISHINGTRADE] Error {}", e.getMessage());
-            e.printStackTrace();
         }
 
         log.info("[BITHUMBGLOBAL][FISHINGTRADE] END");
@@ -322,7 +320,6 @@ public class BithumbGlobalImp extends AbstractExchange {
             }
         }catch (Exception e){
             log.error("[BITHUMBGLOBAL][REALTIME SYNC TRADE] Error :{} ", e.getMessage());
-            e.printStackTrace();
         }
         log.info("[BITHUMBGLOBAL][REALTIME SYNC TRADE] END");
         return returnCode;
@@ -369,13 +366,13 @@ public class BithumbGlobalImp extends AbstractExchange {
             returnRes = getHttpMethod(request);
             String status = gson.fromJson(returnRes, JsonObject.class).get("code").getAsString();
             if (!status.equals(SUCCESS)){
-                insertLog(request,"호가조회", returnRes);
+                insertLog(request, LogAction.ORDER_BOOK, returnRes);
                 log.error("[BITHUMBGLOBAL][ORDER BOOK] Response:{}", returnRes);
                 returnRes = ReturnCode.FAIL.getValue();
             }
         }catch (Exception e){
             log.error("[BITHUMBGLOBAL][ORDER BOOK] Error {}", e.getMessage());
-            insertLog(Arrays.toString(coinWithId),"호가조회",e.getMessage());
+            insertLog(Arrays.toString(coinWithId),LogAction.ORDER_BOOK,e.getMessage());
         }
 
         log.info("[BITHUMBGLOBAL][ORDER BOOK] END");
@@ -401,7 +398,7 @@ public class BithumbGlobalImp extends AbstractExchange {
             log.info("[BITHUMBGLOBAL][GET BALANCE] Response");
         }else{
             log.error("[BITHUMBGLOBAL][GET BALANCE] Response :{}", gson.toJson(returnVal));
-            insertLog(gson.toJson(header), "자산조회", gson.toJson(returnVal));
+            insertLog(gson.toJson(header), LogAction.BALANCE, gson.toJson(returnVal));
         }
         return returnValue;
     }
@@ -433,13 +430,12 @@ public class BithumbGlobalImp extends AbstractExchange {
                 response        = obj.get("orderId").getAsString();
                 log.info("[BITHUMBGLOBAL][CREATE ORDER] Response : {}", gson.toJson(returnVal));
             }else{
-                insertLog(gson.toJson(header), "주문", gson.toJson(returnVal));
+                insertLog(gson.toJson(header), LogAction.CREATE_ORDER, gson.toJson(returnVal));
                 log.error("[BITHUMBGLOBAL][CREATE ORDER] Response :{}", gson.toJson(returnVal));
             }
         }catch (Exception e){
-            insertLog("", "주문", e.getMessage());
+            insertLog("", LogAction.CREATE_ORDER, e.getMessage());
             log.error("[BITHUMBGLOBAL][CREATE ORDER] Error {}",e.getMessage());
-            e.printStackTrace();
         }
         return response;
     }
@@ -464,13 +460,12 @@ public class BithumbGlobalImp extends AbstractExchange {
                 returnValue = ReturnCode.SUCCESS.getCode();
                 log.info("[BITHUMBGLOBAL][CANCEL ORDER] Response:{}", gson.toJson(json));
             } else {
-                insertLog(gson.toJson(header), "취소", gson.toJson(json));
+                insertLog(gson.toJson(header), LogAction.CANCEL_ORDER, gson.toJson(json));
                 log.error("[BITHUMBGLOBAL][CANCEL ORDER] Response:{}", gson.toJson(json));
             }
         }catch(Exception e){
             log.error("[BITHUMBGLOBAL][CANCEL ORDER] Error {}", e.getMessage());
-            insertLog("", "취소", e.getMessage());
-            e.printStackTrace();
+            insertLog("", LogAction.CANCEL_ORDER, e.getMessage());
         }
         return returnValue;
     }
@@ -561,7 +556,7 @@ public class BithumbGlobalImp extends AbstractExchange {
         }
     }
 
-    private void insertLog(String request, String action, String msg){
+    private void insertLog(String request, LogAction action, String msg){
         exceptionLog.makeLogAndInsert("빗썸글로벌",request, action, msg);
     }
 

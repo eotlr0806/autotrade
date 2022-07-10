@@ -1,5 +1,6 @@
 package com.coin.autotrade.service;
 
+import com.coin.autotrade.common.enumeration.LogAction;
 import com.coin.autotrade.model.ExceptionLog;
 import com.coin.autotrade.repository.ExceptionLogRepository;
 import lombok.AllArgsConstructor;
@@ -33,10 +34,10 @@ public class ExceptionLogService {
     /**
      * make and insert
      */
-    public void makeLogAndInsert(String exchange, String request, String action, String logMsg){
+    public void makeLogAndInsert(String exchange, String request, LogAction action, String logMsg){
         log.info("[ExceptionLogService][makeLogAndInsert] make and insert start");
         ExceptionLog exceptionLog = new ExceptionLog();
-        exceptionLog.setAction(action);
+        exceptionLog.setAction(action.getKorName());
         exceptionLog.setDateTime(LocalDateTime.now());
         exceptionLog.setRequest(request);
         exceptionLog.setExchange(exchange);

@@ -114,7 +114,7 @@ public class CoinService {
         return value;
     }
 
-    public Map getLiquidityList(Liquidity liquidity){
+    public Map<String, LinkedList<String>> getLiquidityList(Liquidity liquidity){
 
         Map<String, LinkedList<String>> returnMap = new HashMap<>();
         LinkedList<String> sellList               = new LinkedList<>();

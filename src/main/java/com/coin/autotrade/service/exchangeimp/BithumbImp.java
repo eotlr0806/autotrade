@@ -2,6 +2,7 @@ package com.coin.autotrade.service.exchangeimp;
 
 import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.common.UtilsData;
+import com.coin.autotrade.common.enumeration.LogAction;
 import com.coin.autotrade.common.enumeration.ReturnCode;
 import com.coin.autotrade.common.enumeration.Trade;
 import com.coin.autotrade.model.*;
@@ -22,6 +23,7 @@ import java.net.URLEncoder;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 
 @Slf4j
@@ -109,11 +111,11 @@ public class BithumbImp extends AbstractExchange {
 
     /** 호가유동성 function */
     @Override
-    public int startLiquidity(Map list){
+    public int startLiquidity(Map<String, LinkedList<String>> list){
         int returnCode = ReturnCode.SUCCESS.getCode();
 
-        Queue<String> sellQueue = (LinkedList) list.get("sell");
-        Queue<String> buyQueue  = (LinkedList) list.get("buy");
+        Queue<String> sellQueue = list.get("sell");
+        Queue<String> buyQueue  = list.get("buy");
         Queue<Map<String,String>> cancelList = new LinkedList<>();
 
         try{
@@ -330,7 +332,6 @@ public class BithumbImp extends AbstractExchange {
             }
         }catch (Exception e){
             log.error("[BITHUMB][REALTIME SYNC TRADE] Error :{} ", e.getMessage());
-            e.printStackTrace();
         }
         log.info("[BITHUMB][REALTIME SYNC TRADE] END");
         return returnCode;
@@ -362,9 +363,15 @@ public class BithumbImp extends AbstractExchange {
         try{
             String request  = UtilsData.BITHUMB_ORDERBOOK + "/" + getSymbol(coinWithId,exchange);
             returnRes       = getHttpMethod(request);
+            JsonObject json = gson.fromJson(returnRes, JsonObject.class);
+            String status   = json.get("status").getAsString();
+            if(!SUCCESS.equals(status)){
+                log.error("[BITHUMB][ORDER BOOK] ERROR : {}", returnRes);
+                insertLog(request, LogAction.ORDER_BOOK, returnRes);
+            }
         }catch (Exception e){
-            log.error("[BITHUMB][ORDER BOOK] ERROR : {}",e.getMessage());
-            e.printStackTrace();
+            log.error("[BITHUMB][ORDER BOOK] ERROR : {}", e.getMessage());
+            insertLog(Arrays.toString(coinWithId), LogAction.ORDER_BOOK, e.getMessage());
         }
         return returnRes;
     }
@@ -390,6 +397,7 @@ public class BithumbImp extends AbstractExchange {
         }else{
             returnValue = rgResultDecode;
             log.error("[BITHUMB][GET BALANCE] response :{}", rgResultDecode);
+            insertLog(gson.toJson(rgParams), LogAction.BALANCE, rgResultDecode);
         }
 
         return returnValue;
@@ -421,10 +429,11 @@ public class BithumbImp extends AbstractExchange {
                 log.info("[BITHUMB][CREATE ORDER] response : {}", rgResultDecode);
             }else{
                 log.error("[BITHUMB][CREATE ORDER] response :{}", rgResultDecode);
+                insertLog(gson.toJson(rgParams), LogAction.CREATE_ORDER, rgResultDecode);
             }
         }catch (Exception e){
             log.error("[BITHUMB][CREATE ORDER] ERROR {}",e.getMessage());
-            e.printStackTrace();
+            insertLog("", LogAction.CREATE_ORDER, e.getMessage());
         }
         return response;
     }
@@ -449,10 +458,11 @@ public class BithumbImp extends AbstractExchange {
                 log.info("[BITHUMB][CANCEL ORDER] response : {}", rgResultDecode);
             }else{
                 log.error("[BITHUMB][CANCEL ORDER] response :{}", rgResultDecode);
+                insertLog(gson.toJson(rgParams), LogAction.CANCEL_ORDER, rgResultDecode);
             }
         }catch(Exception e){
             log.error("[BITHUMB][CANCEL ORDER] ERROR : {}", e.getMessage());
-            e.printStackTrace();
+            insertLog("", LogAction.CANCEL_ORDER, e.getMessage());
         }
         return returnValue;
     }
@@ -499,18 +509,7 @@ public class BithumbImp extends AbstractExchange {
 
     // Map으로 받은 파라미터 값들을 쿼리 스트링 형식으로 변경
     private String mapToQueryString(Map<String, String> map) throws Exception{
-        StringBuilder string = new StringBuilder();
-        int i = 0;
-        for (Map.Entry<String, String> entry : map.entrySet()) {
-            string.append(entry.getKey());
-            string.append("=");
-            string.append(entry.getValue());
-            if(i < map.size() - 1){
-                string.append("&");
-            }
-            i++;
-        }
-        return string.toString();
+       return map.keySet().stream().map(key -> key + "=" + map.get(key)).collect(Collectors.joining("&"));
     }
 
     // Bithum 에서 암호화를 하기위한 메서드
@@ -535,22 +534,13 @@ public class BithumbImp extends AbstractExchange {
 
     // Bithum 에서 암호화를 하기위한 메서드
     private byte[] hmacSha512(String value, String key) throws Exception {
-        try {
-            SecretKeySpec keySpec = new SecretKeySpec(key.getBytes("UTF-8"), "HmacSHA512");
-            Mac mac               = Mac.getInstance("HmacSHA512");
-            mac.init(keySpec);
+        SecretKeySpec keySpec = new SecretKeySpec(key.getBytes("UTF-8"), "HmacSHA512");
+        Mac mac = Mac.getInstance("HmacSHA512");
+        mac.init(keySpec);
 
-            final byte[] macData  = mac.doFinal( value.getBytes( ) );
-            byte[] hex            = new Hex().encode( macData );
-            return hex;
-
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        } catch (InvalidKeyException e) {
-            throw new RuntimeException(e);
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        }
+        final byte[] macData = mac.doFinal(value.getBytes());
+        byte[] hex = new Hex().encode(macData);
+        return hex;
     }
 
     // Bithumb 에서 제공하는 메서드
@@ -582,6 +572,8 @@ public class BithumbImp extends AbstractExchange {
         }
     }
 
-
+    private void insertLog(String request, LogAction action, String msg){
+        exceptionLog.makeLogAndInsert("빗썸",request, action, msg);
+    }
 
 }
