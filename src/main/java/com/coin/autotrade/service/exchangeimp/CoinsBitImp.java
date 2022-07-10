@@ -2,6 +2,7 @@ package com.coin.autotrade.service.exchangeimp;
 
 import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.common.UtilsData;
+import com.coin.autotrade.common.enumeration.LogAction;
 import com.coin.autotrade.common.enumeration.ReturnCode;
 import com.coin.autotrade.common.enumeration.Trade;
 import com.coin.autotrade.model.*;
@@ -11,13 +12,12 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.binary.Hex;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import javax.net.ssl.HttpsURLConnection;
-import java.io.*;
 import java.math.BigDecimal;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.*;
@@ -122,18 +122,17 @@ public class CoinsBitImp extends AbstractExchange {
         }catch (Exception e){
             returnCode = ReturnCode.FAIL.getCode();
             log.error("[COINSBIT][AUTOTRADE] Error : {}", e.getMessage());
-            e.printStackTrace();
         }
         log.info("[COINSBIT][AUTOTRADE] END");
         return returnCode;
     }
 
     @Override
-    public int startLiquidity(Map list){
+    public int startLiquidity(Map<String, LinkedList<String>> list){
         int returnCode = ReturnCode.SUCCESS.getCode();
 
-        Queue<String> sellQueue  = (LinkedList) list.get("sell");
-        Queue<String> buyQueue   = (LinkedList) list.get("buy");
+        Queue<String> sellQueue  = list.get("sell");
+        Queue<String> buyQueue   = list.get("buy");
         Queue<String> cancelList = new LinkedList<>();
 
         try{
@@ -173,7 +172,6 @@ public class CoinsBitImp extends AbstractExchange {
         }catch (Exception e){
             returnCode = ReturnCode.SUCCESS.getCode();
             log.error("[COINSBIT][LIQUIDITY] Error {}", e.getMessage());
-            e.printStackTrace();
         }
         log.info("[COINSBIT][LIQUIDITY] END");
         return returnCode;
@@ -260,7 +258,6 @@ public class CoinsBitImp extends AbstractExchange {
         }catch (Exception e){
             returnCode = ReturnCode.FAIL.getCode();
             log.error("[COINSBIT][FISHINGTRADE] Error {}", e.getMessage());
-            e.printStackTrace();
         }
         log.info("[COINSBIT][FISHINGTRADE] END");
         return returnCode;
@@ -347,7 +344,6 @@ public class CoinsBitImp extends AbstractExchange {
 
         }catch (Exception e){
             log.error("[COINSBIT][REALTIME SYNC TRADE] ERROR :{} ", e.getMessage());
-            e.printStackTrace();
         }
         log.info("[COINSBIT][REALTIME SYNC TRADE] END");
         return returnCode;
@@ -393,13 +389,15 @@ public class CoinsBitImp extends AbstractExchange {
                 data.add("asks", parseOrderBook(sellResponse));
                 resObj.add("data", data);
                 returnRes = gson.toJson(resObj);
+            }else{
+                insertLog(Arrays.toString(coinWithId), LogAction.ORDER_BOOK, gson.toJson(sellResponse));
             }
 
             log.info("[COINSBIT][ORDER BOOK] END");
 
         }catch (Exception e){
             log.error("[COINSBIT][ORDER BOOK] Error {}",e.getMessage());
-            e.printStackTrace();
+            insertLog(Arrays.toString(coinWithId), LogAction.ORDER_BOOK, e.getMessage());
         }
 
         return returnRes;
@@ -426,17 +424,18 @@ public class CoinsBitImp extends AbstractExchange {
         String returnValue = ReturnCode.NO_DATA.getValue();;
 
         setCoinToken(coinData, exchange);
-        JsonObject object = new JsonObject();
-        object.addProperty("request", UtilsData.COINSBIT_BALANCE);
-        object.addProperty("nonce",   Instant.now().getEpochSecond());
+        Map<String, String> object = new LinkedHashMap<>();
+        object.put("request", UtilsData.COINSBIT_BALANCE);
+        object.put("nonce",   String.valueOf(Instant.now().getEpochSecond()));
 
         String url = UtilsData.COINSBIT_URL + UtilsData.COINSBIT_BALANCE;
-        JsonObject returnRes = postHttpMethod(url, object);
+        JsonObject returnRes = postHttpMethod(url, gson.toJson(object));
         if(isSuccess(returnRes)){
             returnValue = gson.toJson(returnRes.get("result"));
             log.info("[COINSBIT][GET BALANCE] Success response");
         }else{
             log.error("[COINSBIT][GET BALANCE] Fail response : {}", gson.toJson(returnRes));
+            insertLog(gson.toJson(object), LogAction.BALANCE, gson.toJson(returnRes));
         }
 
         return returnValue;
@@ -446,30 +445,57 @@ public class CoinsBitImp extends AbstractExchange {
     public String createOrder(String type, String price, String cnt , String[] coinData, Exchange exchange){
         String orderId = ReturnCode.FAIL_CREATE.getValue();
         try {
-            JsonObject object = new JsonObject();
+            Map<String, String> object = new LinkedHashMap<>();
             String action     = parseAction(type);
             String symbol     = getSymbol(coinData, exchange);
             String downCut    = roundDownCnt(cnt);
 
-            object.addProperty("request", UtilsData.COINSBIT_CREATE_ORDER);
-            object.addProperty("nonce",   Instant.now().getEpochSecond());
-            object.addProperty("market",  symbol);
-            object.addProperty("side",    action);
-            object.addProperty("amount",  downCut);
-            object.addProperty("price",   price);
+            object.put("request", UtilsData.COINSBIT_CREATE_ORDER);
+            object.put("nonce",   String.valueOf(Instant.now().getEpochSecond()));
+            object.put("market",  symbol);
+            object.put("side",    action);
+            object.put("amount",  downCut);
+            object.put("price",   price);
             String url = UtilsData.COINSBIT_URL + UtilsData.COINSBIT_CREATE_ORDER;
-            JsonObject returnRes = postHttpMethod(url, object);
+            JsonObject returnRes = postHttpMethod(url, gson.toJson(object));
             if(isSuccess(returnRes)){
                 orderId = returnRes.getAsJsonObject("result").get("orderId").getAsString();
                 log.info("[COINSBIT][CREATE ORDER] Success response : {}", gson.toJson(returnRes));
             }else{
                 log.error("[COINSBIT][CREATE ORDER] Fail response : {}", gson.toJson(returnRes));
+                insertLog(gson.toJson(object), LogAction.CREATE_ORDER, gson.toJson(returnRes));
             }
         }catch (Exception e){
             log.error("[COINSBIT][CREATE ORDER] Error : {}",e.getMessage());
-            e.printStackTrace();
+            insertLog("", LogAction.CREATE_ORDER, e.getMessage());
         }
         return orderId;
+    }
+
+    private int cancelOrder(String symbol, String orderId) {
+        int returnValue = ReturnCode.FAIL.getCode();
+        try {
+            Map<String, String> object = new LinkedHashMap<>();
+            object.put("request", UtilsData.COINSBIT_CANCEL_ORDER);
+            object.put("nonce",  String.valueOf(Instant.now().getEpochSecond()));
+            object.put("market", symbol);
+            object.put("orderId", orderId);
+
+            String url = UtilsData.COINSBIT_URL + UtilsData.COINSBIT_CANCEL_ORDER;
+            JsonObject returnRes = postHttpMethod(url, gson.toJson(object));
+            if(isSuccess(returnRes)){
+                log.info("[COINSBIT][CANCEL ORDER] Success cancel response : {}", gson.toJson(returnRes));
+            }else if(isAlreadyCanceled(returnRes)){
+                log.info("[COINSBIT][CANCEL ORDER] Already cancel response : {}", gson.toJson(returnRes));
+            }else{
+                log.error("[COINSBIT][CANCEL ORDER] Fail response : {}", gson.toJson(returnRes));
+                insertLog(gson.toJson(object), LogAction.CANCEL_ORDER, gson.toJson(returnRes));
+            }
+        }catch (Exception e){
+            log.error("[COINSBIT][CANCEL ORDER] Error orderId:{}, response:{}",orderId, e.getMessage());
+            insertLog("", LogAction.CANCEL_ORDER, e.getMessage());
+        }
+        return returnValue;
     }
 
     // 소수점 2번째 자리까지만 보여주도록
@@ -507,59 +533,25 @@ public class CoinsBitImp extends AbstractExchange {
     }
 
     /* Http post method */
-    public JsonObject postHttpMethod(String endPoint, JsonObject params) {
+    public JsonObject postHttpMethod(String endPoint, String body) throws Exception{
+        log.info("[COINSBIT][POST HTTP] post http start");
+        log.info("[COINSBIT][POST HTTP] url:{}, body:{}", endPoint, body);
 
-        JsonObject returnObj = null;
+        String payload = Base64.getEncoder().encodeToString(body.getBytes());
+        String sign    = HmacAndHex(payload);
+        Map<String, String> map = new LinkedHashMap<>();
+        map.put("X-TXC-PAYLOAD", payload);
+        map.put("X-TXC-SIGNATURE", sign);
 
-        try{
-            String body    = gson.toJson(params);
-            String payload = Base64.getEncoder().encodeToString(body.getBytes());
-            String sign    = HmacAndHex(payload);
+        HttpEntity<String> response = restTemplate.exchange(
+                endPoint,
+                HttpMethod.POST,
+                new HttpEntity<String>(body, getHeader(map)),
+                String.class
+        );
 
-            log.info("[COINSBIT][POST HTTP] url:{}, body:{}", endPoint, body);
-
-            URL url = new URL(endPoint);
-            HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
-            connection.setDoOutput(true);
-            connection.setDoInput(true);
-            connection.setConnectTimeout(UtilsData.TIMEOUT_VALUE);
-            connection.setReadTimeout(UtilsData.TIMEOUT_VALUE);
-            connection.setRequestMethod("POST");
-            connection.setRequestProperty("Content-Type", "application/json");
-            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
-            connection.setRequestProperty("X-TXC-APIKEY",  keyList.get(PUBLIC_KEY));
-            connection.setRequestProperty("X-TXC-PAYLOAD", payload);
-            connection.setRequestProperty("X-TXC-SIGNATURE", sign);
-
-            // Writing the post data to the HTTP request body
-            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream()));
-            bw.write(body);
-            bw.close();
-
-            String response = (connection.getErrorStream() == null)
-                    ? getResponseMsg(connection.getInputStream()) : getResponseMsg(connection.getErrorStream());
-
-            returnObj = gson.fromJson(response, JsonObject.class);
-
-        } catch(Exception e){
-            log.error("[COINSBIT][POST HTTP] {}", e.getMessage());
-            e.printStackTrace();
-        }
-
-        return returnObj;
-    }
-
-    // Get Input response message
-    private String getResponseMsg(InputStream stream) throws Exception{
-        BufferedReader br = new BufferedReader(new InputStreamReader(stream));
-        StringBuffer response = new StringBuffer();
-        String inputLine;
-        while ((inputLine = br.readLine()) != null) {
-            response.append(inputLine);
-        }
-        br.close();
-
-        return response.toString();
+        log.info("[COINSBIT][POST HTTP] post http end");
+        return gson.fromJson(response.getBody(), JsonObject.class);
     }
 
     private String HmacAndHex(String value) throws Exception{
@@ -571,31 +563,8 @@ public class CoinsBitImp extends AbstractExchange {
         return new String(hexBytes, "UTF-8");
     }
 
-    /* XTCOM global 거래 취소 */
-    private int cancelOrder(String symbol, String orderId) {
-        int returnValue = ReturnCode.FAIL.getCode();
-        try {
-            JsonObject object = new JsonObject();
-            object.addProperty("request", UtilsData.COINSBIT_CANCEL_ORDER);
-            object.addProperty("nonce",   Instant.now().getEpochSecond());
-            object.addProperty("market",  symbol);
-            object.addProperty("orderId", orderId);
 
-            String url = UtilsData.COINSBIT_URL + UtilsData.COINSBIT_CANCEL_ORDER;
-            JsonObject returnRes = postHttpMethod(url, object);
-            if(isSuccess(returnRes)){
-                log.info("[COINSBIT][CANCEL ORDER] Success cancel response : {}", gson.toJson(returnRes));
-            }else if(isAlreadyCanceled(returnRes)){
-                log.info("[COINSBIT][CANCEL ORDER] Already cancel response : {}", gson.toJson(returnRes));
-            }else{
-                log.error("[COINSBIT][CANCEL ORDER] Fail response : {}", gson.toJson(returnRes));
-            }
-        }catch (Exception e){
-            log.error("[COINSBIT][CANCEL ORDER] Error orderId:{}, response:{}",orderId, e.getMessage());
-            e.printStackTrace();
-        }
-        return returnValue;
-    }
+
 
     // 거래소에 맞춰 심볼 반환
     private String getSymbol(String[] coinData, Exchange exchange) throws Exception {
@@ -605,9 +574,8 @@ public class CoinsBitImp extends AbstractExchange {
     private boolean isSuccess(JsonObject object) throws Exception{
         if(object.get("success").getAsString().equals("true")){
             return true;
-        }else{
-            return false;
         }
+        return false;
     }
 
     private boolean isAlreadyCanceled(JsonObject object) throws Exception {
@@ -637,5 +605,8 @@ public class CoinsBitImp extends AbstractExchange {
         }else{
             return false;
         }
+    }
+    private void insertLog(String request, LogAction action, String msg){
+        exceptionLog.makeLogAndInsert("코인스빗",request, action, msg);
     }
 }

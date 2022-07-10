@@ -254,8 +254,6 @@ public abstract class AbstractExchange {
                 entity,
                 String.class
         );
-
-        log.info("[ABSTRACT EXCHANGE][GET HTTP] url : {}", url);
         return responseEntity.getBody();
     }
 
@@ -269,8 +267,6 @@ public abstract class AbstractExchange {
                 entity,
                 String.class
         );
-
-        log.info("[ABSTRACT EXCHANGE][GET HTTP] url : {}", url);
         return responseEntity.getBody();
     }
 

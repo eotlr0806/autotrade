@@ -27,9 +27,6 @@ public class OrderBookRestController {
 
             if(isData(params)){
                 String orders = orderBook.getOrderBook(Long.parseLong(params.get("exchange")), params.get("currency"));
-//                List<String> orderList = new ArrayList<>();
-//                orderList.add(orders);
-
                 if(orders.equals(ReturnCode.FAIL.getValue())){
                     response.setResponse(ReturnCode.FAIL);
                 }else if(orders.equals(ReturnCode.NO_DATA.getValue())){
