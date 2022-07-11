@@ -7,14 +7,16 @@ import com.coin.autotrade.repository.LiquidityRepository;
 import com.coin.autotrade.service.CoinService;
 import com.coin.autotrade.service.exchangeimp.AbstractExchange;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
+import java.util.LinkedList;
 import java.util.Map;
 
 /**
  * Liquidity Trade Thread
  * DESC : 호가 유동성 쓰레드
  */
-@org.springframework.stereotype.Service
+@Service
 @Slf4j
 public class LiquidityTradeThread implements Runnable{
 
@@ -50,7 +52,7 @@ public class LiquidityTradeThread implements Runnable{
             int intervalTime = 100;
             while(run){
                 /** Check is there best offer */
-                Map list = coinService.getLiquidityList(liquidity);
+                Map<String, LinkedList<String>> list = coinService.getLiquidityList(liquidity);
                 /** Start Liquidity Thread **/
                 abstractExchange.startLiquidity(list);
 

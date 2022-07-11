@@ -109,6 +109,15 @@ public class MainController {
         return mav;
     }
 
+    // main/trade_exception
+    @GetMapping(value = "/main/trade_exception")
+    public ModelAndView tradeException(HttpServletRequest request) throws Exception{
+        ModelAndView mav = new ModelAndView();
+        mav.setViewName("contents/trade_exception");
+        mav.addObject("userId",request.getSession().getAttribute(SessionKey.USER_ID.toString()));
+        return mav;
+    }
+
     /* main/account trading */
     @GetMapping(value = "/main/account")
     public ModelAndView account(HttpServletRequest request) throws Exception{

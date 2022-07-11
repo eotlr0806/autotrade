@@ -1,26 +1,25 @@
 package com.coin.autotrade.service.exchangeimp;
 
-import com.coin.autotrade.common.UtilsData;
+import com.coin.autotrade.common.BeanUtils;
 import com.coin.autotrade.common.Utils;
+import com.coin.autotrade.common.UtilsData;
 import com.coin.autotrade.common.enumeration.ReturnCode;
 import com.coin.autotrade.common.enumeration.Trade;
 import com.coin.autotrade.model.*;
 import com.coin.autotrade.service.CoinService;
+import com.coin.autotrade.service.ExceptionLogService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.*;
+import org.springframework.util.ObjectUtils;
+import org.springframework.web.client.RestTemplate;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.math.BigDecimal;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 // Abstract class for common function and variable
@@ -35,31 +34,31 @@ public abstract class AbstractExchange {
      final protected String MIN_AMOUNT      = "min_amount";
      final protected String API_PASSWORD    = "apiPassword";
      AutoTrade autoTrade                    = null;
-    Liquidity liquidity                    = null;
-    Fishing fishing                        = null;
-    RealtimeSync realtimeSync              = null;
-    CoinService coinService                = null; // Fishing 시, 사용하기 위한 coin Service class
-    String realtimeTargetInitRate          = null; // realtime 에서 사용하는 실시간 동기화 타겟의 최초 현재 값
-    Gson gson                              = new Gson();
-    protected ConcurrentHashMap<String, String> keyList  = new ConcurrentHashMap<>();
+     Liquidity liquidity                    = null;
+     Fishing fishing                        = null;
+     RealtimeSync realtimeSync              = null;
+     CoinService coinService                = null; // Fishing 시, 사용하기 위한 coin Service class
+     String realtimeTargetInitRate          = null; // realtime 에서 사용하는 실시간 동기화 타겟의 최초 현재 값
+     Gson gson                              = new Gson(); // 그만써가는걸로...
+     ObjectMapper mapper                    = new ObjectMapper();
 
+     protected ConcurrentHashMap<String, String> keyList  = new ConcurrentHashMap<>();
+     protected ExceptionLogService exceptionLog = (ExceptionLogService) BeanUtils.getBean(ExceptionLogService.class);  // Bean 주입
+     protected RestTemplate restTemplate = (RestTemplate) BeanUtils.getBean(RestTemplate.class);
 
 
 
     /**#####################################################################
      * #################### Declaration abstract method ####################
      * ##################################################################### */
-    /** 자전 거래를 이용하기위한 초기값 설정 */
+
     public abstract void initClass(AutoTrade autoTrade) throws Exception;
-    /** 호가 유동성을 이용하기 위한 초기값 설정 */
     public abstract void initClass(Liquidity liquidity) throws Exception;
-    /** 매매 긁기를 이용하기 위한 초기값 설정 */
     public abstract void initClass(Fishing fishing, CoinService coinService) throws Exception;
-    /** 실시간 동기화를 이용하기 위한 초기값 설정 */
     public abstract void initClass(RealtimeSync realtimeSync, CoinService coinService) throws Exception;
 
     public abstract int startAutoTrade(String price, String cnt);
-    public abstract int startLiquidity(Map list);
+    public abstract int startLiquidity(Map<String, LinkedList<String>> list);
     public abstract int startFishingTrade(Map<String, List> list, int intervalTime);
     public abstract int startRealtimeTrade(JsonObject realtime, boolean resetFlag);
     public abstract String getOrderBook(Exchange exchange, String[] coinWithId);
@@ -245,85 +244,41 @@ public abstract class AbstractExchange {
     }
 
     // Http get method
-    protected String getHttpMethod(String url) throws Exception{
+    protected String getHttpMethod(String url) throws Exception {
         log.info("[ABSTRACT EXCHANGE][GET HTTP] url : {}", url);
-        StringBuffer response = null;
 
-        URL urlObject = new URL(url);
-        HttpURLConnection connection = (HttpURLConnection) urlObject.openConnection();
-        connection.setRequestMethod("GET");
-        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
-        connection.setConnectTimeout(UtilsData.TIMEOUT_VALUE);
-        connection.setReadTimeout(UtilsData.TIMEOUT_VALUE);
-
-        int returnCode    = connection.getResponseCode();
-        String returnMsg  = connection.getResponseMessage();
-        if(returnCode == HttpURLConnection.HTTP_OK){
-            InputStreamReader reader = null;
-            if(connection.getInputStream() != null){
-                reader = new InputStreamReader(connection.getInputStream());
-            }else if(connection.getErrorStream() != null){
-                reader = new InputStreamReader(connection.getErrorStream());
-            }else{
-                log.error("[ABSTRACT EXCHANGE][GET HTTP] Http response is 200. But inputstream is null!!");
-                throw new Exception();
-            }
-            BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            response = new StringBuffer();
-            String inputLine = "";
-            while ((inputLine = br.readLine()) != null) {
-                response.append(inputLine);
-            }
-            br.close();
-        }else{
-            log.error("[ABSTRACT EXCHANGE][GET HTTP] Error code : {}, Error msg : {}", returnCode, returnMsg);
-            throw new Exception();
-        }
-        return response.toString();
+        HttpEntity entity = new HttpEntity(getHeader(null));
+        ResponseEntity<String> responseEntity = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                entity,
+                String.class
+        );
+        return responseEntity.getBody();
     }
 
-
-    protected String getHttpMethod(String url, Map<String, String> header) throws Exception{
+    protected String getHttpMethod(String url, Map<String, String> header) throws Exception {
         log.info("[ABSTRACT EXCHANGE][GET HTTP] url : {}", url);
-        StringBuffer response = null;
 
-        URL urlObject = new URL(url);
-        HttpURLConnection connection = (HttpURLConnection) urlObject.openConnection();
-        connection.setRequestMethod("GET");
-        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
-        connection.setConnectTimeout(UtilsData.TIMEOUT_VALUE);
-        connection.setReadTimeout(UtilsData.TIMEOUT_VALUE);
+        HttpEntity entity = new HttpEntity(getHeader(header));
+        ResponseEntity<String> responseEntity = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                entity,
+                String.class
+        );
+        return responseEntity.getBody();
+    }
 
-        if(!header.isEmpty()){
-            header.keySet().stream().forEach(key -> {
-                connection.setRequestProperty(key, header.get(key));
-            });
+    protected HttpHeaders getHeader(Map<String, String> header){
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
+        if(!ObjectUtils.isEmpty(header)){
+            header.keySet().stream().forEach(x -> headers.set(x, header.get(x)));
         }
 
-        int returnCode    = connection.getResponseCode();
-        String returnMsg  = connection.getResponseMessage();
-        if(returnCode == HttpURLConnection.HTTP_OK){
-            InputStreamReader reader = null;
-            if(connection.getInputStream() != null){
-                reader = new InputStreamReader(connection.getInputStream());
-            }else if(connection.getErrorStream() != null){
-                reader = new InputStreamReader(connection.getErrorStream());
-            }else{
-                log.error("[ABSTRACT EXCHANGE][GET HTTP] Http response is 200. But inputstream is null!!");
-                throw new Exception();
-            }
-            BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            response = new StringBuffer();
-            String inputLine = "";
-            while ((inputLine = br.readLine()) != null) {
-                response.append(inputLine);
-            }
-            br.close();
-        }else{
-            log.error("[ABSTRACT EXCHANGE][GET HTTP] Error code : {}, Error msg : {}", returnCode, returnMsg);
-            throw new Exception();
-        }
-        return response.toString();
+        return headers;
     }
 
     /**

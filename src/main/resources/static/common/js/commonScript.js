@@ -52,7 +52,8 @@ const API = {
     ORDER_BOOK    :"/v1/orderbook",
     BALANCE       :"/v1/balance",
     TRADE_ACTION  :"/v1/trade/action",
-    ADD_TICK      :"/v1/trade/add-tick"
+    ADD_TICK      :"/v1/trade/add-tick",
+    TRADE_EXCEPTION : "/v1/trade/exception"
 }
 
 const CODE_ERROR         = -1000;

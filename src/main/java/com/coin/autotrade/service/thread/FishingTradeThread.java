@@ -7,6 +7,7 @@ import com.coin.autotrade.repository.FishingRepository;
 import com.coin.autotrade.service.CoinService;
 import com.coin.autotrade.service.exchangeimp.AbstractExchange;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,7 +17,7 @@ import java.util.Map;
  * Fishing Trade Thread
  * DESC : 매매긁기 쓰레드
  */
-@org.springframework.stereotype.Service
+@Service
 @Slf4j
 public class FishingTradeThread implements Runnable{
 

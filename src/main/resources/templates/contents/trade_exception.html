@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ATS - Auto Trading Solution</title>
+
+    <!-- Global stylesheets -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,300,100,500,700,900" rel="stylesheet" type="text/css">
+    <link href="../bootstrap/assets/css/icons/icomoon/styles.css" rel="stylesheet" type="text/css">
+    <link href="../bootstrap/assets/css/bootstrap.css" rel="stylesheet" type="text/css">
+    <link href="../bootstrap/assets/css/core.css" rel="stylesheet" type="text/css">
+    <link href="../bootstrap/assets/css/components.css" rel="stylesheet" type="text/css">
+    <link href="../bootstrap/assets/css/colors.css" rel="stylesheet" type="text/css">
+    <!-- /global stylesheets -->
+</head>
+
+
+
+<body>
+    <!-- Page container -->
+    <div class="page-container">
+
+        <!-- Page content -->
+        <div class="page-content">
+            <!-- Main content -->
+            <div class="content-wrapper">
+
+                <!-- Page header -->
+                <div class="page-header">
+                    <div class="page-header-content">
+                        <div class="page-title">
+                            <h4><i class="icon-arrow-left52 position-left"></i> <span class="text-semibold">운영관리</span> - 에러 확인</h4>
+                        </div>
+                    </div>
+                </div>
+                <!-- /page header -->
+
+                <!-- Content area -->
+                <div class="content">
+                    <!-- Basic table -->
+                    <div class="row">
+                        <div class="panel panel-flat">
+                            <div class="panel-heading">
+                                <h5 class="panel-title text-bold">거래 정보</h5>
+                                <div class="heading-elements">
+                                    <ul class="icons-list">
+                                        <li><a data-action="collapse"></a></li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="panel-body">
+                            </div>
+                            <div class="table-responsive">
+                                <table id="exception_table" class="table table-bordered table-striped"></table>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- /basic table -->
+                    <!-- Footer -->
+                    <div class="footer text-muted">
+                    </div>
+                    <!-- /footer -->
+
+                </div>
+                <!-- /content area -->
+            </div>
+            <!-- /main content -->
+        </div>
+    </div>
+
+</body>
+
+
+
+<!-- Core JS files -->
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/loaders/pace.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/core/libraries/jquery.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/core/libraries/bootstrap.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/loaders/blockui.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/tables/datatables/datatables.min.js"></script>
+<script type="text/javascript" src="../common/js/datatables_basic.js"></script>
+<!-- /core JS files -->
+
+<!-- Theme JS files -->
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/forms/styling/uniform.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/editors/wysihtml5/wysihtml5.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/editors/wysihtml5/toolbar.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/editors/wysihtml5/parsers.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/editors/wysihtml5/locales/bootstrap-wysihtml5.ua-UA.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/notifications/jgrowl.min.js"></script>
+
+<script type="text/javascript" src="../bootstrap/assets/js/plugins/notifications/pnotify.min.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/core/app.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/pages/editor_wysihtml5.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/pages/components_notifications_pnotify.js"></script>
+<script type="text/javascript" src="../bootstrap/assets/js/pages/extension_blockui.js"></script>
+<!-- /theme JS files -->
+
+<!-- Common Lib -->
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script type="text/javascript" src="../common/js/commonScript.js"></script>
+<!-- /Common Lib -->
+
+
+<script>
+
+    const DELETE             = "DELETE";
+    const INSERT             = "INSERT";
+    const UPDATE             = "UPDATE";
+    const REALTIME_TYPE_BEFORE  = "BEFORE";
+
+
+    let columnList = [
+        {title: "id",     orderable: true},
+        {title: "action", orderable: true},
+        {title: "시간",   orderable: true},
+        {title: "거래소",   orderable: true},
+        {title: "요청데이터",   orderable: true},
+        {title: "에러내용",   orderable: true},
+    ];
+
+    
+
+    let exceptionList   = [];
+    let clickedRow  = '';
+
+    /** table row click 시 발생하는 이벤트 **/
+    $('#exception_table').on('click', 'tr', function () {
+        clickedRow = $('#exception_table').DataTable().row(this).data();
+    })
+
+    // init page
+    $(document).ready(() => {
+        fncObj.initPage();
+    })
+
+
+    /** Function object **/
+    let fncObj = {
+
+        // 페이지 로드 시 초기값 셋팅을 위한 함수
+        initPage : () => {
+            loginUserId = $('#server_user_id').val();                   // Set user id
+            fncObj.getTrade();
+        },
+
+        getTrade : () => {
+            dataObj.clearTradeTable();
+            fncObj.getTradeByType();
+        },
+
+        // trade type 에 따라 리스트 조회
+        getTradeByType : async () => {
+            let returnVal = await common.get(API.TRADE_EXCEPTION);
+            if(returnVal.data != null){
+                exceptionList = returnVal.data;
+                dataObj.makeTradeTable();
+            }
+        },
+    };
+    /** Function object **/
+
+
+
+
+    /** Function object for data setter / getter **/
+    let dataObj = {
+        // Data table clear method
+        clearTradeTable : () => {
+            $('#exception_table').DataTable().destroy();
+            $('#exception_table').empty();
+        },
+
+        makeTradeTable : () => {
+            $('#exception_table').DataTable({
+                data: dataObj.makeTradeTableArr(),
+                columns: columnList
+            });
+        },
+
+        makeTradeTableArr : () => {
+            let parseTrade = [];
+            exceptionList.forEach(item => {
+                let innerTrade = [];
+                innerTrade.push(item.id);
+                innerTrade.push(item.action);
+                let date = new Date(item.dateTime.year,
+                    item.dateTime.monthValue - 1,
+                    item.dateTime.dayOfMonth,
+                    item.dateTime.hour,
+                    item.dateTime.minute,
+                    item.dateTime.second
+                ).toLocaleString();
+
+                innerTrade.push(date);
+                innerTrade.push(item.exchange);
+                innerTrade.push(item.request);
+                innerTrade.push(item.log);
+                parseTrade.push(innerTrade);
+            });
+
+            return parseTrade;
+        },
+        /***** Make Data table End *****/
+    }
+    /** Function object for data setter,getter **/
+
+
+   
+
+</script>
+
+
+
+<input type="hidden" id="server_user_id" th:value="${userId}" />
