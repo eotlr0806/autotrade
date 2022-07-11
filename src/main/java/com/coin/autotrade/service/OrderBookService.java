@@ -73,7 +73,10 @@ public class OrderBookService {
             JsonArray ask       = dataObj.get("sellList").getAsJsonArray();
             JsonArray bid       = dataObj.get("buyList").getAsJsonArray();
             returnValue = setOrderBookDataByJsonArray(ask, bid, "price","amount");
-        } else if(exchange.equals(UtilsData.BITHUMB) || exchange.equals(UtilsData.COINSBIT) || exchange.equals(UtilsData.MEXC) ){   // BITHUMB
+        } else if(exchange.equals(UtilsData.BITHUMB)
+                || exchange.equals(UtilsData.COINSBIT)
+                || exchange.equals(UtilsData.MEXC)
+                || exchange.equals(UtilsData.BIGONE)){   // BITHUMB
             JsonObject dataObj  = object.getAsJsonObject("data");
             JsonArray ask       = dataObj.get("asks").getAsJsonArray();
             JsonArray bid       = dataObj.get("bids").getAsJsonArray();

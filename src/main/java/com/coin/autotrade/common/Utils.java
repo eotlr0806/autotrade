@@ -8,6 +8,9 @@ import com.coin.autotrade.service.thread.LiquidityTradeThread;
 import com.coin.autotrade.service.thread.RealtimeSyncThread;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.google.gson.Gson;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 
@@ -348,6 +351,8 @@ public class Utils {
             abstractExchange = new MexcImp();
         } else if(UtilsData.DEXORCA.equals(exchange)){
             abstractExchange = new DexorcaImp();
+        } else if(UtilsData.BIGONE.equals(exchange)){
+            abstractExchange = new BigOneImp();
         }
 
         return abstractExchange;
@@ -376,6 +381,22 @@ public class Utils {
             e1.printStackTrace();
         }
         return ip;
+    }
+
+    public static String getJwtToken(String key,
+                                     Map<String, Object> header,
+                                     Map<String, String> payload){
+
+        Claims claims = Jwts.claims();
+        claims.putAll(payload);
+
+        return Jwts.builder()
+                .setHeader(header)
+                .setClaims(claims)
+                .setIssuedAt(new Date())
+//                .setExpiration(new Date(now.getTime() + tokenValidMilisecond))
+                .signWith(SignatureAlgorithm.HS256,"tree")
+                .compact();
     }
 
 }

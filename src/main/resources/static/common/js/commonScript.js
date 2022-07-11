@@ -20,6 +20,7 @@ const EXCHANGE_LIST = {
     COINSBIT     : "COINSBIT",
     MEXC         : "MEXC",
     DEXORCA      : "DEXORCA",
+    BIGONE       : "BIGONE"
 }
 
 const TRADE_LIST = {
