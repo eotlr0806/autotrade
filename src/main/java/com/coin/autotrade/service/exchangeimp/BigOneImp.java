@@ -15,12 +15,15 @@ import org.apache.commons.codec.binary.Hex;
 import org.apache.tomcat.util.codec.binary.Base64;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
+import org.springframework.util.StringUtils;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.awt.*;
 import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.util.*;
+import java.util.List;
 
 /**
  * Coin one 에서 사용할 class
@@ -36,21 +39,18 @@ public class BigOneImp extends AbstractExchange {
     @Override
     public void initClass(AutoTrade autoTrade) throws Exception{
         super.autoTrade = autoTrade;
-        setCoinToken(Utils.splitCoinWithId(autoTrade.getCoin()), autoTrade.getExchange());
     }
 
     /** 호가 유동성을 이용하기 위한 초기값 설정 */
     @Override
     public void initClass(Liquidity liquidity) throws Exception {
         super.liquidity  = liquidity;
-        setCoinToken(Utils.splitCoinWithId(liquidity.getCoin()), liquidity.getExchange());
     }
 
     @Override
     public void initClass(RealtimeSync realtimeSync, CoinService coinService) throws Exception{
         super.realtimeSync = realtimeSync;
         super.coinService  = coinService;
-        setCoinToken(Utils.splitCoinWithId(realtimeSync.getCoin()), realtimeSync.getExchange());
     }
 
     /** 매매 긁기를 이용하기 위한 초기값 설정 */
@@ -58,23 +58,34 @@ public class BigOneImp extends AbstractExchange {
     public void initClass(Fishing fishing, CoinService coinService) throws Exception {
         super.fishing     = fishing;
         super.coinService = coinService;
-        setCoinToken(Utils.splitCoinWithId(fishing.getCoin()), fishing.getExchange());
     }
-    /** 코인 토큰 정보 셋팅 **/
-    private void setCoinToken(String[] coinData, Exchange exchange) throws Exception{
-        // Set token key
-        if(keyList.isEmpty()){
-            for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
-                if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1]) ){
-                    keyList.put(PUBLIC_KEY, exCoin.getPublicKey());
-                    keyList.put(SECRET_KEY,   exCoin.getPrivateKey());
-                }
-            }
-            if(keyList.isEmpty()){
-                String msg = "There is no match coin. " + Arrays.toString(coinData) + " " + exchange.getExchangeCode();
-                throw new Exception(msg);
+
+    /** 해당 정보를 이용해 API 키를 셋팅한다 */
+    private String getJwtToken(String[] coinData, Exchange exchange) throws Exception{
+
+        String token = "";
+        for(ExchangeCoin exCoin : exchange.getExchangeCoin()){
+            if(exCoin.getCoinCode().equals(coinData[0]) && exCoin.getId() == Long.parseLong(coinData[1])){
+                    LinkedHashMap header = new LinkedHashMap();
+                    header.put("typ","JWT");
+                    header.put("alg","HS256");
+
+                    LinkedHashMap payload = new LinkedHashMap();
+                    payload.put("type","OpenAPIV2");
+                    payload.put("sub", exCoin.getPublicKey());
+                    payload.put("nonce", getPing());
+
+                    token = Utils.getJwtToken(header, payload, exCoin.getPrivateKey());
             }
         }
+
+        if(!StringUtils.hasText(token)){
+            String msg = "There is no match coin. " + Arrays.toString(coinData) + " " + exchange.getExchangeCode();
+            log.error("[BIGONE][getJwtToken] get token error");
+            log.error("[BIGONE][getJwtToken] error : {}", msg);
+            throw new Exception(msg);
+        }
+        return token;
     }
 
     @Override
@@ -409,7 +420,7 @@ public class BigOneImp extends AbstractExchange {
         String orderId = ReturnCode.FAIL_CREATE.getValue();
 
         try{
-            setCoinToken(coinData, exchange);
+            getJwtToken(coinData, exchange);
             String action     = parseAction(type);
             String url        = ( action.equals(BUY) ) ? UtilsData.COINONE_LIMIT_BUY : UtilsData.COINONE_LIMIT_SELL;
             Map<String, String> header = setDefaultRequest(cnt, coinData[0], price);
@@ -464,19 +475,20 @@ public class BigOneImp extends AbstractExchange {
     public String getBalance(String[] coinData, Exchange exchange) throws Exception{
         String returnValue = ReturnCode.NO_DATA.getValue();;
 
-        setCoinToken(coinData, exchange);
-        Map<String, String> header = new LinkedHashMap<>();
-        header.put("access_token", keyList.get(PUBLIC_KEY));
-        header.put("nonce", String.valueOf(System.currentTimeMillis()));
+        String token = getJwtToken(coinData, exchange);
+        String uri = UtilsData.BIGONE_URL + UtilsData.BIGONE_BALANCE;
+        Map<String, String> header = new HashMap<>();
+        header.put("Authorization", "Bearer " + token);
 
-        JsonObject json   = postHttpMethod(UtilsData.COINONE_BALANCE , gson.toJson(header));
-        String returnCode = json.get("errorCode").getAsString();
+        String response = getHttpMethod(uri, header);
+        JsonObject json   = gson.fromJson(response, JsonObject.class);
+        String returnCode = json.get("code").getAsString();
         if(SUCCESS.equals(returnCode)){
-            returnValue = gson.toJson(json);
+            returnValue = gson.toJson(json.get("data"));
             log.info("[BIGONE][GET BALANCE] Success Response");
         }else{
-            log.error("[BIGONE][GET BALANCE] Response : {}" , gson.toJson(json));
-            insertLog(gson.toJson(header), LogAction.BALANCE, gson.toJson(json));
+            log.error("[BIGONE][GET BALANCE] Response : {}" , response);
+            insertLog(gson.toJson(header), LogAction.BALANCE, response);
             throw new Exception(gson.toJson(json));
         }
         return returnValue;
@@ -560,5 +572,19 @@ public class BigOneImp extends AbstractExchange {
         return coinData[0]+ "-" + getCurrency(exchange,coinData[0], coinData[1]);
     }
 
+    private String getPing() throws Exception {
+        String returnTime = "";
+        String time = getHttpMethod(UtilsData.BIGONE_URL + "/ping");
+        JsonObject jsonObject = gson.fromJson(time, JsonObject.class);
+
+        if(SUCCESS.equals(jsonObject.get("code").getAsString())){
+            returnTime = jsonObject.get("data").getAsJsonObject().get("Timestamp").getAsString();
+        }
+        if(!StringUtils.hasText(returnTime)){
+            log.error("[BIGONE][getPing] ping is error");
+            log.error("[BIGONE][getPing] error : {}", time);
+        }
+        return returnTime;
+    }
 }
 

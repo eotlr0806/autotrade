@@ -132,6 +132,7 @@ public class UtilsData {
     public static String DEXORCA_URL                    = "https://211.239.119.54:3500/api";
 
     public static String BIGONE_URL                     = "https://big.one/api/v3";
+    public static String BIGONE_BALANCE                 = "/viewer/accounts";
 
     /** Define Variable */
     public static int TIMEOUT_VALUE = 10000;

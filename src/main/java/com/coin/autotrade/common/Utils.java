@@ -383,19 +383,23 @@ public class Utils {
         return ip;
     }
 
-    public static String getJwtToken(String key,
-                                     Map<String, Object> header,
-                                     Map<String, String> payload){
+    /**
+     * jwt token 발급
+     * @param header
+     * @param payload
+     * @param secretKey
+     * @return
+     */
+    public static String getJwtToken(LinkedHashMap<String, Object> header,
+                                     LinkedHashMap<String, String> payload,
+                                     String secretKey){
 
         Claims claims = Jwts.claims();
         claims.putAll(payload);
-
         return Jwts.builder()
                 .setHeader(header)
                 .setClaims(claims)
-                .setIssuedAt(new Date())
-//                .setExpiration(new Date(now.getTime() + tokenValidMilisecond))
-                .signWith(SignatureAlgorithm.HS256,"tree")
+                .signWith(SignatureAlgorithm.HS256, secretKey.getBytes())
                 .compact();
     }
 
