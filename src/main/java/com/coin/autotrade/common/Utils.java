@@ -367,9 +367,8 @@ public class Utils {
     public static boolean isSuccessOrder(String orderId) {
         if(!ReturnCode.FAIL_CREATE.getValue().equals(orderId)){
             return true;
-        }else{
-            return false;
         }
+        return false;
     }
 
     public static String getIp() {

@@ -133,6 +133,7 @@ public class UtilsData {
 
     public static String BIGONE_URL                     = "https://big.one/api/v3";
     public static String BIGONE_BALANCE                 = "/viewer/accounts";
+    public static String BIGONE_CREATE_ORDER            = "/viewer/orders";
 
     /** Define Variable */
     public static int TIMEOUT_VALUE = 10000;
