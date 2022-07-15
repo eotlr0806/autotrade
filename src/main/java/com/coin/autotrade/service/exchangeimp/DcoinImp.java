@@ -2,6 +2,7 @@ package com.coin.autotrade.service.exchangeimp;
 
 import com.coin.autotrade.common.Utils;
 import com.coin.autotrade.common.UtilsData;
+import com.coin.autotrade.common.enumeration.LogAction;
 import com.coin.autotrade.common.enumeration.ReturnCode;
 import com.coin.autotrade.common.enumeration.Trade;
 import com.coin.autotrade.model.*;
@@ -9,19 +10,16 @@ import com.coin.autotrade.service.CoinService;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 
-import javax.net.ssl.HttpsURLConnection;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.math.BigDecimal;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.net.URLEncoder;
 import java.security.MessageDigest;
-import java.time.Instant;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 public class DcoinImp extends AbstractExchange {
@@ -360,10 +358,18 @@ public class DcoinImp extends AbstractExchange {
         try{
             String symbol      = getSymbol(coinWithId, exchange);
             String encodedData = "symbol=" + URLEncoder.encode(symbol) + "&type=" + URLEncoder.encode("step0");
-            returnRes          = getHttpMethod(UtilsData.DCOIN_ORDERBOOK + "?" + encodedData);
+            JsonObject json    = gson.fromJson(getHttpMethod(UtilsData.DCOIN_ORDERBOOK + "?" + encodedData), JsonObject.class);
+
+            if(SUCCESS.equals(json.get("code").getAsString())){
+                returnRes = gson.toJson(json);
+                log.info("[DCOIN][GET BALANCE] Success response");
+            }else{
+                log.error("[DCOIN][GET BALANCE] Fail response : {}", gson.toJson(json));
+                insertLog(gson.toJson(json), LogAction.ORDER_BOOK, gson.toJson(json));
+            }
         }catch (Exception e){
             log.error("[DCOIN][ORDER BOOK] {}",e.getMessage());
-            e.printStackTrace();
+            insertLog("", LogAction.BALANCE, e.getMessage());
         }
 
         return returnRes;
@@ -377,7 +383,6 @@ public class DcoinImp extends AbstractExchange {
         // DCoin 의 경우, property 값들이 오름차순으로 입력되야 해서, 공통 함수로 빼기 어려움.
         JsonObject header = new JsonObject();
         header.addProperty("api_key", keyList.get(PUBLIC_KEY));
-
         String request       = UtilsData.DCOIN_BALANCE + "?api_key=" + URLEncoder.encode(keyList.get(PUBLIC_KEY))
                                                        + "&sign=" + createSign(gson.toJson(header));
         String response      = getHttpMethod(request);
@@ -388,6 +393,7 @@ public class DcoinImp extends AbstractExchange {
             log.info("[DCOIN][GET BALANCE] Success response");
         }else{
             log.error("[DCOIN][GET BALANCE] Fail response : {}", gson.toJson(resObject));
+            insertLog(request, LogAction.BALANCE, response);
         }
 
         return returnValue;
@@ -401,15 +407,15 @@ public class DcoinImp extends AbstractExchange {
         try {
             setApiKey(coinData, exchange);
             // DCoin 의 경우, property 값들이 오름차순으로 입력되야 해서, 공통 함수로 빼기 어려움.
-            JsonObject header = new JsonObject();
-            String symbol     = getSymbol(coinData, exchange);
-            header.addProperty("api_key", keyList.get(PUBLIC_KEY));
-            header.addProperty("price",   Double.parseDouble(price));
-            header.addProperty("side",    parseAction(type));
-            header.addProperty("symbol",  symbol.toLowerCase());
-            header.addProperty("type", 1);              // 1: 지정가, 2:시장가
-            header.addProperty("volume",  Double.parseDouble(cnt));
-            header.addProperty("sign",    createSign(gson.toJson(header)));
+            String symbol = getSymbol(coinData, exchange);
+            Map<String, String> header    = new LinkedHashMap();
+            header.put("api_key", keyList.get(PUBLIC_KEY));
+            header.put("price",   price);
+            header.put("side",    parseAction(type));
+            header.put("symbol",  symbol.toLowerCase());
+            header.put("type",    "1"); // 1: 지정가, 2:시장가
+            header.put("volume",  cnt);
+            header.put("sign",    createSign(gson.toJson(header)));
 
             String params   = makeEncodedParas(header);
             JsonObject json = postHttpMethod(UtilsData.DCOIN_CREATE_ORDER, params);
@@ -420,11 +426,12 @@ public class DcoinImp extends AbstractExchange {
                 log.info("[DCOIN][CREATE ORDER] response :{}", gson.toJson(json));
             } else {
                 log.error("[DCOIN][CREATE ORDER] response {}", gson.toJson(json));
+                insertLog(gson.toJson(header), LogAction.CREATE_ORDER, returnCode);
             }
             Thread.sleep(600);
         }catch(Exception e){
             log.error("[DCOIN][CREATE ORDER] Error {}", e.getMessage());
-            e.printStackTrace();
+            insertLog("", LogAction.CREATE_ORDER, e.getMessage());
         }
         return orderId;
     }
@@ -434,14 +441,13 @@ public class DcoinImp extends AbstractExchange {
      * @param symbol   - coin + currency
      */
     public int cancelOrder(String symbol, String orderId) {
-
         int returnValue = ReturnCode.FAIL.getCode();
         try {
-            JsonObject header = new JsonObject();
-            header.addProperty("api_key",  keyList.get(PUBLIC_KEY));
-            header.addProperty("order_id", orderId);
-            header.addProperty("symbol",   symbol.toLowerCase());
-            header.addProperty("sign",     createSign(gson.toJson(header)));
+            Map<String, String> header = new LinkedHashMap<>();
+            header.put("api_key",  keyList.get(PUBLIC_KEY));
+            header.put("order_id", orderId);
+            header.put("symbol",   symbol.toLowerCase());
+            header.put("sign",     createSign(gson.toJson(header)));
 
             JsonObject json   = postHttpMethod(UtilsData.DCOIN_CANCEL_ORDER, makeEncodedParas(header));
             String returnCode = json.get("code").getAsString();
@@ -453,13 +459,15 @@ public class DcoinImp extends AbstractExchange {
                 Thread.sleep(65000);
                 JsonObject reAgainJson = postHttpMethod(UtilsData.DCOIN_CANCEL_ORDER, makeEncodedParas(header));
                 log.error("[DCOIN][CANCEL ORDER] CANCEL AGAIN:{}", gson.toJson(reAgainJson));
+                insertLog(gson.toJson(header), LogAction.CANCEL_ORDER, returnCode);
             } else {
                 log.error("[DCOIN][CANCEL ORDER] FAIL CANCEL:{}", gson.toJson(json));
+                insertLog(gson.toJson(header), LogAction.CANCEL_ORDER, returnCode);
             }
             Thread.sleep(600);
         }catch(Exception e){
             log.error("[DCOIN][CANCEL ORDER] Error: {}", e.getMessage());
-            e.printStackTrace();
+            insertLog("", LogAction.CANCEL_ORDER, e.getMessage());
         }
         return returnValue;
     }
@@ -480,64 +488,27 @@ public class DcoinImp extends AbstractExchange {
         return returnVal;
     }
 
-
-    private String makeEncodedParas(JsonObject header) throws Exception {
-        String returnVal = "";
-        int i = 0;
-        for(String key : header.keySet()){
-            String value = header.get(key).getAsString();
-            if(i < header.size() -1){
-                returnVal += (key + "=" + value + "&");
-            }else{
-                returnVal += (key + "=" + value);
-            }
-            i++;
-        }
-        return returnVal;
+    private String makeEncodedParas(Map<String, String> header) throws Exception {
+        return header.keySet().stream()
+                .map(key -> key + "=" + header.get(key))
+                .collect(Collectors.joining("&"));
     }
-
 
     /* HTTP POST Method for coinone */
     private JsonObject postHttpMethod(String targetUrl, String payload) throws Exception{
-
         log.info("[DCOIN][POST HTTP] url : {}, payload : {}", targetUrl, payload);
 
-        URL url = new URL(targetUrl);
-        HttpURLConnection connection = (HttpsURLConnection) url.openConnection();
-        connection.setDoOutput(true);
-        connection.setDoInput(true);
-        connection.setRequestMethod("POST");
-        connection.setConnectTimeout(UtilsData.TIMEOUT_VALUE);
-        connection.setReadTimeout(UtilsData.TIMEOUT_VALUE);
-        connection.setRequestProperty("Context-Type", "application/x-www-form-urlencoded");
-        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
-        // Writing the post data to the HTTP request body
-        BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream()));
-        bw.write(payload);
-        bw.close();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        headers.set("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
+        HttpEntity<String> response = restTemplate.exchange(
+                targetUrl,
+                HttpMethod.POST,
+                new HttpEntity<String>(payload, headers),
+                String.class
+        );
 
-        StringBuffer response = new StringBuffer();
-        if(connection.getResponseCode() == HttpsURLConnection.HTTP_OK){
-            BufferedReader br = null;
-            if(connection.getInputStream() != null){
-                br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            }else if(connection.getErrorStream() != null){
-                br = new BufferedReader(new InputStreamReader(connection.getErrorStream()));
-            }else{
-                log.error("[DCOIN][POST HTTP] Return Code is 200. But inputstream and errorstream is null");
-                throw new Exception();
-            }
-            String inputLine = "";
-            while ((inputLine = br.readLine()) != null) {
-                response.append(inputLine);
-            }
-            br.close();
-        }else{
-            log.error("[DCOIN][POST HTTP] Return code : {}, msg : {}",connection.getResponseCode(), connection.getResponseMessage());
-            throw new Exception();
-        }
-
-        return gson.fromJson(response.toString(), JsonObject.class);
+        return gson.fromJson(response.getBody(), JsonObject.class);
     }
 
 
@@ -560,8 +531,11 @@ public class DcoinImp extends AbstractExchange {
     private boolean isExternalAction(String action){
         if(!action.equals(BUY) && !action.equals(SELL)){
             return true;
-        }else{
-            return false;
         }
+        return false;
+    }
+
+    private void insertLog(String request, LogAction action, String msg){
+        exceptionLog.makeLogAndInsert("디코인",request, action, msg);
     }
 }
