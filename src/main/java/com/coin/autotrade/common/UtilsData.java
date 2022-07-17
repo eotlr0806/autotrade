@@ -28,6 +28,7 @@ public class UtilsData {
     public static String COINSBIT       = "COINSBIT";
     public static String MEXC           = "MEXC";
     public static String DEXORCA        = "DEXORCA";
+    public static String BIGONE         = "BIGONE";
 
     public static String MODE_RANDOM    = "RANDOM";
     public static String MODE_SELL      = "SELL";
@@ -129,6 +130,10 @@ public class UtilsData {
     public static String MEXC_GET_COININFO              = "https://www.mexc.com/open/api/v2/market/symbols";
 
     public static String DEXORCA_URL                    = "https://211.239.119.54:3500/api";
+
+    public static String BIGONE_URL                     = "https://big.one/api/v3";
+    public static String BIGONE_BALANCE                 = "/viewer/accounts";
+    public static String BIGONE_CREATE_ORDER            = "/viewer/orders";
 
     /** Define Variable */
     public static int TIMEOUT_VALUE = 10000;

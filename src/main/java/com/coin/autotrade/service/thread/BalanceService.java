@@ -95,6 +95,8 @@ public class BalanceService {
             returnValue = gson.toJson(makeOkexArray(gson.fromJson(data, JsonArray.class)));
         }else if(exchange.equals(UtilsData.XTCOM)){
             returnValue = gson.toJson(makeXtcomArray(gson.fromJson(data, JsonObject.class)));
+        }else if(exchange.equals(UtilsData.BIGONE)){
+            returnValue = gson.toJson(makeBigOneArray(gson.fromJson(data, JsonArray.class)));
         }
 
 
@@ -354,6 +356,26 @@ public class BalanceService {
             jsonArray.add(makeJson(coin, availVal.toPlainString(), freeze.add(availVal).toPlainString()));
         }
         return jsonArray;
+    }
+
+    /**
+     * Bigone 거래소 전용
+     * @param arrayData
+     * @return
+     * @throws Exception
+     */
+    private JsonArray makeBigOneArray(JsonArray arrayData) throws Exception{
+        JsonArray resultJson = new JsonArray();
+        for(JsonElement arrayElement : arrayData){
+            JsonObject data   = arrayElement.getAsJsonObject();
+            BigDecimal total  = new BigDecimal(data.get("balance").getAsString()); // 사용가능
+            BigDecimal locked = new BigDecimal(data.get("locked_balance").getAsString());    // 잠겨있는 금액 인듯
+            if(total.compareTo(BigDecimal.ZERO) < 1){
+                continue;
+            }
+            resultJson.add(makeJson(data.get("asset_symbol").getAsString() ,total.subtract(locked).toPlainString(),total.toPlainString() ));
+        }
+        return resultJson;
     }
 
     /**

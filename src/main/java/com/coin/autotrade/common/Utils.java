@@ -8,6 +8,9 @@ import com.coin.autotrade.service.thread.LiquidityTradeThread;
 import com.coin.autotrade.service.thread.RealtimeSyncThread;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.google.gson.Gson;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 
@@ -348,6 +351,8 @@ public class Utils {
             abstractExchange = new MexcImp();
         } else if(UtilsData.DEXORCA.equals(exchange)){
             abstractExchange = new DexorcaImp();
+        } else if(UtilsData.BIGONE.equals(exchange)){
+            abstractExchange = new BigOneImp();
         }
 
         return abstractExchange;
@@ -362,9 +367,8 @@ public class Utils {
     public static boolean isSuccessOrder(String orderId) {
         if(!ReturnCode.FAIL_CREATE.getValue().equals(orderId)){
             return true;
-        }else{
-            return false;
         }
+        return false;
     }
 
     public static String getIp() {
@@ -376,6 +380,26 @@ public class Utils {
             e1.printStackTrace();
         }
         return ip;
+    }
+
+    /**
+     * jwt token 발급
+     * @param header
+     * @param payload
+     * @param secretKey
+     * @return
+     */
+    public static String getJwtToken(LinkedHashMap<String, Object> header,
+                                     LinkedHashMap<String, String> payload,
+                                     String secretKey){
+
+        Claims claims = Jwts.claims();
+        claims.putAll(payload);
+        return Jwts.builder()
+                .setHeader(header)
+                .setClaims(claims)
+                .signWith(SignatureAlgorithm.HS256, secretKey.getBytes())
+                .compact();
     }
 
 }
